@@ -2,6 +2,7 @@ package com.duggustore.app.data.remote
 
 import com.duggustore.app.BuildConfig
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -45,20 +46,27 @@ object SupabaseService {
         return body
     }
 
+    private fun parseJsonArray(response: String): List<JsonObject> {
+        val element = json.parseToJsonElement(response)
+        return (element as? JsonArray)?.filterIsInstance<JsonObject>() ?: emptyList()
+    }
+
+    private fun parseJsonObject(response: String): JsonObject {
+        return json.parseToJsonElement(response) as JsonObject
+    }
+
     suspend fun signUp(email: String, password: String, data: JsonObject? = null): JsonObject {
         val body = buildJsonObject {
             put("email", email)
             put("password", password)
             data?.let { put("data", it) }
         }
-        val requestBody = body.toString().toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url("$BASE_URL/auth/v1/signup")
-            .post(requestBody)
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .apply { headers().forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response) as JsonObject
+        return parseJsonObject(executeRequest(request))
     }
 
     suspend fun signIn(email: String, password: String): JsonObject {
@@ -66,21 +74,18 @@ object SupabaseService {
             put("email", email)
             put("password", password)
         }
-        val requestBody = body.toString().toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url("$BASE_URL/auth/v1/token?grant_type=password")
-            .post(requestBody)
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .apply { headers().forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response) as JsonObject
+        return parseJsonObject(executeRequest(request))
     }
 
     suspend fun signOut(token: String) {
-        val requestBody = "".toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url("$BASE_URL/auth/v1/logout")
-            .post(requestBody)
+            .post("".toRequestBody(JSON_MEDIA_TYPE))
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
         executeRequest(request)
@@ -92,23 +97,17 @@ object SupabaseService {
             .get()
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response) as JsonObject
+        return parseJsonObject(executeRequest(request))
     }
 
     suspend fun select(table: String, token: String? = null, params: Map<String, String> = emptyMap()): List<JsonObject> {
-        val queryString = if (params.isNotEmpty()) {
-            "?${params.entries.joinToString("&") { "${it.key}=eq.${it.value}" }}"
-        } else ""
+        val qs = if (params.isNotEmpty()) "?${params.entries.joinToString("&") { "${it.key}=eq.${it.value}" }}" else ""
         val request = Request.Builder()
-            .url("$BASE_URL/rest/v1/$table$queryString")
+            .url("$BASE_URL/rest/v1/$table$qs")
             .get()
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response).let { element ->
-            kotlinx.serialization.json.jsonArray(element) ?: emptyList()
-        }
+        return parseJsonArray(executeRequest(request))
     }
 
     suspend fun selectAll(table: String, token: String? = null): List<JsonObject> {
@@ -117,34 +116,25 @@ object SupabaseService {
             .get()
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response).let { element ->
-            kotlinx.serialization.json.jsonArray(element) ?: emptyList()
-        }
+        return parseJsonArray(executeRequest(request))
     }
 
     suspend fun insert(table: String, body: String, token: String? = null): JsonObject {
-        val requestBody = body.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table")
-            .post(requestBody)
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response) as JsonObject
+        return parseJsonObject(executeRequest(request))
     }
 
     suspend fun update(table: String, id: String, body: String, token: String? = null): List<JsonObject> {
-        val requestBody = body.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table?id=eq.$id")
-            .patch(requestBody)
+            .patch(body.toRequestBody(JSON_MEDIA_TYPE))
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response).let { element ->
-            kotlinx.serialization.json.jsonArray(element) ?: emptyList()
-        }
+        return parseJsonArray(executeRequest(request))
     }
 
     suspend fun delete(table: String, id: String, token: String? = null) {
@@ -166,19 +156,11 @@ object SupabaseService {
     }
 
     suspend fun updateWhere(table: String, column: String, value: String, body: String, token: String? = null): List<JsonObject> {
-        val requestBody = body.toRequestBody(JSON_MEDIA_TYPE)
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table?$column=eq.$value")
-            .patch(requestBody)
+            .patch(body.toRequestBody(JSON_MEDIA_TYPE))
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
-        val response = executeRequest(request)
-        return json.parseToJsonElement(response).let { element ->
-            kotlinx.serialization.json.jsonArray(element) ?: emptyList()
-        }
-    }
-
-    private fun jsonArray(element: kotlinx.serialization.json.JsonElement): List<JsonObject>? {
-        return (element as? kotlinx.serialization.json.JsonArray)?.map { it as JsonObject }
+        return parseJsonArray(executeRequest(request))
     }
 }
