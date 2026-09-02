@@ -102,6 +102,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     // OkHttp HTTP Client
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.slf4j:slf4j-nop:2.0.9")
 
     // Ktor HTTP Client
 
