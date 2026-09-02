@@ -39,7 +39,7 @@ fun HomeScreen(
     onCartClick: () -> Unit,
     onFavoritesClick: () -> Unit,
     onAccountClick: () -> Unit,
-    onOrdersClick: () -> Unit
+
 ) {
     Column(
         modifier = Modifier

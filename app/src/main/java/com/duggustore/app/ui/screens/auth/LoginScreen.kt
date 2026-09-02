@@ -23,7 +23,7 @@ import com.duggustore.app.ui.theme.*
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
+
     onNavigateToRegister: () -> Unit,
     isLoading: Boolean = false,
     error: String? = null,

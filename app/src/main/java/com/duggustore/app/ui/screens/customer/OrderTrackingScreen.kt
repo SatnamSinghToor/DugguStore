@@ -184,7 +184,7 @@ fun OrderTrackingDetailScreen(
 
                         val currentStatusIdx = steps.indexOfFirst { it.first.value == order.status }
 
-                        steps.forEachIndexed { index, (status, label) ->
+                        steps.forEachIndexed { index, (_, label) ->
                             TimelineStep(
                                 label = label,
                                 time = if (index <= currentStatusIdx) order.createdAt else "",

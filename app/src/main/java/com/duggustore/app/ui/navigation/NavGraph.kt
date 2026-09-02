@@ -57,7 +57,6 @@ fun AppNavGraph(
     val deliveryState by deliveryViewModel.state.collectAsState()
     val adminState by adminViewModel.state.collectAsState()
 
-    // Set up initial route based on auth state
     val startDestination = remember(authState.isLoggedIn, authState.user) {
         if (!authState.isLoggedIn) Screen.Login.route
         else {
@@ -70,7 +69,6 @@ fun AppNavGraph(
         }
     }
 
-    // Initialize cart when user is logged in
     LaunchedEffect(authState.user) {
         authState.user?.let { user ->
             cartViewModel.setCustomer(user.id)
@@ -85,19 +83,8 @@ fun AppNavGraph(
         popEnterTransition = { fadeIn(tween(300)) },
         popExitTransition = { fadeOut(tween(300)) }
     ) {
-        // Auth Screens
         composable(Screen.Login.route) {
             LoginScreen(
-                onLoginSuccess = {
-                    authState.user?.let { user ->
-                        when (user.userRole()) {
-                            UserRole.SELLER -> navController.navigate(Screen.SellerDashboard.route)
-                            UserRole.DELIVERY -> navController.navigate(Screen.DeliveryDashboard.route)
-                            UserRole.ADMIN -> navController.navigate(Screen.AdminDashboard.route)
-                            else -> navController.navigate(Screen.CustomerHome.route)
-                        }
-                    }
-                },
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) },
                 isLoading = authState.isLoading,
                 error = authState.error,
@@ -130,7 +117,6 @@ fun AppNavGraph(
             )
         }
 
-        // Customer Screens
         composable(Screen.CustomerHome.route) {
             HomeScreen(
                 categories = homeState.categories,
@@ -143,8 +129,7 @@ fun AppNavGraph(
                 onAddToCart = { cartViewModel.addToCart(it) },
                 onCartClick = { navController.navigate(Screen.CustomerCart.route) },
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
-                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) },
-                onOrdersClick = { navController.navigate(Screen.CustomerOrders.route) }
+                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) }
             )
         }
 
@@ -171,14 +156,13 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() }
             )
 
-            // Show success dialog
             if (cartState.orderPlaced) {
-                androidx.compose.material3.AlertDialog(
+                AlertDialog(
                     onDismissRequest = { cartViewModel.resetOrderPlaced() },
-                    title = { Text("Order Placed! 🎉") },
-                    text = { Text("Your order has been placed successfully. You can track it in My Orders.") },
+                    title = { Text("Order Placed!") },
+                    text = { Text("Your order has been placed successfully. Track it in My Orders.") },
                     confirmButton = {
-                        androidx.compose.material3.TextButton(onClick = {
+                        TextButton(onClick = {
                             cartViewModel.resetOrderPlaced()
                             navController.navigate(Screen.CustomerOrders.route) {
                                 popUpTo(Screen.CustomerHome.route) { inclusive = false }
@@ -188,7 +172,7 @@ fun AppNavGraph(
                         }
                     },
                     dismissButton = {
-                        androidx.compose.material3.TextButton(onClick = { cartViewModel.resetOrderPlaced() }) {
+                        TextButton(onClick = { cartViewModel.resetOrderPlaced() }) {
                             Text("Continue Shopping")
                         }
                     }
@@ -243,7 +227,7 @@ fun AppNavGraph(
                 user = authState.user,
                 onOrdersClick = { navController.navigate(Screen.CustomerOrders.route) },
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
-                onAddressesClick = { /* TODO: Addresses screen */ },
+                onAddressesClick = { },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) {
@@ -254,31 +238,26 @@ fun AppNavGraph(
             )
         }
 
-        // Seller Dashboard
         composable(Screen.SellerDashboard.route) {
             SellerDashboard(
                 products = sellerState.products,
                 orders = sellerState.orders,
                 totalRevenue = sellerState.totalRevenue,
                 totalOrders = sellerState.totalOrders,
-                onAddProduct = { /* TODO: Add Product Dialog */ },
-                onEditProduct = { /* TODO: Edit Product */ },
+                onAddProduct = { },
+                onEditProduct = { },
                 onDeleteProduct = { sellerViewModel.deleteProduct(it, authState.user?.id ?: "") },
                 onUpdateOrderStatus = { orderId, status -> orderViewModel.updateOrderStatus(orderId, status) },
                 onSignOut = {
                     authViewModel.signOut()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
                 }
             )
-
             LaunchedEffect(authState.user) {
                 authState.user?.let { sellerViewModel.loadSellerData(it.id) }
             }
         }
 
-        // Delivery Dashboard
         composable(Screen.DeliveryDashboard.route) {
             DeliveryDashboard(
                 activeOrders = deliveryState.activeOrders,
@@ -288,18 +267,14 @@ fun AppNavGraph(
                 onMarkDelivered = { deliveryViewModel.markDelivered(it, authState.user?.id ?: "") },
                 onSignOut = {
                     authViewModel.signOut()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
                 }
             )
-
             LaunchedEffect(authState.user) {
                 authState.user?.let { deliveryViewModel.loadDeliveryData(it.id) }
             }
         }
 
-        // Admin Dashboard
         composable(Screen.AdminDashboard.route) {
             AdminDashboard(
                 users = adminState.users,
@@ -312,12 +287,9 @@ fun AppNavGraph(
                 onUpdateUserRole = { userId, role -> adminViewModel.updateUserRole(userId, role) },
                 onSignOut = {
                     authViewModel.signOut()
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
                 }
             )
-
             LaunchedEffect(Unit) {
                 adminViewModel.loadDashboard()
             }

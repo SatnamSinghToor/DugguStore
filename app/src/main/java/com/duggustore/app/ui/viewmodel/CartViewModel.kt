@@ -117,8 +117,6 @@ class CartViewModel : ViewModel() {
             val customerId = state.customerId
             if (customerId.isEmpty() || state.cartItems.isEmpty()) return@launch
 
-            // Helper functions defined as lambdas for data manipulation
-            val orders = state.cartItems.mapNotNull { it.product?.effectivePrice() }
 
             _state.value = _state.value.copy(isLoading = true)
 
