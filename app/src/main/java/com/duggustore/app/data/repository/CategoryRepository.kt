@@ -1,18 +1,17 @@
 package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Category
-import com.duggustore.app.data.remote.SupabaseClient.client
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.filter.eq
+import com.duggustore.app.data.remote.SupabaseService
+import kotlinx.serialization.json.Json
+
+private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
 class CategoryRepository {
 
     suspend fun getAllCategories(): Result<List<Category>> {
         return try {
-            val categories = client.from("categories")
-                .select()
-                .decodeList<Category>()
-            Result.success(categories)
+            val list = SupabaseService.selectAll("categories")
+            Result.success(list.map { json.decodeFromString(Category.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -20,7 +19,7 @@ class CategoryRepository {
 
     suspend fun createCategory(category: Category): Result<Unit> {
         return try {
-            client.from("categories").insert(category)
+            SupabaseService.insert("categories", json.encodeToString(Category.serializer(), category))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -29,8 +28,7 @@ class CategoryRepository {
 
     suspend fun updateCategory(category: Category): Result<Unit> {
         return try {
-            client.from("categories")
-                .update(category) { eq("id", category.id) }
+            SupabaseService.update("categories", category.id, json.encodeToString(Category.serializer(), category))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -39,8 +37,7 @@ class CategoryRepository {
 
     suspend fun deleteCategory(id: String): Result<Unit> {
         return try {
-            client.from("categories")
-                .delete { eq("id", id) }
+            SupabaseService.delete("categories", id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

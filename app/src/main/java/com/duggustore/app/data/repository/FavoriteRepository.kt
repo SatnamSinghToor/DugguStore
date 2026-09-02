@@ -1,18 +1,17 @@
 package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Favorite
-import com.duggustore.app.data.remote.SupabaseClient.client
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.filter.eq
+import com.duggustore.app.data.remote.SupabaseService
+import kotlinx.serialization.json.Json
+
+private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
 class FavoriteRepository {
 
     suspend fun getFavorites(customerId: String): Result<List<Favorite>> {
         return try {
-            val favorites = client.from("favorites")
-                .select { eq("customer_id", customerId) }
-                .decodeList<Favorite>()
-            Result.success(favorites)
+            val list = SupabaseService.select("favorites", params = mapOf("customer_id" to customerId))
+            Result.success(list.map { json.decodeFromString(Favorite.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -20,11 +19,8 @@ class FavoriteRepository {
 
     suspend fun addToFavorites(customerId: String, productId: String): Result<Unit> {
         return try {
-            val favorite = Favorite(
-                customerId = customerId,
-                productId = productId
-            )
-            client.from("favorites").insert(favorite)
+            val favorite = Favorite(customerId = customerId, productId = productId)
+            SupabaseService.insert("favorites", json.encodeToString(Favorite.serializer(), favorite))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -33,11 +29,10 @@ class FavoriteRepository {
 
     suspend fun removeFromFavorites(customerId: String, productId: String): Result<Unit> {
         return try {
-            client.from("favorites")
-                .delete {
-                    eq("customer_id", customerId)
-                    eq("product_id", productId)
-                }
+            val favs = SupabaseService.select("favorites", params = mapOf("customer_id" to customerId))
+                .map { json.decodeFromString(Favorite.serializer(), it.toString()) }
+            val fav = favs.find { it.productId == productId }
+            fav?.let { SupabaseService.delete("favorites", it.id) }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -46,10 +41,9 @@ class FavoriteRepository {
 
     suspend fun isFavorite(customerId: String, productId: String): Boolean {
         return try {
-            val favorites = client.from("favorites")
-                .select()
-                .decodeList<Favorite>()
-            favorites.any { it.customerId == customerId && it.productId == productId }
+            val favs = SupabaseService.select("favorites", params = mapOf("customer_id" to customerId))
+                .map { json.decodeFromString(Favorite.serializer(), it.toString()) }
+            favs.any { it.productId == productId }
         } catch (e: Exception) {
             false
         }

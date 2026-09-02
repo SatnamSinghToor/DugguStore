@@ -97,6 +97,12 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:storage-kt:2.0.0")
     implementation("io.github.jan-tennert.supabase:realtime-kt:2.0.0")
 
+    // Ktor HTTP Client
+    implementation("io.ktor:ktor-client-core:2.3.7")
+    implementation("io.ktor:ktor-client-okhttp:2.3.7")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 

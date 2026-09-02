@@ -1,18 +1,17 @@
 package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Product
-import com.duggustore.app.data.remote.SupabaseClient.client
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.filter.eq
+import com.duggustore.app.data.remote.SupabaseService
+import kotlinx.serialization.json.Json
+
+private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
 class ProductRepository {
 
     suspend fun getAllProducts(): Result<List<Product>> {
         return try {
-            val products = client.from("products")
-                .select()
-                .decodeList<Product>()
-            Result.success(products)
+            val list = SupabaseService.selectAll("products")
+            Result.success(list.map { json.decodeFromString(Product.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -20,10 +19,8 @@ class ProductRepository {
 
     suspend fun getProductsByCategory(categoryId: String): Result<List<Product>> {
         return try {
-            val products = client.from("products")
-                .select { eq("category_id", categoryId) }
-                .decodeList<Product>()
-            Result.success(products)
+            val list = SupabaseService.select("products", params = mapOf("category_id" to categoryId))
+            Result.success(list.map { json.decodeFromString(Product.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -31,10 +28,8 @@ class ProductRepository {
 
     suspend fun getProductsBySeller(sellerId: String): Result<List<Product>> {
         return try {
-            val products = client.from("products")
-                .select { eq("seller_id", sellerId) }
-                .decodeList<Product>()
-            Result.success(products)
+            val list = SupabaseService.select("products", params = mapOf("seller_id" to sellerId))
+            Result.success(list.map { json.decodeFromString(Product.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -42,9 +37,8 @@ class ProductRepository {
 
     suspend fun getProduct(id: String): Result<Product?> {
         return try {
-            val product = client.from("products")
-                .select { eq("id", id) }
-                .decodeSingle<Product>()
+            val list = SupabaseService.select("products", params = mapOf("id" to id))
+            val product = list.firstOrNull()?.let { json.decodeFromString(Product.serializer(), it.toString()) }
             Result.success(product)
         } catch (e: Exception) {
             Result.failure(e)
@@ -53,7 +47,7 @@ class ProductRepository {
 
     suspend fun createProduct(product: Product): Result<Unit> {
         return try {
-            client.from("products").insert(product)
+            SupabaseService.insert("products", json.encodeToString(Product.serializer(), product))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -62,8 +56,7 @@ class ProductRepository {
 
     suspend fun updateProduct(product: Product): Result<Unit> {
         return try {
-            client.from("products")
-                .update(product) { eq("id", product.id) }
+            SupabaseService.update("products", product.id, json.encodeToString(Product.serializer(), product))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -72,8 +65,7 @@ class ProductRepository {
 
     suspend fun deleteProduct(id: String): Result<Unit> {
         return try {
-            client.from("products")
-                .delete { eq("id", id) }
+            SupabaseService.delete("products", id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -82,12 +74,10 @@ class ProductRepository {
 
     suspend fun searchProducts(query: String): Result<List<Product>> {
         return try {
-            val products = client.from("products")
-                .select()
-                .decodeList<Product>()
+            val all = SupabaseService.selectAll("products")
+            val products = all.map { json.decodeFromString(Product.serializer(), it.toString()) }
             Result.success(products.filter {
-                it.name.contains(query, ignoreCase = true) ||
-                it.description.contains(query, ignoreCase = true)
+                it.name.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true)
             })
         } catch (e: Exception) {
             Result.failure(e)

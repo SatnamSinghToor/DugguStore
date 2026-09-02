@@ -2,21 +2,21 @@ package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderItem
-import com.duggustore.app.data.remote.SupabaseClient.client
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.filter.eq
+import com.duggustore.app.data.remote.SupabaseService
+import kotlinx.serialization.json.Json
+
+private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
 class OrderRepository {
 
     suspend fun createOrder(order: Order, items: List<OrderItem>): Result<String> {
         return try {
-            val result = client.from("orders")
-                .insert(order)
-                .decodeSingle<Order>()
+            val resultStr = SupabaseService.insert("orders", json.encodeToString(Order.serializer(), order))
+            val result = json.decodeFromString(Order.serializer(), resultStr.toString())
 
             items.forEach { item ->
                 val orderItem = item.copy(orderId = result.id)
-                client.from("order_items").insert(orderItem)
+                SupabaseService.insert("order_items", json.encodeToString(OrderItem.serializer(), orderItem))
             }
 
             Result.success(result.id)
@@ -27,10 +27,8 @@ class OrderRepository {
 
     suspend fun getCustomerOrders(customerId: String): Result<List<Order>> {
         return try {
-            val orders = client.from("orders")
-                .select { eq("customer_id", customerId) }
-                .decodeList<Order>()
-            Result.success(orders.sortedByDescending { it.createdAt })
+            val list = SupabaseService.select("orders", params = mapOf("customer_id" to customerId))
+            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -38,10 +36,8 @@ class OrderRepository {
 
     suspend fun getSellerOrders(sellerId: String): Result<List<Order>> {
         return try {
-            val orders = client.from("orders")
-                .select { eq("seller_id", sellerId) }
-                .decodeList<Order>()
-            Result.success(orders.sortedByDescending { it.createdAt })
+            val list = SupabaseService.select("orders", params = mapOf("seller_id" to sellerId))
+            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -49,10 +45,8 @@ class OrderRepository {
 
     suspend fun getDeliveryOrders(deliveryId: String): Result<List<Order>> {
         return try {
-            val orders = client.from("orders")
-                .select { eq("delivery_id", deliveryId) }
-                .decodeList<Order>()
-            Result.success(orders.sortedByDescending { it.createdAt })
+            val list = SupabaseService.select("orders", params = mapOf("delivery_id" to deliveryId))
+            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -60,10 +54,8 @@ class OrderRepository {
 
     suspend fun getAllOrders(): Result<List<Order>> {
         return try {
-            val orders = client.from("orders")
-                .select()
-                .decodeList<Order>()
-            Result.success(orders.sortedByDescending { it.createdAt })
+            val list = SupabaseService.selectAll("orders")
+            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -71,9 +63,8 @@ class OrderRepository {
 
     suspend fun getOrder(orderId: String): Result<Order?> {
         return try {
-            val order = client.from("orders")
-                .select { eq("id", orderId) }
-                .decodeSingle<Order>()
+            val list = SupabaseService.select("orders", params = mapOf("id" to orderId))
+            val order = list.firstOrNull()?.let { json.decodeFromString(Order.serializer(), it.toString()) }
             Result.success(order)
         } catch (e: Exception) {
             Result.failure(e)
@@ -82,8 +73,7 @@ class OrderRepository {
 
     suspend fun updateOrderStatus(orderId: String, status: String): Result<Unit> {
         return try {
-            client.from("orders")
-                .update(mapOf("status" to status)) { eq("id", orderId) }
+            SupabaseService.update("orders", orderId, """{"status":"$status"}""")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -92,11 +82,7 @@ class OrderRepository {
 
     suspend fun assignDelivery(orderId: String, deliveryId: String): Result<Unit> {
         return try {
-            client.from("orders")
-                .update(mapOf(
-                    "delivery_id" to deliveryId,
-                    "status" to "out_for_delivery"
-                )) { eq("id", orderId) }
+            SupabaseService.update("orders", orderId, """{"delivery_id":"$deliveryId","status":"out_for_delivery"}""")
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -105,16 +91,12 @@ class OrderRepository {
 
     suspend fun getOrderItems(orderId: String): Result<List<OrderItem>> {
         return try {
-            val items = client.from("order_items")
-                .select { eq("order_id", orderId) }
-                .decodeList<OrderItem>()
-            Result.success(items)
+            val list = SupabaseService.select("order_items", params = mapOf("order_id" to orderId))
+            Result.success(list.map { json.decodeFromString(OrderItem.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun cancelOrder(orderId: String): Result<Unit> {
-        return updateOrderStatus(orderId, "cancelled")
-    }
+    suspend fun cancelOrder(orderId: String): Result<Unit> = updateOrderStatus(orderId, "cancelled")
 }
