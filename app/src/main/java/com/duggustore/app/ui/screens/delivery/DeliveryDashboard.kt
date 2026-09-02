@@ -28,7 +28,7 @@ fun DeliveryDashboard(
     onMarkDelivered: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier

@@ -1,7 +1,7 @@
 package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.CartItem
-import com.duggustore.app.data.remote.SupabaseClient
+import com.duggustore.app.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.eq
 
@@ -9,7 +9,7 @@ class CartRepository {
 
     suspend fun getCartItems(customerId: String): Result<List<CartItem>> {
         return try {
-            val items = SupabaseClient.client.from("cart_items")
+            val items = client.from("cart_items")
                 .select { eq("customer_id", customerId) }
                 .decodeList<CartItem>()
             Result.success(items)
@@ -20,15 +20,14 @@ class CartRepository {
 
     suspend fun addToCart(customerId: String, productId: String, quantity: Int = 1): Result<Unit> {
         return try {
-            // Check if item already in cart
-            val existing = SupabaseClient.client.from("cart_items")
+            val existing = client.from("cart_items")
                 .select()
                 .decodeList<CartItem>()
                 .find { it.customerId == customerId && it.productId == productId }
 
             if (existing != null) {
                 val newQty = existing.quantity + quantity
-                SupabaseClient.client.from("cart_items")
+                client.from("cart_items")
                     .update(mapOf("quantity" to newQty)) { eq("id", existing.id) }
             } else {
                 val cartItem = CartItem(
@@ -36,7 +35,7 @@ class CartRepository {
                     productId = productId,
                     quantity = quantity
                 )
-                SupabaseClient.client.from("cart_items").insert(cartItem)
+                client.from("cart_items").insert(cartItem)
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -47,10 +46,10 @@ class CartRepository {
     suspend fun updateQuantity(itemId: String, quantity: Int): Result<Unit> {
         return try {
             if (quantity <= 0) {
-                SupabaseClient.client.from("cart_items")
+                client.from("cart_items")
                     .delete { eq("id", itemId) }
             } else {
-                SupabaseClient.client.from("cart_items")
+                client.from("cart_items")
                     .update(mapOf("quantity" to quantity)) { eq("id", itemId) }
             }
             Result.success(Unit)
@@ -61,7 +60,7 @@ class CartRepository {
 
     suspend fun removeFromCart(itemId: String): Result<Unit> {
         return try {
-            SupabaseClient.client.from("cart_items")
+            client.from("cart_items")
                 .delete { eq("id", itemId) }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -71,7 +70,7 @@ class CartRepository {
 
     suspend fun clearCart(customerId: String): Result<Unit> {
         return try {
-            SupabaseClient.client.from("cart_items")
+            client.from("cart_items")
                 .delete { eq("customer_id", customerId) }
             Result.success(Unit)
         } catch (e: Exception) {

@@ -113,14 +113,14 @@ fun AccountScreen(
                     subtitle = "View your order history",
                     onClick = onOrdersClick
                 )
-                HorizontalDivider(color = BorderGray)
+                Divider(color = BorderGray)
                 AccountMenuItem(
                     icon = Icons.Default.Favorite,
                     title = "Favorites",
                     subtitle = "Your saved products",
                     onClick = onFavoritesClick
                 )
-                HorizontalDivider(color = BorderGray)
+                Divider(color = BorderGray)
                 AccountMenuItem(
                     icon = Icons.Default.LocationOn,
                     title = "Addresses",
@@ -151,6 +151,7 @@ fun AccountScreen(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun AccountMenuItem(
     icon: ImageVector,
     title: String,

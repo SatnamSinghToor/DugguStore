@@ -26,6 +26,7 @@ import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun HomeScreen(
     categories: List<Category>,
     filteredProducts: List<com.duggustore.app.data.model.Product>,
@@ -204,7 +205,7 @@ fun CategoryChip(
         modifier = Modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         color = if (isSelected) chipColor else chipColor.copy(alpha = 0.15f),
-        border = if (isSelected) null else ButtonDefaults.outlinedButtonBorder(enabled = true)
+        border = if (isSelected) null else ButtonDefaults.outlinedButtonBorder
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),

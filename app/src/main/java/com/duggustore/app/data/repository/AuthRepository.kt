@@ -2,6 +2,8 @@ package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.data.remote.SupabaseClient
+import com.duggustore.app.data.remote.SupabaseClient.client
+import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.eq
@@ -12,7 +14,7 @@ class AuthRepository {
 
     suspend fun signUp(email: String, password: String, fullName: String, phone: String, role: String): Result<UserProfile> {
         return try {
-            val result = SupabaseClient.auth.signUpWith(Email) {
+            val result = client.auth.signUpWith(Email) {
                 this.email = email
                 this.password = password
                 this.data = buildJsonObject {
@@ -31,7 +33,7 @@ class AuthRepository {
                 role = role
             )
 
-            SupabaseClient.client.from("profiles").insert(profile)
+            client.from("profiles").insert(profile)
 
             Result.success(profile)
         } catch (e: Exception) {
@@ -41,14 +43,14 @@ class AuthRepository {
 
     suspend fun signIn(email: String, password: String): Result<UserProfile> {
         return try {
-            val result = SupabaseClient.auth.signInWith(Email) {
+            val result = client.auth.signInWith(Email) {
                 this.email = email
                 this.password = password
             }
 
             val userId = result.user?.id ?: throw Exception("Login failed")
 
-            val profile = SupabaseClient.client.from("profiles")
+            val profile = client.from("profiles")
                 .select { eq("id", userId) }
                 .decodeSingle<UserProfile>()
 
@@ -60,7 +62,7 @@ class AuthRepository {
 
     suspend fun signOut(): Result<Unit> {
         return try {
-            SupabaseClient.auth.signOut()
+            client.auth.signOut()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -69,10 +71,10 @@ class AuthRepository {
 
     suspend fun getCurrentUserProfile(): Result<UserProfile?> {
         return try {
-            val session = SupabaseClient.auth.currentSessionOrNull()
+            val session = client.auth.currentSessionOrNull()
             val userId = session?.user?.id ?: return Result.success(null)
 
-            val profile = SupabaseClient.client.from("profiles")
+            val profile = client.from("profiles")
                 .select { eq("id", userId) }
                 .decodeSingle<UserProfile>()
 
@@ -84,7 +86,7 @@ class AuthRepository {
 
     suspend fun updateProfile(profile: UserProfile): Result<UserProfile> {
         return try {
-            SupabaseClient.client.from("profiles")
+            client.from("profiles")
                 .update(profile) { eq("id", profile.id) }
             Result.success(profile)
         } catch (e: Exception) {
@@ -94,7 +96,7 @@ class AuthRepository {
 
     suspend fun getAllUsers(): Result<List<UserProfile>> {
         return try {
-            val profiles = SupabaseClient.client.from("profiles")
+            val profiles = client.from("profiles")
                 .select()
                 .decodeList<UserProfile>()
             Result.success(profiles)
@@ -106,7 +108,7 @@ class AuthRepository {
     suspend fun updateUserRole(userId: String, role: String): Result<Unit> {
         return try {
             val updates = buildJsonObject { put("role", role) }
-            SupabaseClient.client.from("profiles")
+            client.from("profiles")
                 .update(updates) { eq("id", userId) }
             Result.success(Unit)
         } catch (e: Exception) {

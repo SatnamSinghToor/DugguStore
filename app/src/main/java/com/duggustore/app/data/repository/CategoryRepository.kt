@@ -1,14 +1,15 @@
 package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Category
-import com.duggustore.app.data.remote.SupabaseClient
+import com.duggustore.app.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.eq
 
 class CategoryRepository {
 
     suspend fun getAllCategories(): Result<List<Category>> {
         return try {
-            val categories = SupabaseClient.client.from("categories")
+            val categories = client.from("categories")
                 .select()
                 .decodeList<Category>()
             Result.success(categories)
@@ -19,7 +20,7 @@ class CategoryRepository {
 
     suspend fun createCategory(category: Category): Result<Unit> {
         return try {
-            SupabaseClient.client.from("categories").insert(category)
+            client.from("categories").insert(category)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -28,8 +29,8 @@ class CategoryRepository {
 
     suspend fun updateCategory(category: Category): Result<Unit> {
         return try {
-            SupabaseClient.client.from("categories")
-                .update(category) { io.github.jan.supabase.postgrest.query.eq("id", category.id) }
+            client.from("categories")
+                .update(category) { eq("id", category.id) }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -38,8 +39,8 @@ class CategoryRepository {
 
     suspend fun deleteCategory(id: String): Result<Unit> {
         return try {
-            SupabaseClient.client.from("categories")
-                .delete { io.github.jan.supabase.postgrest.query.eq("id", id) }
+            client.from("categories")
+                .delete { eq("id", id) }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

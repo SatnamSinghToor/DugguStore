@@ -7,6 +7,9 @@ import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.storage.storage
 
 object SupabaseClient {
     val client: SupabaseClient by lazy {
@@ -20,8 +23,4 @@ object SupabaseClient {
             install(Realtime)
         }
     }
-
-    val auth get() = client.auth
-    val postgrest get() = client.from("profiles")
-    val storage get() = client.storage
 }

@@ -68,7 +68,7 @@ fun CartScreen(
                                 onDecrement = { onDecrementQuantity(item.id, item.quantity - 1) },
                                 onRemove = { onRemoveItem(item.id) }
                             )
-                            HorizontalDivider(color = BorderGray)
+                            Divider(color = BorderGray)
                         }
                     }
 
@@ -131,7 +131,7 @@ fun CartScreen(
                         if (savings > 0) {
                             PriceRow("You Save", "-₹${"%.1f".format(savings)}", color = SuccessGreen)
                         }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
                         PriceRow("Total Bill", "₹${"%.1f".format(total)}", isBold = true)
 
                         Spacer(modifier = Modifier.height(12.dp))

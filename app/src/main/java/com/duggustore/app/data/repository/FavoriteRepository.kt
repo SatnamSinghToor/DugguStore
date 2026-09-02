@@ -1,7 +1,7 @@
 package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Favorite
-import com.duggustore.app.data.remote.SupabaseClient
+import com.duggustore.app.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.eq
 
@@ -9,7 +9,7 @@ class FavoriteRepository {
 
     suspend fun getFavorites(customerId: String): Result<List<Favorite>> {
         return try {
-            val favorites = SupabaseClient.client.from("favorites")
+            val favorites = client.from("favorites")
                 .select { eq("customer_id", customerId) }
                 .decodeList<Favorite>()
             Result.success(favorites)
@@ -24,7 +24,7 @@ class FavoriteRepository {
                 customerId = customerId,
                 productId = productId
             )
-            SupabaseClient.client.from("favorites").insert(favorite)
+            client.from("favorites").insert(favorite)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -33,7 +33,7 @@ class FavoriteRepository {
 
     suspend fun removeFromFavorites(customerId: String, productId: String): Result<Unit> {
         return try {
-            SupabaseClient.client.from("favorites")
+            client.from("favorites")
                 .delete {
                     eq("customer_id", customerId)
                     eq("product_id", productId)
@@ -46,7 +46,7 @@ class FavoriteRepository {
 
     suspend fun isFavorite(customerId: String, productId: String): Boolean {
         return try {
-            val favorites = SupabaseClient.client.from("favorites")
+            val favorites = client.from("favorites")
                 .select()
                 .decodeList<Favorite>()
             favorites.any { it.customerId == customerId && it.productId == productId }
