@@ -1,0 +1,35 @@
+package com.duggustore.app.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val PrimaryGreen = Color(0xFF2D6A4F)
+val PrimaryGreenLight = Color(0xFF40916C)
+val PrimaryGreenDark = Color(0xFF1B4332)
+val AccentOrange = Color(0xFFE76F51)
+val AccentRed = Color(0xFFD62828)
+val Background = Color(0xFFF5F5F5)
+val SurfaceWhite = Color(0xFFFFFFFF)
+val TextPrimary = Color(0xFF1A1A2E)
+val TextSecondary = Color(0xFF6B7280)
+val TextLight = Color(0xFF9CA3AF)
+val BorderGray = Color(0xFFE5E7EB)
+val SuccessGreen = Color(0xFF10B981)
+val WarningYellow = Color(0xFFF59E0B)
+val InfoBlue = Color(0xFF3B82F6)
+val PendingYellow = Color(0xFFFBBF24)
+val DeliveredGreen = Color(0xFF22C55E)
+
+// Category Colors
+val CategoryGrocery = Color(0xFF7C3AED)
+val CategoryVeggies = Color(0xFF16A34A)
+val CategoryFruits = Color(0xFFF97316)
+val CategorySnacks = Color(0xFFEAB308)
+val CategoryChocolate = Color(0xFF92400E)
+val CategoryBread = Color(0xFFD97706)
+val CategoryShampoo = Color(0xFFEC4899)
+val CategoryCleaning = Color(0xFF06B6D4)
+val CategoryBabyCare = Color(0xFFF472B6)
+val CategoryColdDrinks = Color(0xFF2563EB)
+val CategoryMeat = Color(0xFFDC2626)
+val CategoryDairy = Color(0xFF8B5CF6)
+val CategoryFrozen = Color(0xFF0EA5E9)
