@@ -1,11 +1,12 @@
-# Supabase
+# Supabase & Ktor
 -keep class io.github.jan.supabase.** { *; }
--keepclassmembers class com.duggustore.app.data.model.** { *; }
--keepattributes *Annotation*
--keepattributes Signature
+-keep class io.ktor.** { *; }
+-keep class org.slf4j.** { *; }
+-dontwarn org.slf4j.**
+-dontwarn org.slf4j.impl.**
 
 # Kotlin Serialization
--keepattributes *Annotation*, InnerClasses
+-keepattributes *Annotation*, InnerClasses, Signature
 -dontnote kotlinx.serialization.AnnotationsKt
 
 -keepclassmembers @kotlinx.serialization.Serializable class com.duggustore.app.** {
@@ -14,3 +15,6 @@
 -keepclasseswithmembers class com.duggustore.app.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# Models
+-keepclassmembers class com.duggustore.app.data.model.** { *; }
