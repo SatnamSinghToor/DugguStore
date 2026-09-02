@@ -67,28 +67,6 @@ android {
     }
 }
 
-configurations.all {
-    exclude(group = "io.ktor", module = "ktor-client-core-jvm")
-    exclude(group = "io.ktor", module = "ktor-client-core")
-    exclude(group = "io.ktor", module = "ktor-client-okhttp-jvm")
-    exclude(group = "io.ktor", module = "ktor-client-okhttp")
-    exclude(group = "io.ktor", module = "ktor-client-content-negotiation-jvm")
-    exclude(group = "io.ktor", module = "ktor-client-content-negotiation")
-    exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json-jvm")
-    exclude(group = "io.ktor", module = "ktor-serialization-kotlinx-json")
-    exclude(group = "io.ktor", module = "ktor-serialization-json-jvm")
-    exclude(group = "io.ktor", module = "ktor-serialization-json")
-    exclude(group = "io.ktor", module = "ktor-http-jvm")
-    exclude(group = "io.ktor", module = "ktor-http")
-    exclude(group = "io.ktor", module = "ktor-io-jvm")
-    exclude(group = "io.ktor", module = "ktor-io")
-    exclude(group = "io.ktor", module = "ktor-utils-jvm")
-    exclude(group = "io.ktor", module = "ktor-utils")
-    exclude(group = "io.ktor", module = "ktor-client-websockets-jvm")
-    exclude(group = "io.ktor", module = "ktor-client-websockets")
-    exclude(group = "io.ktor")
-}
-
 dependencies {
     // Core
     implementation("androidx.core:core-ktx:1.12.0")
@@ -113,12 +91,20 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Supabase (we use only auth/session management, all HTTP via OkHttp)
+    // Supabase (auth session management only - HTTP calls via OkHttp)
     implementation("io.github.jan-tennert.supabase:supabase-kt:2.0.0")
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.0.0")
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.0")
-    implementation("io.github.jan-tennert.supabase:storage-kt:2.0.0")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.0.0")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.0.0") {
+        exclude(group = "io.ktor")
+    }
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.0") {
+        exclude(group = "io.ktor")
+    }
+    implementation("io.github.jan-tennert.supabase:storage-kt:2.0.0") {
+        exclude(group = "io.ktor")
+    }
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.0.0") {
+        exclude(group = "io.ktor")
+    }
 
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
@@ -126,7 +112,7 @@ dependencies {
     // OkHttp HTTP Client
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // SLF4J (needed by OkHttp/Supabase at runtime)
+    // SLF4J (runtime dependency for logging frameworks)
     implementation("org.slf4j:slf4j-nop:2.0.9")
 
     // Debug
