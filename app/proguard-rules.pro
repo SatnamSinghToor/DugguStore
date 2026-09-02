@@ -1,10 +1,3 @@
-# Keep Ktor debug detector (references JVM-only java.lang.management which isn't on Android)
--keep class io.ktor.util.debug.IntellijIdeaDebugDetector { *; }
--keepclassmembers class io.ktor.** {
-    *;
-}
--keep class io.ktor.** { *; }
-
 # Kotlin Serialization
 -keepattributes *Annotation*, InnerClasses, Signature
 -dontnote kotlinx.serialization.AnnotationsKt
@@ -21,3 +14,7 @@
 
 # Supabase
 -keep class io.github.jan.supabase.** { *; }
+-keep class io.github.jan.supabase.gotrue.** { *; }
+-keep class io.github.jan.supabase.postgrest.** { *; }
+-keep class io.github.jan.supabase.storage.** { *; }
+-keep class io.github.jan.supabase.realtime.** { *; }

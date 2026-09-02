@@ -100,12 +100,10 @@ dependencies {
 
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    // OkHttp HTTP Client
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Ktor HTTP Client
-    implementation("io.ktor:ktor-client-core:2.3.7")
-    implementation("io.ktor:ktor-client-okhttp:2.3.7")
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
