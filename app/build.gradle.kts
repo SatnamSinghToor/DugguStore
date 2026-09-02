@@ -91,28 +91,13 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Supabase (auth session management only - HTTP calls via OkHttp)
-    implementation("io.github.jan-tennert.supabase:supabase-kt:2.0.0")
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.0.0") {
-        exclude(group = "io.ktor")
-    }
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.0.0") {
-        exclude(group = "io.ktor")
-    }
-    implementation("io.github.jan-tennert.supabase:storage-kt:2.0.0") {
-        exclude(group = "io.ktor")
-    }
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.0.0") {
-        exclude(group = "io.ktor")
-    }
-
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
-    // OkHttp HTTP Client
+    // OkHttp HTTP Client (all Supabase API calls via OkHttp)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // SLF4J (runtime dependency for logging frameworks)
+    // SLF4J nop (runtime dependency)
     implementation("org.slf4j:slf4j-nop:2.0.9")
 
     // Debug

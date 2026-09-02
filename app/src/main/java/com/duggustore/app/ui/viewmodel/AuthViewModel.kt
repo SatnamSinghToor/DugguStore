@@ -3,6 +3,7 @@ package com.duggustore.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.UserProfile
+import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ class AuthViewModel : ViewModel() {
 
     private fun checkCurrentUser() {
         viewModelScope.launch {
+            if (!SessionManager.isLoggedIn()) return@launch
             _state.value = _state.value.copy(isLoading = true)
             val result = repository.getCurrentUserProfile()
             result.onSuccess { profile ->
