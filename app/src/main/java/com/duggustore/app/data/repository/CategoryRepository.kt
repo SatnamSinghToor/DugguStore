@@ -3,7 +3,7 @@ package com.duggustore.app.data.repository
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.eq
+import io.github.jan.supabase.postgrest.filter.eq
 
 class CategoryRepository {
 

@@ -1,12 +1,11 @@
 package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.UserProfile
-import com.duggustore.app.data.remote.SupabaseClient
 import com.duggustore.app.data.remote.SupabaseClient.client
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.eq
+import io.github.jan.supabase.postgrest.filter.eq
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -14,7 +13,7 @@ class AuthRepository {
 
     suspend fun signUp(email: String, password: String, fullName: String, phone: String, role: String): Result<UserProfile> {
         return try {
-            val result = client.auth.signUpWith(Email) {
+            client.auth.signUpWith(Email) {
                 this.email = email
                 this.password = password
                 this.data = buildJsonObject {
@@ -24,7 +23,8 @@ class AuthRepository {
                 }
             }
 
-            val userId = result.user?.id ?: throw Exception("User creation failed")
+            val userId = client.auth.currentUserOrNull()?.id
+                ?: throw Exception("User creation failed")
 
             val profile = UserProfile(
                 id = userId,
@@ -43,12 +43,13 @@ class AuthRepository {
 
     suspend fun signIn(email: String, password: String): Result<UserProfile> {
         return try {
-            val result = client.auth.signInWith(Email) {
+            client.auth.signInWith(Email) {
                 this.email = email
                 this.password = password
             }
 
-            val userId = result.user?.id ?: throw Exception("Login failed")
+            val userId = client.auth.currentUserOrNull()?.id
+                ?: throw Exception("Login failed")
 
             val profile = client.from("profiles")
                 .select { eq("id", userId) }
@@ -71,8 +72,8 @@ class AuthRepository {
 
     suspend fun getCurrentUserProfile(): Result<UserProfile?> {
         return try {
-            val session = client.auth.currentSessionOrNull()
-            val userId = session?.user?.id ?: return Result.success(null)
+            val userId = client.auth.currentUserOrNull()?.id
+                ?: return Result.success(null)
 
             val profile = client.from("profiles")
                 .select { eq("id", userId) }
