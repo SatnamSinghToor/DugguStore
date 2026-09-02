@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 val localProps = Properties().apply {
@@ -97,17 +98,14 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:storage-kt:2.0.0")
     implementation("io.github.jan-tennert.supabase:realtime-kt:2.0.0")
 
+    // Kotlin Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
     // Ktor HTTP Client
     implementation("io.ktor:ktor-client-core:2.3.7")
     implementation("io.ktor:ktor-client-okhttp:2.3.7")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
-
-    // Kotlin Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-
-    // Accompanist
-    implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
