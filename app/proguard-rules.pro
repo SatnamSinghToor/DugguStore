@@ -4,6 +4,11 @@
 -keep class org.slf4j.** { *; }
 -dontwarn org.slf4j.**
 -dontwarn org.slf4j.impl.**
+-dontwarn java.lang.management.**
+-dontwarn io.ktor.util.debug.**
+-dontwarn io.ktor.client.features.**
+-dontwarn io.ktor.client.engine.**
+-dontwarn io.ktor.serialization.**
 
 # Kotlin Serialization
 -keepattributes *Annotation*, InnerClasses, Signature
