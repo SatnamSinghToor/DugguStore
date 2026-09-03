@@ -46,13 +46,6 @@ fun RegisterScreen(
         "delivery" to "Delivery Partner"
     )
 
-    LaunchedEffect(successMessage) {
-        if (successMessage != null) {
-            onRegisterSuccess()
-            onClearSuccess()
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -125,7 +118,6 @@ fun RegisterScreen(
                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
                 )
 
-                // Role Selector
                 ExposedDropdownMenuBox(
                     expanded = expandedRoleMenu,
                     onExpandedChange = { expandedRoleMenu = it }

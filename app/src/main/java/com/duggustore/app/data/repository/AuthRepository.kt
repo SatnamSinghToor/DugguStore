@@ -12,14 +12,17 @@ import kotlinx.serialization.json.put
 
 private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
+data class SignUpResult(
+    val profile: UserProfile?,
+    val requiresVerification: Boolean = false,
+    val email: String = ""
+)
+
 class AuthRepository {
 
     private fun extractToken(resp: JsonObject): String? {
-        // Try direct access_token
         resp["access_token"]?.jsonPrimitive?.content?.let { return it }
-        // Try nested session object
         resp["session"]?.jsonObject?.get("access_token")?.jsonPrimitive?.content?.let { return it }
-        // Supabase v1 signup returns user object without token - need to sign in after
         return null
     }
 
@@ -29,7 +32,7 @@ class AuthRepository {
         return null
     }
 
-    suspend fun signUp(email: String, password: String, fullName: String, phone: String, role: String): Result<UserProfile> {
+    suspend fun signUp(email: String, password: String, fullName: String, phone: String, role: String): Result<SignUpResult> {
         return try {
             val resp = SupabaseService.signUp(email, password, buildJsonObject {
                 put("full_name", fullName)
@@ -37,23 +40,18 @@ class AuthRepository {
                 put("role", role)
             })
 
-            // Signup might return user object without token (email confirmation enabled)
-            // or full session with token (email confirmation disabled)
             val token = extractToken(resp)
 
             if (token != null) {
-                // Email confirmation disabled - we have the token
                 val userId = extractUserId(resp) ?: throw Exception("No user ID")
                 SessionManager.saveSession(token, "", userId, email)
                 val profile = UserProfile(id = userId, fullName = fullName, phone = phone, role = role)
                 SupabaseService.insert("profiles", json.encodeToString(UserProfile.serializer(), profile))
-                return Result.success(profile)
+                return Result.success(SignUpResult(profile = profile))
             }
 
-            // Email confirmation might be enabled - try signing in anyway
             val userId = extractUserId(resp)
             if (userId != null) {
-                // Try auto sign-in
                 try {
                     val signInResp = SupabaseService.signIn(email, password)
                     val signInToken = extractToken(signInResp)
@@ -63,26 +61,30 @@ class AuthRepository {
                         val profile = profiles.firstOrNull()?.let {
                             json.decodeFromString(UserProfile.serializer(), it.toString())
                         } ?: UserProfile(id = userId, fullName = fullName, phone = phone, role = role)
-                        return Result.success(profile)
+                        return Result.success(SignUpResult(profile = profile))
                     }
-                } catch (_: Exception) { }
+                } catch (_: Exception) {}
             }
 
-            // Check if it's an email confirmation error
             val errorMsg = resp["msg"]?.jsonPrimitive?.content ?: ""
             val errorCode = resp["error_code"]?.jsonPrimitive?.content ?: ""
 
             if (errorCode == "email_not_confirmed" || errorMsg.contains("confirm")) {
-                return Result.failure(Exception("Please verify your email first. Check your inbox."))
+                return Result.success(SignUpResult(
+                    profile = null,
+                    requiresVerification = true,
+                    email = email
+                ))
             }
 
-            // Signup succeeded but can't login yet
-            Result.failure(Exception("Account created! Please verify your email, then sign in."))
+            Result.success(SignUpResult(
+                profile = null,
+                requiresVerification = true,
+                email = email
+            ))
         } catch (e: Exception) {
-            // Parse error response from HTTP exceptions
             val msg = e.message ?: ""
             when {
-                msg.contains("email_not_confirmed") -> Result.failure(Exception("Please verify your email first."))
                 msg.contains("User already registered") -> Result.failure(Exception("This email is already registered. Try signing in."))
                 msg.contains("Password should be") -> Result.failure(Exception("Password must be at least 6 characters."))
                 msg.contains("Signup requires") -> Result.failure(Exception("Please fill all required fields."))
@@ -110,10 +112,24 @@ class AuthRepository {
         } catch (e: Exception) {
             val msg = e.message ?: ""
             when {
-                msg.contains("email_not_confirmed") -> Result.failure(Exception("Please verify your email first."))
+                msg.contains("email_not_confirmed") -> Result.failure(Exception("Please verify your email first. Check your inbox for the verification link."))
                 msg.contains("Invalid login") -> Result.failure(Exception("Invalid email or password."))
                 msg.contains("HTTP 400") -> Result.failure(Exception("Invalid email or password."))
                 else -> Result.failure(Exception("Login failed: $msg"))
+            }
+        }
+    }
+
+    suspend fun resendVerificationEmail(email: String): Result<Unit> {
+        return try {
+            SupabaseService.resendVerification(email)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            val msg = e.message ?: ""
+            when {
+                msg.contains("already confirmed") -> Result.failure(Exception("This email is already verified. Try signing in."))
+                msg.contains("HTTP 429") -> Result.failure(Exception("Too many requests. Please wait a moment and try again."))
+                else -> Result.failure(Exception("Failed to resend: $msg"))
             }
         }
     }

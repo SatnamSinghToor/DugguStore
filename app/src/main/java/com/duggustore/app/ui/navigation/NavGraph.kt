@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.duggustore.app.data.model.UserRole
 import com.duggustore.app.ui.screens.auth.LoginScreen
 import com.duggustore.app.ui.screens.auth.RegisterScreen
+import com.duggustore.app.ui.screens.auth.VerifyEmailScreen
 import com.duggustore.app.ui.screens.customer.*
 import com.duggustore.app.ui.screens.seller.SellerDashboard
 import com.duggustore.app.ui.screens.delivery.DeliveryDashboard
@@ -25,6 +26,9 @@ import com.duggustore.app.ui.viewmodel.*
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
+    object VerifyEmail : Screen("verify_email/{email}") {
+        fun createRoute(email: String) = "verify_email/$email"
+    }
     object CustomerHome : Screen("customer_home")
     object CustomerCart : Screen("customer_cart")
     object CustomerOrders : Screen("customer_orders")
@@ -66,6 +70,45 @@ fun AppNavGraph(
                 UserRole.ADMIN -> Screen.AdminDashboard.route
                 else -> Screen.CustomerHome.route
             }
+        }
+    }
+
+    // Navigate to verify email when signup requires verification
+    var hasNavigatedToVerify by remember { mutableStateOf(false) }
+    LaunchedEffect(authState.requiresEmailVerification, authState.pendingVerificationEmail) {
+        if (authState.requiresEmailVerification && authState.pendingVerificationEmail.isNotEmpty() && !hasNavigatedToVerify) {
+            hasNavigatedToVerify = true
+            navController.navigate(Screen.VerifyEmail.createRoute(authState.pendingVerificationEmail)) {
+                popUpTo(Screen.Register.route) { inclusive = true }
+            }
+        }
+        if (!authState.requiresEmailVerification) {
+            hasNavigatedToVerify = false
+        }
+    }
+
+    // Navigate to role-based dashboard after successful login/signup
+    var hasNavigatedToDashboard by remember { mutableStateOf(false) }
+    LaunchedEffect(authState.isLoggedIn, authState.user) {
+        if (authState.isLoggedIn && authState.user != null && !hasNavigatedToDashboard) {
+            hasNavigatedToDashboard = true
+            when (authState.user?.userRole()) {
+                UserRole.SELLER -> navController.navigate(Screen.SellerDashboard.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+                UserRole.DELIVERY -> navController.navigate(Screen.DeliveryDashboard.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+                UserRole.ADMIN -> navController.navigate(Screen.AdminDashboard.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+                else -> navController.navigate(Screen.CustomerHome.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            }
+        }
+        if (!authState.isLoggedIn) {
+            hasNavigatedToDashboard = false
         }
     }
 
@@ -117,20 +160,46 @@ fun AppNavGraph(
             )
         }
 
+        composable(
+            Screen.VerifyEmail.route,
+            arguments = listOf(navArgument("email") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email") ?: authState.pendingVerificationEmail
+
+            VerifyEmailScreen(
+                email = email,
+                onResendEmail = { authViewModel.resendVerificationEmail() },
+                onBackToLogin = {
+                    authViewModel.resetVerificationState()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                isLoading = authState.isLoading,
+                error = authState.error,
+                verificationResent = authState.verificationResent,
+                onClearError = { authViewModel.clearError() }
+            )
+        }
+
         composable(Screen.CustomerHome.route) {
             HomeScreen(
                 categories = homeState.categories,
-                filteredProducts = homeState.filteredProducts,
-                selectedCategoryId = homeState.selectedCategoryId,
+                products = homeState.products,
                 searchQuery = homeState.searchQuery,
-                cartItemCount = cartState.itemCount,
-                onSearchQueryChange = { homeViewModel.search(it) },
-                onCategorySelected = { homeViewModel.selectCategory(it) },
+                onSearchChange = { homeViewModel.updateSearch(it) },
+                onCategoryClick = { homeViewModel.filterByCategory(it) },
+                onProductClick = { },
                 onAddToCart = { cartViewModel.addToCart(it) },
-                onCartClick = { navController.navigate(Screen.CustomerCart.route) },
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
-                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) }
+                onCartClick = { navController.navigate(Screen.CustomerCart.route) },
+                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) },
+                isLoading = homeState.isLoading
             )
+
+            LaunchedEffect(Unit) {
+                homeViewModel.loadHomeData()
+            }
         }
 
         composable(Screen.CustomerCart.route) {
@@ -139,34 +208,23 @@ fun AppNavGraph(
                 subtotal = cartState.subtotal,
                 deliveryFee = cartState.deliveryFee,
                 total = cartState.total,
-                savings = cartState.savings,
-                couponApplied = cartState.couponApplied,
-                couponDiscount = cartState.couponDiscount,
-                isLoading = cartState.isLoading,
-                onIncrementQuantity = { id, qty -> cartViewModel.updateQuantity(id, qty) },
-                onDecrementQuantity = { id, qty -> cartViewModel.updateQuantity(id, qty) },
-                onRemoveItem = { cartViewModel.removeItem(it) },
-                onApplyCoupon = { cartViewModel.applyCoupon(it) },
-                onPlaceOrder = {
-                    cartViewModel.placeOrder(
-                        sellerId = "",
-                        deliveryAddress = "Pankaj Residential, Lande Colony, Siyana Road, Ghaziabad"
-                    )
-                },
-                onBack = { navController.popBackStack() }
+                onIncrement = { cartViewModel.incrementQuantity(it) },
+                onDecrement = { cartViewModel.decrementQuantity(it) },
+                onRemove = { cartViewModel.removeItem(it) },
+                onPlaceOrder = { cartViewModel.placeOrder() },
+                onBack = { navController.popBackStack() },
+                isPlacingOrder = cartState.isPlacingOrder
             )
 
             if (cartState.orderPlaced) {
                 AlertDialog(
                     onDismissRequest = { cartViewModel.resetOrderPlaced() },
                     title = { Text("Order Placed!") },
-                    text = { Text("Your order has been placed successfully. Track it in My Orders.") },
+                    text = { Text("Your order has been placed successfully. You can track it in Orders.") },
                     confirmButton = {
                         TextButton(onClick = {
                             cartViewModel.resetOrderPlaced()
-                            navController.navigate(Screen.CustomerOrders.route) {
-                                popUpTo(Screen.CustomerHome.route) { inclusive = false }
-                            }
+                            navController.navigate(Screen.CustomerOrders.route)
                         }) {
                             Text("View Orders")
                         }

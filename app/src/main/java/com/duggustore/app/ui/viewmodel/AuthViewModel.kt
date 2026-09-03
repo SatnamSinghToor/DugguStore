@@ -14,7 +14,10 @@ data class AuthState(
     val isLoggedIn: Boolean = false,
     val user: UserProfile? = null,
     val error: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val requiresEmailVerification: Boolean = false,
+    val pendingVerificationEmail: String = "",
+    val verificationResent: Boolean = false
 )
 
 class AuthViewModel : ViewModel() {
@@ -49,13 +52,21 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             val result = repository.signUp(email, password, fullName, phone, role)
-            result.onSuccess { profile ->
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    isLoggedIn = true,
-                    user = profile,
-                    successMessage = "Account created successfully!"
-                )
+            result.onSuccess { signUpResult ->
+                if (signUpResult.requiresVerification) {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        requiresEmailVerification = true,
+                        pendingVerificationEmail = signUpResult.email
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        isLoggedIn = true,
+                        user = signUpResult.profile,
+                        successMessage = "Account created successfully!"
+                    )
+                }
             }
             result.onFailure { e ->
                 _state.value = _state.value.copy(
@@ -86,6 +97,28 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun resendVerificationEmail() {
+        val email = _state.value.pendingVerificationEmail
+        if (email.isBlank()) return
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val result = repository.resendVerificationEmail(email)
+            result.onSuccess {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    verificationResent = true
+                )
+            }
+            result.onFailure { e ->
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Failed to resend email"
+                )
+            }
+        }
+    }
+
     fun signOut() {
         viewModelScope.launch {
             repository.signOut()
@@ -99,6 +132,14 @@ class AuthViewModel : ViewModel() {
 
     fun clearSuccess() {
         _state.value = _state.value.copy(successMessage = null)
+    }
+
+    fun resetVerificationState() {
+        _state.value = _state.value.copy(
+            requiresEmailVerification = false,
+            pendingVerificationEmail = "",
+            verificationResent = false
+        )
     }
 
     fun refreshProfile() {

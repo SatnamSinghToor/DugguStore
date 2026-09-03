@@ -82,6 +82,19 @@ object SupabaseService {
         return parseJsonObject(executeRequest(request))
     }
 
+    suspend fun resendVerification(email: String) {
+        val body = buildJsonObject {
+            put("email", email)
+            put("type", "signup")
+        }
+        val request = Request.Builder()
+            .url("$BASE_URL/auth/v1/verify")
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .apply { headers().forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        executeRequest(request)
+    }
+
     suspend fun signOut(token: String) {
         val request = Request.Builder()
             .url("$BASE_URL/auth/v1/logout")
