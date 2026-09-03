@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.ui.components.*
+import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -44,16 +46,24 @@ fun RegisterScreen(
     var localError by remember { mutableStateOf<String?>(null) }
 
     val roles = listOf(
-        "customer" to "Shop",
-        "seller" to "Sell",
-        "delivery" to "Deliver"
+        "customer" to stringResource(R.string.auth_role_shop),
+        "seller" to stringResource(R.string.auth_role_sell),
+        "delivery" to stringResource(R.string.auth_role_deliver)
     )
 
     val shownError = localError ?: error
 
+    // Resolved here rather than in the click handler: that lambda is not a
+    // composable scope and cannot call stringResource.
+    val errNoName = stringResource(R.string.auth_err_name)
+    val errNoEmail = stringResource(R.string.auth_err_email)
+    val errNoPhone = stringResource(R.string.auth_err_phone)
+    val errShortPassword = stringResource(R.string.auth_err_password_short)
+    val errPasswordMatch = stringResource(R.string.auth_err_password_match)
+
     AuthScaffold(
-        title = "Create account",
-        subtitle = "Groceries at your door in minutes"
+        title = stringResource(R.string.auth_create_title),
+        subtitle = stringResource(R.string.auth_create_sub)
     ) {
         if (shownError != null) {
             AuthErrorBanner(
@@ -73,8 +83,8 @@ fun RegisterScreen(
         AuthField(
             value = fullName,
             onValueChange = { fullName = it; localError = null; onClearError() },
-            label = "Full name",
-            placeholder = "Your name",
+            label = stringResource(R.string.auth_full_name),
+            placeholder = stringResource(R.string.auth_full_name_hint),
             leadingIcon = Icons.Default.Person
         )
 
@@ -83,8 +93,8 @@ fun RegisterScreen(
         AuthField(
             value = email,
             onValueChange = { email = it; localError = null; onClearError() },
-            label = "Email",
-            placeholder = "you@example.com",
+            label = stringResource(R.string.auth_email),
+            placeholder = stringResource(R.string.auth_email_hint),
             leadingIcon = Icons.Default.Email,
             keyboardType = KeyboardType.Email
         )
@@ -94,8 +104,8 @@ fun RegisterScreen(
         AuthField(
             value = phone,
             onValueChange = { phone = it; localError = null; onClearError() },
-            label = "Phone number",
-            placeholder = "10-digit number",
+            label = stringResource(R.string.auth_phone),
+            placeholder = stringResource(R.string.auth_phone_hint),
             leadingIcon = Icons.Default.Phone,
             keyboardType = KeyboardType.Phone
         )
@@ -103,7 +113,7 @@ fun RegisterScreen(
         Spacer(Modifier.height(18.dp))
 
         Text(
-            text = "I want to",
+            text = stringResource(R.string.auth_i_want_to),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             color = TextSecondary
@@ -125,8 +135,8 @@ fun RegisterScreen(
         AuthField(
             value = password,
             onValueChange = { password = it; localError = null; onClearError() },
-            label = "Password",
-            placeholder = "At least 6 characters",
+            label = stringResource(R.string.auth_password),
+            placeholder = stringResource(R.string.auth_password_min_hint),
             leadingIcon = Icons.Default.Lock,
             isPassword = true
         )
@@ -136,8 +146,8 @@ fun RegisterScreen(
         AuthField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it; localError = null },
-            label = "Confirm password",
-            placeholder = "Repeat the password",
+            label = stringResource(R.string.auth_confirm_password),
+            placeholder = stringResource(R.string.auth_confirm_password_hint),
             leadingIcon = Icons.Default.Lock,
             isPassword = true
         )
@@ -145,16 +155,16 @@ fun RegisterScreen(
         Spacer(Modifier.height(24.dp))
 
         AuthPrimaryButton(
-            text = "Create account",
+            text = stringResource(R.string.auth_create_title),
             onClick = {
                 localError = null
                 onClearSuccess()
                 when {
-                    fullName.isBlank() -> localError = "Please enter your name"
-                    email.isBlank() -> localError = "Please enter your email"
-                    phone.isBlank() -> localError = "Please enter your phone number"
-                    password.length < 6 -> localError = "Password must be at least 6 characters"
-                    password != confirmPassword -> localError = "Passwords don't match"
+                    fullName.isBlank() -> localError = errNoName
+                    email.isBlank() -> localError = errNoEmail
+                    phone.isBlank() -> localError = errNoPhone
+                    password.length < 6 -> localError = errShortPassword
+                    password != confirmPassword -> localError = errPasswordMatch
                     else -> onRegister(email, password, fullName, phone, selectedRole)
                 }
             },
@@ -164,8 +174,8 @@ fun RegisterScreen(
         Spacer(Modifier.height(20.dp))
 
         AuthSwitchRow(
-            question = "Already have an account?",
-            action = "Sign in",
+            question = stringResource(R.string.auth_have_account),
+            action = stringResource(R.string.auth_sign_in),
             onClick = onNavigateToLogin
         )
     }

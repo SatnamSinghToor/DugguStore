@@ -1,5 +1,6 @@
 package com.duggustore.app
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.duggustore.app.data.remote.AuthDeepLinkParser
+import com.duggustore.app.platform.withAppLanguage
 import com.duggustore.app.ui.navigation.AppNavGraph
 import com.duggustore.app.ui.theme.DugguStoreTheme
 import com.duggustore.app.ui.viewmodel.AuthViewModel
@@ -19,6 +21,15 @@ class MainActivity : ComponentActivity() {
 
     // Held by the activity so the deep link and the UI act on the same instance.
     private val authViewModel: AuthViewModel by viewModels()
+
+    /**
+     * Everything the activity resolves — including every string Compose reads
+     * through stringResource — comes from this context, so applying the chosen
+     * language here is what makes the whole app switch.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withAppLanguage())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

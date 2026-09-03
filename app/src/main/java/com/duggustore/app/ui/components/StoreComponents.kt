@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 /** Wordmark with the two-tone split from the design. */
@@ -86,7 +88,7 @@ fun LocationBar(
                 IconButton(onClick = onLocateClick, modifier = Modifier.size(34.dp)) {
                     Icon(
                         Icons.Default.Refresh,
-                        contentDescription = "Use my current location",
+                        contentDescription = stringResource(R.string.location_use_current),
                         tint = Teal,
                         modifier = Modifier.size(19.dp)
                     )
@@ -126,7 +128,12 @@ fun StoreSearchBar(
             if (onMicClick != null) {
                 Box(Modifier.width(1.dp).height(22.dp).background(BorderGray))
                 IconButton(onClick = onMicClick, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.Mic, "Voice search", tint = Teal, modifier = Modifier.size(21.dp))
+                    Icon(
+                        Icons.Default.Mic,
+                        stringResource(R.string.home_voice_search),
+                        tint = Teal,
+                        modifier = Modifier.size(21.dp)
+                    )
                 }
             }
         }

@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.UserProfile
+import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -49,23 +51,23 @@ fun AccountScreen(
         MenuGroup {
             AccountMenuItem(
                 icon = Icons.Default.Receipt,
-                title = "My orders",
-                subtitle = "Track and review past orders",
+                title = stringResource(R.string.account_my_orders),
+                subtitle = stringResource(R.string.account_my_orders_sub),
                 onClick = onOrdersClick
             )
             Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
             AccountMenuItem(
                 icon = Icons.Default.Favorite,
-                title = "Favourites",
-                subtitle = "Products you saved",
+                title = stringResource(R.string.nav_favourites),
+                subtitle = stringResource(R.string.account_favourites_sub),
                 tint = Coral,
                 onClick = onFavoritesClick
             )
             Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
             AccountMenuItem(
                 icon = Icons.Default.LocationOn,
-                title = "Addresses",
-                subtitle = "Where your orders are delivered",
+                title = stringResource(R.string.account_addresses),
+                subtitle = stringResource(R.string.account_addresses_sub),
                 tint = Orange,
                 onClick = onAddressesClick
             )
@@ -76,8 +78,8 @@ fun AccountScreen(
         MenuGroup {
             AccountMenuItem(
                 icon = Icons.Default.Logout,
-                title = "Sign out",
-                subtitle = "Log out of this device",
+                title = stringResource(R.string.account_sign_out),
+                subtitle = stringResource(R.string.account_sign_out_sub),
                 tint = Coral,
                 showChevron = false,
                 onClick = onSignOut
@@ -110,7 +112,7 @@ private fun AccountHeader(user: UserProfile?, onBack: () -> Unit) {
                 .padding(bottom = 44.dp)
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, stringResource(R.string.common_back), tint = Color.White)
             }
         }
 
@@ -148,7 +150,7 @@ private fun AccountHeader(user: UserProfile?, onBack: () -> Unit) {
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = user?.fullName?.takeIf { it.isNotBlank() } ?: "User",
+                        text = user?.fullName?.takeIf { it.isNotBlank() } ?: stringResource(R.string.account_user),
                         fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary

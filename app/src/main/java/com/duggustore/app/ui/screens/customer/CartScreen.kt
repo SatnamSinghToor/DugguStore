@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -27,6 +28,7 @@ import com.duggustore.app.data.model.CartItem
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.QuantityStepperRow
 import com.duggustore.app.ui.components.trimAmount
+import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -120,13 +122,14 @@ private fun CartHeader(itemCount: Int, onBack: () -> Unit) {
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "My Cart",
+                    text = stringResource(R.string.cart_title),
                     color = Color.White,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (itemCount == 1) "1 item" else "$itemCount items",
+                    text = if (itemCount == 1) stringResource(R.string.cart_one_item)
+                           else stringResource(R.string.cart_item_count, itemCount),
                     color = Color.White.copy(alpha = 0.85f),
                     fontSize = 12.sp
                 )
@@ -277,7 +280,7 @@ private fun CouponCard(onApplyCoupon: (String) -> Unit, applied: Boolean) {
             Spacer(Modifier.width(10.dp))
             if (applied) {
                 Text(
-                    text = "Coupon applied",
+                    text = stringResource(R.string.cart_coupon_applied),
                     modifier = Modifier.weight(1f),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -288,7 +291,13 @@ private fun CouponCard(onApplyCoupon: (String) -> Unit, applied: Boolean) {
                     value = code,
                     onValueChange = { code = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Have a coupon?", fontSize = 13.sp, color = TextLight) },
+                    placeholder = {
+                        Text(
+                            stringResource(R.string.cart_coupon_hint),
+                            fontSize = 13.sp,
+                            color = TextLight
+                        )
+                    },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium,
                     colors = TextFieldDefaults.colors(
@@ -304,7 +313,7 @@ private fun CouponCard(onApplyCoupon: (String) -> Unit, applied: Boolean) {
                     modifier = Modifier.clickable { onApplyCoupon(code) }
                 ) {
                     Text(
-                        text = "Apply",
+                        text = stringResource(R.string.cart_apply),
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -340,29 +349,38 @@ private fun SummarySheet(
                 .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
             Text(
-                text = "Bill details",
+                text = stringResource(R.string.cart_bill_details),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
             Spacer(Modifier.height(10.dp))
 
-            PriceRow("Subtotal", "₹${trimAmount(subtotal)}")
+            PriceRow(stringResource(R.string.cart_subtotal), "₹${trimAmount(subtotal)}")
             PriceRow(
-                label = "Delivery fee",
-                value = if (deliveryFee <= 0.0) "FREE" else "₹${trimAmount(deliveryFee)}",
+                label = stringResource(R.string.cart_delivery_fee),
+                value = if (deliveryFee <= 0.0) stringResource(R.string.cart_free)
+                        else "₹${trimAmount(deliveryFee)}",
                 color = if (deliveryFee <= 0.0) SuccessGreen else TextPrimary
             )
             if (couponApplied) {
-                PriceRow("Coupon discount", "-₹${trimAmount(couponDiscount)}", color = SuccessGreen)
+                PriceRow(
+                    stringResource(R.string.cart_coupon_discount),
+                    "-₹${trimAmount(couponDiscount)}",
+                    color = SuccessGreen
+                )
             }
             if (savings > 0) {
-                PriceRow("You save", "-₹${trimAmount(savings)}", color = SuccessGreen)
+                PriceRow(
+                    stringResource(R.string.cart_you_save),
+                    "-₹${trimAmount(savings)}",
+                    color = SuccessGreen
+                )
             }
 
             Divider(color = BorderGray, modifier = Modifier.padding(vertical = 10.dp))
 
-            PriceRow("Total", "₹${trimAmount(total)}", isBold = true)
+            PriceRow(stringResource(R.string.cart_total), "₹${trimAmount(total)}", isBold = true)
 
             Spacer(Modifier.height(14.dp))
 
@@ -383,7 +401,7 @@ private fun SummarySheet(
                     )
                 } else {
                     Text(
-                        text = "Proceed to checkout",
+                        text = stringResource(R.string.cart_checkout),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -418,9 +436,14 @@ private fun EmptyCart() {
             )
         }
         Spacer(Modifier.height(18.dp))
-        Text("Your cart is empty", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(
+            stringResource(R.string.cart_empty_title),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
         Spacer(Modifier.height(6.dp))
-        Text("Add items to get started", fontSize = 14.sp, color = TextSecondary)
+        Text(stringResource(R.string.cart_empty_subtitle), fontSize = 14.sp, color = TextSecondary)
     }
 }
 

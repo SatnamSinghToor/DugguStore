@@ -8,6 +8,9 @@ import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.duggustore.app.R
 import com.duggustore.app.data.model.UserRole
 import com.duggustore.app.ui.components.BottomNavItem
 
@@ -20,26 +23,27 @@ object BottomNav {
 
     val CART_KEY = "cart"
 
+    @Composable
     fun itemsFor(role: UserRole): List<BottomNavItem> = when (role) {
         UserRole.CUSTOMER -> listOf(
-            BottomNavItem(Screen.CustomerHome.route, "Home", Icons.Outlined.Home),
-            BottomNavItem(Screen.CustomerCategories.route, "Categories", Icons.Outlined.GridView),
-            BottomNavItem(Screen.CustomerFavorites.route, "Favourites", Icons.Outlined.FavoriteBorder),
-            BottomNavItem(Screen.CustomerAccount.route, "Account", Icons.Outlined.Person)
+            BottomNavItem(Screen.CustomerHome.route, stringResource(R.string.nav_home), Icons.Outlined.Home),
+            BottomNavItem(Screen.CustomerCategories.route, stringResource(R.string.nav_categories), Icons.Outlined.GridView),
+            BottomNavItem(Screen.CustomerFavorites.route, stringResource(R.string.nav_favourites), Icons.Outlined.FavoriteBorder),
+            BottomNavItem(Screen.CustomerAccount.route, stringResource(R.string.nav_account), Icons.Outlined.Person)
         )
         UserRole.SELLER -> listOf(
-            BottomNavItem("0", "Products", Icons.Default.Inventory),
-            BottomNavItem("1", "Orders", Icons.Default.Receipt)
+            BottomNavItem("0", stringResource(R.string.nav_products), Icons.Default.Inventory),
+            BottomNavItem("1", stringResource(R.string.nav_orders), Icons.Default.Receipt)
         )
         UserRole.DELIVERY -> listOf(
-            BottomNavItem("0", "Active", Icons.Default.LocalShipping),
-            BottomNavItem("1", "Completed", Icons.Default.Receipt)
+            BottomNavItem("0", stringResource(R.string.nav_active), Icons.Default.LocalShipping),
+            BottomNavItem("1", stringResource(R.string.nav_completed), Icons.Default.Receipt)
         )
         UserRole.ADMIN -> listOf(
-            BottomNavItem("0", "Overview", Icons.Outlined.GridView),
-            BottomNavItem("1", "Users", Icons.Outlined.Person),
-            BottomNavItem("2", "Orders", Icons.Default.Receipt),
-            BottomNavItem("3", "Products", Icons.Default.Inventory)
+            BottomNavItem("0", stringResource(R.string.nav_overview), Icons.Outlined.GridView),
+            BottomNavItem("1", stringResource(R.string.nav_users), Icons.Outlined.Person),
+            BottomNavItem("2", stringResource(R.string.nav_orders), Icons.Default.Receipt),
+            BottomNavItem("3", stringResource(R.string.nav_products), Icons.Default.Inventory)
         )
     }
 

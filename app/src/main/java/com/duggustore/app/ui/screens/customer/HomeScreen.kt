@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
+import androidx.compose.ui.res.stringResource
+import com.duggustore.app.R
 import com.duggustore.app.platform.LocationState
 import com.duggustore.app.platform.rememberDeviceLocation
 import com.duggustore.app.platform.rememberVoiceSearch
@@ -67,10 +69,7 @@ fun HomeScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         StoreWordmark()
                         Spacer(Modifier.weight(1f))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Eng", fontSize = 14.sp, color = TextPrimary)
-                            Icon(Icons.Default.KeyboardArrowDown, null, tint = TextPrimary, modifier = Modifier.size(18.dp))
-                        }
+                        LanguagePicker()
                         Spacer(Modifier.width(12.dp))
                         Box(contentAlignment = Alignment.TopEnd) {
                             Box(
@@ -83,7 +82,7 @@ fun HomeScreen(
                             ) {
                                 Icon(
                                     Icons.Default.NotificationsNone,
-                                    "Notifications",
+                                    stringResource(R.string.home_notifications),
                                     tint = Coral,
                                     modifier = Modifier.size(21.dp)
                                 )
@@ -117,15 +116,18 @@ fun HomeScreen(
                     val locationState = detected.state
                     LocationBar(
                         city = when {
-                            locationState is LocationState.Locating -> "Finding you..."
-                            locationState is LocationState.Found -> "Current location"
-                            userName.isBlank() -> "Deliver to"
-                            else -> "Hi $userName"
+                            locationState is LocationState.Locating ->
+                                stringResource(R.string.location_finding)
+                            locationState is LocationState.Found ->
+                                stringResource(R.string.location_current)
+                            userName.isBlank() -> stringResource(R.string.home_deliver_to)
+                            else -> stringResource(R.string.home_greeting, userName)
                         },
                         address = when (locationState) {
                             is LocationState.Found -> locationState.address
-                            is LocationState.Locating -> "Please wait"
-                            is LocationState.Unavailable -> locationState.reason
+                            is LocationState.Locating -> stringResource(R.string.location_wait)
+                            is LocationState.Unavailable ->
+                                stringResource(locationState.messageRes)
                             LocationState.Idle -> deliveryAddress
                         },
                         onClick = onAddressClick,
@@ -137,6 +139,7 @@ fun HomeScreen(
 
                     StoreSearchBar(
                         query = searchQuery,
+                        placeholder = stringResource(R.string.home_search_hint),
                         onQueryChange = onSearchQueryChange,
                         // Null when the device has no speech recogniser, which
                         // leaves the mic out rather than showing a dead button.

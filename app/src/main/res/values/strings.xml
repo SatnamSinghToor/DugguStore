@@ -1,4 +1,109 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Duggu Store</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_categories">Categories</string>
+    <string name="nav_favourites">Favourites</string>
+    <string name="nav_account">Account</string>
+    <string name="nav_products">Products</string>
+    <string name="nav_orders">Orders</string>
+    <string name="nav_active">Active</string>
+    <string name="nav_completed">Completed</string>
+    <string name="nav_overview">Overview</string>
+    <string name="nav_users">Users</string>
+    <string name="nav_cart">Cart</string>
+
+    <!-- Home -->
+    <string name="home_search_hint">Search Anything...</string>
+    <string name="home_voice_search">Voice search</string>
+    <string name="home_notifications">Notifications</string>
+    <string name="home_deliver_to">Deliver to</string>
+    <string name="home_greeting">Hi %1$s</string>
+    <string name="home_categories">Categories</string>
+    <string name="home_popular">Popular</string>
+    <string name="home_set_address">Set your delivery address</string>
+
+    <!-- Location -->
+    <string name="location_finding">Finding you…</string>
+    <string name="location_current">Current location</string>
+    <string name="location_wait">Please wait</string>
+    <string name="location_use_current">Use my current location</string>
+    <string name="location_permission_denied">Location permission denied</string>
+    <string name="location_turn_on">Turn on location to detect your address</string>
+
+    <!-- Language -->
+    <string name="language_title">Choose language</string>
+    <string name="language_system">Device language</string>
+
+    <!-- Cart -->
+    <string name="cart_title">My Cart</string>
+    <string name="cart_item_count">%1$d items</string>
+    <string name="cart_one_item">1 item</string>
+    <string name="cart_empty_title">Your cart is empty</string>
+    <string name="cart_empty_subtitle">Add items to get started</string>
+    <string name="cart_coupon_hint">Have a coupon?</string>
+    <string name="cart_coupon_applied">Coupon applied</string>
+    <string name="cart_apply">Apply</string>
+    <string name="cart_bill_details">Bill details</string>
+    <string name="cart_subtotal">Subtotal</string>
+    <string name="cart_delivery_fee">Delivery fee</string>
+    <string name="cart_free">FREE</string>
+    <string name="cart_coupon_discount">Coupon discount</string>
+    <string name="cart_you_save">You save</string>
+    <string name="cart_total">Total</string>
+    <string name="cart_checkout">Proceed to checkout</string>
+    <string name="cart_add">Add to cart</string>
+
+    <!-- Auth -->
+    <string name="auth_welcome_back">Welcome back</string>
+    <string name="auth_welcome_back_sub">Sign in to keep shopping</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_email_hint">you@example.com</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_password_hint">Your password</string>
+    <string name="auth_forgot">Forgot password?</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_new_here">New to Duggu Store?</string>
+    <string name="auth_create_account">Create an account</string>
+    <string name="auth_create_title">Create account</string>
+    <string name="auth_create_sub">Groceries at your door in minutes</string>
+    <string name="auth_full_name">Full name</string>
+    <string name="auth_full_name_hint">Your name</string>
+    <string name="auth_phone">Phone number</string>
+    <string name="auth_phone_hint">10-digit number</string>
+    <string name="auth_password_min_hint">At least 6 characters</string>
+    <string name="auth_confirm_password">Confirm password</string>
+    <string name="auth_confirm_password_hint">Repeat the password</string>
+    <string name="auth_i_want_to">I want to</string>
+    <string name="auth_role_shop">Shop</string>
+    <string name="auth_role_sell">Sell</string>
+    <string name="auth_role_deliver">Deliver</string>
+    <string name="auth_have_account">Already have an account?</string>
+    <string name="auth_err_name">Please enter your name</string>
+    <string name="auth_err_email">Please enter your email</string>
+    <string name="auth_err_phone">Please enter your phone number</string>
+    <string name="auth_err_password_short">Password must be at least 6 characters</string>
+    <string name="auth_err_password_match">Passwords don\'t match</string>
+
+    <!-- Account -->
+    <string name="account_my_orders">My orders</string>
+    <string name="account_my_orders_sub">Track and review past orders</string>
+    <string name="account_favourites_sub">Products you saved</string>
+    <string name="account_addresses">Addresses</string>
+    <string name="account_addresses_sub">Where your orders are delivered</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_sign_out_sub">Log out of this device</string>
+    <string name="account_user">User</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_empty_title">Nothing new</string>
+    <string name="notifications_empty_sub">Updates about your orders will show up here</string>
+
+    <!-- Common -->
+    <string name="common_back">Back</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_save">Save</string>
 </resources>

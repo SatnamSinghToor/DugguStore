@@ -29,6 +29,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.compose.ui.res.stringResource
+import com.duggustore.app.R
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.UserRole
 import com.duggustore.app.data.model.toNotification
@@ -311,7 +313,8 @@ fun AppNavGraph(
                 onAddToCart = { cartViewModel.addToCart(it) },
                 onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) },
                 userName = authState.user?.fullName?.substringBefore(' ').orEmpty(),
-                deliveryAddress = addressState.defaultAddress?.fullAddress ?: "Set your delivery address",
+                deliveryAddress = addressState.defaultAddress?.fullAddress
+                    ?: stringResource(R.string.home_set_address),
                 // Lets a card show a stepper instead of "Add to cart" once the
                 // product is already in the cart, as in the design.
                 cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },

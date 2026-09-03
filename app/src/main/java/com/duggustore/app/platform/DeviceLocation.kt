@@ -8,10 +8,12 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.StringRes
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.duggustore.app.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
@@ -24,7 +26,7 @@ sealed interface LocationState {
     object Locating : LocationState
     data class Found(val address: String) : LocationState
     /** Permission refused, location switched off, or nothing came back. */
-    data class Unavailable(val reason: String) : LocationState
+    data class Unavailable(@StringRes val messageRes: Int) : LocationState
 }
 
 /** Holds the detected location and the action that (re)fetches it. */
@@ -53,7 +55,7 @@ fun rememberDeviceLocation(autoStart: Boolean = true): DeviceLocation {
         if (granted.values.any { it }) {
             requestToken++
         } else {
-            state = LocationState.Unavailable("Location permission denied")
+            state = LocationState.Unavailable(R.string.location_permission_denied)
         }
     }
 
@@ -94,7 +96,7 @@ private fun hasLocationPermission(context: Context): Boolean =
 
 private suspend fun resolveLocation(context: Context): LocationState {
     val location = currentLocation(context)
-        ?: return LocationState.Unavailable("Turn on location to detect your address")
+        ?: return LocationState.Unavailable(R.string.location_turn_on)
     val address = describe(context, location)
     return if (address.isNullOrBlank()) {
         // Still a real fix, just no street name for it.

@@ -9,11 +9,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.ui.components.*
+import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -29,8 +31,8 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
 
     AuthScaffold(
-        title = "Welcome back",
-        subtitle = "Sign in to keep shopping"
+        title = stringResource(R.string.auth_welcome_back),
+        subtitle = stringResource(R.string.auth_welcome_back_sub)
     ) {
         if (error != null) {
             AuthErrorBanner(message = error, onDismiss = onClearError)
@@ -40,8 +42,8 @@ fun LoginScreen(
         AuthField(
             value = email,
             onValueChange = { email = it; onClearError() },
-            label = "Email",
-            placeholder = "you@example.com",
+            label = stringResource(R.string.auth_email),
+            placeholder = stringResource(R.string.auth_email_hint),
             leadingIcon = Icons.Default.Email,
             keyboardType = KeyboardType.Email
         )
@@ -51,8 +53,8 @@ fun LoginScreen(
         AuthField(
             value = password,
             onValueChange = { password = it; onClearError() },
-            label = "Password",
-            placeholder = "Your password",
+            label = stringResource(R.string.auth_password),
+            placeholder = stringResource(R.string.auth_password_hint),
             leadingIcon = Icons.Default.Lock,
             isPassword = true
         )
@@ -60,7 +62,7 @@ fun LoginScreen(
         Spacer(Modifier.height(10.dp))
 
         Text(
-            text = "Forgot password?",
+            text = stringResource(R.string.auth_forgot),
             modifier = Modifier
                 .align(Alignment.End)
                 .clickable { onForgotPassword() },
@@ -72,7 +74,7 @@ fun LoginScreen(
         Spacer(Modifier.height(24.dp))
 
         AuthPrimaryButton(
-            text = "Sign in",
+            text = stringResource(R.string.auth_sign_in),
             onClick = { onLogin(email, password) },
             isLoading = isLoading,
             // Nothing to send until both fields carry something.
@@ -82,8 +84,8 @@ fun LoginScreen(
         Spacer(Modifier.height(20.dp))
 
         AuthSwitchRow(
-            question = "New to Duggu Store?",
-            action = "Create an account",
+            question = stringResource(R.string.auth_new_here),
+            action = stringResource(R.string.auth_create_account),
             onClick = onNavigateToRegister
         )
     }
