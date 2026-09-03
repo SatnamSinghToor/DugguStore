@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.screens.customer
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -22,10 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
-import com.duggustore.app.ui.components.DugguButton
-import com.duggustore.app.ui.components.DugguTextField
-import com.duggustore.app.ui.components.DugguTopBar
-import com.duggustore.app.ui.components.EmptyState
+import com.duggustore.app.ui.components.AuthField
+import com.duggustore.app.ui.components.DashboardEmpty
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -43,56 +43,91 @@ fun AddressesScreen(
     var showSheet by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
-        DugguTopBar(
-            title = if (onSelectAddress != null) "Choose Address" else "My Addresses",
-            onBackClick = onBack
-        )
+        Surface(color = Teal) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                }
+                Column {
+                    Text(
+                        text = if (onSelectAddress != null) "Choose address" else "My addresses",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (addresses.size == 1) "1 saved" else "${addresses.size} saved",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
 
         Box(modifier = Modifier.weight(1f)) {
             when {
-                isLoading && addresses.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = PrimaryGreen)
-                    }
+                isLoading && addresses.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Teal)
                 }
-                addresses.isEmpty() -> {
-                    EmptyState(
-                        icon = Icons.Default.LocationOff,
-                        title = "No addresses yet",
-                        subtitle = "Add a delivery address to place an order"
-                    )
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(addresses, key = { it.id }) { address ->
-                            AddressCard(
-                                address = address,
-                                onClick = { onSelectAddress?.invoke(address) ?: onSetDefault(address.id) },
-                                onEdit = { editing = address; showSheet = true },
-                                onDelete = { onDeleteAddress(address.id) }
-                            )
-                        }
+
+                addresses.isEmpty() -> DashboardEmpty(
+                    icon = Icons.Default.LocationOff,
+                    title = "No addresses yet",
+                    subtitle = "Add a delivery address to place an order"
+                )
+
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(addresses, key = { it.id }) { address ->
+                        AddressCard(
+                            address = address,
+                            onClick = { onSelectAddress?.invoke(address) ?: onSetDefault(address.id) },
+                            onEdit = { editing = address; showSheet = true },
+                            onDelete = { onDeleteAddress(address.id) }
+                        )
                     }
                 }
             }
         }
 
-        Surface(color = Color.White, shadowElevation = 12.dp) {
+        Surface(
+            color = SurfaceWhite,
+            shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
+            shadowElevation = 18.dp
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(16.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                DugguButton(
-                    text = "Add New Address",
+                Button(
                     onClick = { editing = null; showSheet = true },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Teal)
+                ) {
+                    Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Add new address",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }
@@ -117,24 +152,23 @@ private fun AddressCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(18.dp),
+        color = if (address.isDefault) TealSurface else SurfaceWhite,
+        shadowElevation = if (address.isDefault) 0.dp else 2.dp,
+        border = if (address.isDefault) BorderStroke(1.5.dp, Teal) else null
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.Top
-        ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
             Icon(
-                imageVector = if (address.isDefault) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                imageVector = if (address.isDefault) Icons.Default.CheckCircle
+                              else Icons.Default.RadioButtonUnchecked,
                 contentDescription = if (address.isDefault) "Default address" else "Set as default",
-                tint = if (address.isDefault) PrimaryGreen else TextLight,
+                tint = if (address.isDefault) Teal else TextLight,
                 modifier = Modifier.size(22.dp)
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -145,19 +179,19 @@ private fun AddressCard(
                         color = TextPrimary
                     )
                     if (address.isDefault) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(shape = RoundedCornerShape(4.dp), color = PrimaryGreen.copy(alpha = 0.12f)) {
+                        Spacer(Modifier.width(8.dp))
+                        Surface(shape = RoundedCornerShape(6.dp), color = Teal) {
                             Text(
                                 text = "DEFAULT",
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = PrimaryGreen
+                                color = Color.White
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = address.fullAddress,
                     fontSize = 13.sp,
@@ -167,10 +201,20 @@ private fun AddressCard(
             }
 
             IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Edit, "Edit", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Edit,
+                    "Edit ${address.label}",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
             IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Delete, "Delete", tint = AccentRed, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Delete,
+                    "Delete ${address.label}",
+                    tint = Coral,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -188,27 +232,40 @@ private fun AddressDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) "Add Address" else "Edit Address") },
+        containerColor = SurfaceWhite,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Text(
+                text = if (existing == null) "Add address" else "Edit address",
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        },
         text = {
             Column {
-                DugguTextField(
+                AuthField(
                     value = label,
                     onValueChange = { label = it },
-                    label = "Label (Home, Work…)"
+                    label = "Label",
+                    placeholder = "Home, Work…"
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                DugguTextField(
+                Spacer(Modifier.height(14.dp))
+                AuthField(
                     value = fullAddress,
                     onValueChange = { fullAddress = it },
                     label = "Full address",
-                    singleLine = false
+                    placeholder = "House, street, area, pincode"
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.clickable { isDefault = !isDefault },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Checkbox(
                         checked = isDefault,
                         onCheckedChange = { isDefault = it },
-                        colors = CheckboxDefaults.colors(checkedColor = PrimaryGreen)
+                        colors = CheckboxDefaults.colors(checkedColor = Teal)
                     )
                     Text("Set as default", fontSize = 14.sp, color = TextPrimary)
                 }
@@ -219,7 +276,7 @@ private fun AddressDialog(
                 onClick = { onSave(label, fullAddress, isDefault) },
                 enabled = fullAddress.isNotBlank()
             ) {
-                Text("Save", color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                Text("Save", color = Teal, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
