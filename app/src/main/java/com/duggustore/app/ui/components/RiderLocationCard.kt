@@ -42,6 +42,9 @@ fun RiderLocationCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // Pulled out so the branches below read against a value the compiler can
+    // smart-cast; tracking?.hasFix() == true does not narrow the nullable.
+    val fix = tracking?.takeIf { it.hasFix() }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -55,14 +58,14 @@ fun RiderLocationCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(if (tracking?.hasFix() == true) TealSurface else SurfaceMuted),
+                        .background(if (fix != null) TealSurface else SurfaceMuted),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (tracking?.hasFix() == true) Icons.Default.LocalShipping
+                        imageVector = if (fix != null) Icons.Default.LocalShipping
                                       else Icons.Default.LocationOff,
                         contentDescription = null,
-                        tint = if (tracking?.hasFix() == true) Teal else TextLight,
+                        tint = if (fix != null) Teal else TextLight,
                         modifier = Modifier.size(21.dp)
                     )
                 }
@@ -75,7 +78,7 @@ fun RiderLocationCard(
                         color = TextPrimary
                     )
                     Text(
-                        text = describe(tracking, distanceMetres, ageMinutes),
+                        text = describe(fix, distanceMetres, ageMinutes),
                         fontSize = 12.sp,
                         color = TextSecondary,
                         lineHeight = 17.sp
@@ -83,14 +86,14 @@ fun RiderLocationCard(
                 }
             }
 
-            if (tracking?.hasFix() == true) {
+            if (fix != null) {
                 Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(Teal)
-                        .clickable { openInMaps(context, tracking) }
+                        .clickable { openInMaps(context, fix) }
                         .padding(vertical = 11.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
@@ -115,13 +118,11 @@ fun RiderLocationCard(
 }
 
 private fun describe(
-    tracking: DeliveryTracking?,
+    fix: DeliveryTracking?,
     distanceMetres: Float?,
     ageMinutes: Long?
 ): String {
-    if (tracking == null || !tracking.hasFix()) {
-        return "Not sharing their location right now"
-    }
+    if (fix == null) return "Not sharing their location right now"
 
     val distance = when {
         distanceMetres == null -> null

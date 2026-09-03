@@ -338,7 +338,19 @@ fun AppNavGraph(
                     it.status != OrderStatus.DELIVERED.value &&
                         it.status != OrderStatus.CANCELLED.value
                 },
-                onNotificationsClick = { navController.navigate(Screen.CustomerNotifications.route) }
+                onNotificationsClick = { navController.navigate(Screen.CustomerNotifications.route) },
+                savedAddresses = addressState.addresses,
+                onSelectAddress = { addressViewModel.setDefault(it.id) },
+                // A detected address is only useful if it survives the session,
+                // so picking it saves it as the new default rather than holding
+                // it in memory until the next launch.
+                onSaveDetectedAddress = { detected ->
+                    addressViewModel.saveAddress(
+                        label = "Current location",
+                        fullAddress = detected,
+                        isDefault = true
+                    )
+                }
             )
 
             LaunchedEffect(authState.user) {

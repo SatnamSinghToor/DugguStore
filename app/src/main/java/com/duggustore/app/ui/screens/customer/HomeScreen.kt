@@ -13,7 +13,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,13 +21,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
 import androidx.compose.ui.res.stringResource
 import com.duggustore.app.R
 import com.duggustore.app.platform.LocationState
 import com.duggustore.app.platform.rememberDeviceLocation
-import com.duggustore.app.platform.rememberVoiceSearch
+import com.duggustore.app.platform.rememberVoiceSearchController
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
@@ -50,8 +51,17 @@ fun HomeScreen(
     onToggleFavorite: (Product) -> Unit = {},
     onAddressClick: () -> Unit = {},
     notificationCount: Int = 0,
-    onNotificationsClick: () -> Unit = {}
+    onNotificationsClick: () -> Unit = {},
+    savedAddresses: List<Address> = emptyList(),
+    onSelectAddress: (Address) -> Unit = {},
+    onSaveDetectedAddress: (String) -> Unit = {}
 ) {
+    // Both sheets are owned here so the header can stay a plain row of
+    // controls and the sheets sit above the whole screen.
+    var showLocationSheet by remember { mutableStateOf(false) }
+    val detected = rememberDeviceLocation()
+    val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
+
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -112,7 +122,6 @@ fun HomeScreen(
                     // The strip showed only the saved default address. It now
                     // leads with the detected one and falls back to the saved
                     // address when location is off or refused.
-                    val detected = rememberDeviceLocation()
                     val locationState = detected.state
                     LocationBar(
                         city = when {
@@ -130,7 +139,7 @@ fun HomeScreen(
                                 stringResource(locationState.messageRes)
                             LocationState.Idle -> deliveryAddress
                         },
-                        onClick = onAddressClick,
+                        onClick = { showLocationSheet = true },
                         onLocateClick = detected.refresh,
                         locating = locationState is LocationState.Locating
                     )
@@ -143,7 +152,7 @@ fun HomeScreen(
                         onQueryChange = onSearchQueryChange,
                         // Null when the device has no speech recogniser, which
                         // leaves the mic out rather than showing a dead button.
-                        onMicClick = rememberVoiceSearch { onSearchQueryChange(it) }
+                        onMicClick = voice?.let { { it.open() } }
                     )
                 }
             }
@@ -248,6 +257,28 @@ fun HomeScreen(
                 }
             }
         }
+
+        LocationSheet(
+            visible = showLocationSheet,
+            locationState = detected.state,
+            addresses = savedAddresses,
+            onDetectLocation = detected.refresh,
+            onUseDetected = { address ->
+                onSaveDetectedAddress(address)
+                showLocationSheet = false
+            },
+            onSelectAddress = { address ->
+                onSelectAddress(address)
+                showLocationSheet = false
+            },
+            onAddNewAddress = {
+                showLocationSheet = false
+                onAddressClick()
+            },
+            onDismiss = { showLocationSheet = false }
+        )
+
+        voice?.let { VoiceSearchSheet(controller = it) }
     }
 }
 
