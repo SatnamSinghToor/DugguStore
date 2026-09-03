@@ -77,7 +77,7 @@ fun HomeScreen(
                     .background(SurfaceWhite)
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 8.dp, bottom = 16.dp)
+                    .padding(top = 8.dp, bottom = 8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StoreWordmark()
@@ -169,7 +169,7 @@ fun HomeScreen(
 
             if (offers.isNotEmpty()) {
                 item {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(10.dp))
                     OfferCarousel(
                         offers = offers,
                         onOfferClick = onOfferClick

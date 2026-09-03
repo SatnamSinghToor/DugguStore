@@ -115,26 +115,23 @@ fun StoreSearchBar(
         color = SurfaceMuted
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            // Left inset kept small on purpose: the location pin right above
+            // this bar sits flush with the screen margin, and the old boxed
+            // icon (with its own 8dp of padding before it) started noticeably
+            // further right than the pin — the two controls didn't line up.
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 9.dp, bottom = 9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Orange here, not teal: the location pin right above this bar is
-            // already teal, and two blue tiles stacked in the same header made
-            // that whole strip read as one flat colour instead of two controls.
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(Orange),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            // Plain tinted glyph rather than a filled tile: a solid orange
+            // square here was just as heavy as the teal one it replaced, and
+            // this bar doesn't need its own colour block to read as a search
+            // field.
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = Orange,
+                modifier = Modifier.size(22.dp)
+            )
             Spacer(Modifier.width(10.dp))
             Box(modifier = Modifier.weight(1f)) {
                 BasicSearchField(query, onQueryChange, placeholder)
@@ -465,19 +462,25 @@ private fun StepperSquare(icon: ImageVector, color: Color, label: String, onClic
     }
 }
 
-/** Angled corner flag used for the "5% OFF" mark. */
+/**
+ * Small straight "5% OFF" chip for the product card's top-right corner. Used
+ * to be a diagonal ribbon cutting across the corner at 45°, which read as
+ * heavier and less tidy than the rest of the card's flat, rounded style.
+ */
 @Composable
 fun DiscountRibbon(percent: Int, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.size(64.dp), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .rotate(45f)
-                .offset(x = 18.dp, y = (-10).dp)
-                .background(Coral)
-                .padding(horizontal = 22.dp, vertical = 3.dp)
-        ) {
-            Text("$percent% OFF", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        }
+    Surface(
+        modifier = modifier.padding(6.dp),
+        shape = RoundedCornerShape(6.dp),
+        color = Coral
+    ) {
+        Text(
+            text = "$percent% OFF",
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

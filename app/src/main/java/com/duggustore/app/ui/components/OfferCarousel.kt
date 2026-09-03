@@ -125,7 +125,7 @@ private fun OfferCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(148.dp)
+            .height(172.dp)
             .clip(RoundedCornerShape(20.dp))
             // A light wash of the card's colour rather than the colour itself:
             // the reference banner is a pale tint with dark type on it, and a

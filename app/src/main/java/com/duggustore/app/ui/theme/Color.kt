@@ -40,16 +40,18 @@ val StarYellow = Color(0xFFFFB020)
 
 // ── Category tiles ───────────────────────────────────────────────────────
 // Cycled in order for whatever categories the database returns, and reused
-// for the offer cards so the two rails read as one family.
+// for the offer cards so the two rails read as one family. Lighter and more
+// saturated than the original set, which read as muddy/dark next to the
+// rest of the page's soft palette.
 val CategoryColors = listOf(
     Teal,
-    Color(0xFF4A90D9),
-    Color(0xFFC96A9B),
-    Color(0xFF8B6FD1),
-    Color(0xFFE8894A),
-    Color(0xFF3FAE7A),
-    Color(0xFFD9646E),
-    Color(0xFF5BB8D4)
+    Color(0xFF5AA9E6),
+    Color(0xFFE083AE),
+    Color(0xFFA78BFA),
+    Color(0xFFF2994A),
+    Color(0xFF4FC38A),
+    Color(0xFFEF7C7C),
+    Color(0xFF6FC9E0)
 )
 
 // ── Compatibility aliases ────────────────────────────────────────────────
