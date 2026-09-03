@@ -28,7 +28,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.UserRole
+import com.duggustore.app.data.model.toNotification
 import com.duggustore.app.ui.screens.auth.ForgotPasswordScreen
 import com.duggustore.app.ui.screens.auth.LoginScreen
 import com.duggustore.app.ui.screens.auth.RegisterScreen
@@ -53,8 +55,11 @@ sealed class Screen(val route: String) {
     object CustomerHome : Screen("customer_home")
     object CustomerCart : Screen("customer_cart")
     object CustomerOrders : Screen("customer_orders")
-    object CustomerOrderTracking : Screen("customer_order_tracking/{orderId}")
+    object CustomerOrderTracking : Screen("customer_order_tracking/{orderId}") {
+        fun createRoute(orderId: String) = "customer_order_tracking/$orderId"
+    }
     object CustomerCategories : Screen("customer_categories")
+    object CustomerNotifications : Screen("customer_notifications")
     object CustomerFavorites : Screen("customer_favorites")
     object CustomerAccount : Screen("customer_account")
     object CustomerAddresses : Screen("customer_addresses")
@@ -265,6 +270,21 @@ fun AppNavGraph(
             )
         }
 
+        composable(Screen.CustomerNotifications.route) {
+            NotificationsScreen(
+                notifications = orderState.customerOrders.map { it.toNotification() },
+                onNotificationClick = { notification ->
+                    navController.navigate(
+                        Screen.CustomerOrderTracking.createRoute(notification.orderId)
+                    )
+                },
+                onBack = { navController.popBackStack() }
+            )
+            LaunchedEffect(authState.user) {
+                authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
+            }
+        }
+
         composable(Screen.CustomerCategories.route) {
             CategoriesScreen(
                 categories = homeState.categories,
@@ -302,10 +322,18 @@ fun AppNavGraph(
                 onToggleFavorite = { product ->
                     authState.user?.let { favoriteViewModel.toggleFavorite(it.id, product.id) }
                 },
-                onAddressClick = { navController.navigate(Screen.CustomerAddresses.route) }
+                onAddressClick = { navController.navigate(Screen.CustomerAddresses.route) },
+                // Orders still in flight are the ones worth a badge; delivered
+                // and cancelled ones are not news.
+                notificationCount = orderState.customerOrders.count {
+                    it.status != OrderStatus.DELIVERED.value &&
+                        it.status != OrderStatus.CANCELLED.value
+                },
+                onNotificationsClick = { navController.navigate(Screen.CustomerNotifications.route) }
             )
 
             LaunchedEffect(authState.user) {
+                authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
                 authState.user?.let { favoriteViewModel.loadFavorites(it.id) }
                 cartViewModel.loadCart()
             }
@@ -364,7 +392,7 @@ fun AppNavGraph(
             OrderListScreen(
                 orders = orderState.customerOrders,
                 onOrderClick = { orderId ->
-                    navController.navigate("customer_order_tracking/$orderId")
+                    navController.navigate(Screen.CustomerOrderTracking.createRoute(orderId))
                 },
                 onBack = { navController.popBackStack() }
             )

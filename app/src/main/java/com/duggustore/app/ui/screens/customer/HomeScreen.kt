@@ -1,6 +1,7 @@
 package com.duggustore.app.ui.screens.customer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -15,12 +16,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.platform.LocationState
+import com.duggustore.app.platform.rememberDeviceLocation
+import com.duggustore.app.platform.rememberVoiceSearch
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
@@ -41,7 +46,9 @@ fun HomeScreen(
     onIncrease: (Product) -> Unit = {},
     onDecrease: (Product) -> Unit = {},
     onToggleFavorite: (Product) -> Unit = {},
-    onAddressClick: () -> Unit = {}
+    onAddressClick: () -> Unit = {},
+    notificationCount: Int = 0,
+    onNotificationsClick: () -> Unit = {}
 ) {
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
         LazyColumn(
@@ -65,25 +72,65 @@ fun HomeScreen(
                             Icon(Icons.Default.KeyboardArrowDown, null, tint = TextPrimary, modifier = Modifier.size(18.dp))
                         }
                         Spacer(Modifier.width(12.dp))
-                        Box(
-                            modifier = Modifier.size(40.dp).background(SurfaceMuted, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.NotificationsNone,
-                                "Notifications",
-                                tint = Coral,
-                                modifier = Modifier.size(21.dp)
-                            )
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(SurfaceMuted)
+                                    .clickable { onNotificationsClick() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.NotificationsNone,
+                                    "Notifications",
+                                    tint = Coral,
+                                    modifier = Modifier.size(21.dp)
+                                )
+                            }
+                            if (notificationCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .defaultMinSize(minWidth = 17.dp, minHeight = 17.dp)
+                                        .clip(CircleShape)
+                                        .background(Coral),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (notificationCount > 9) "9+" else "$notificationCount",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
 
                     Spacer(Modifier.height(10.dp))
 
+                    // The strip showed only the saved default address. It now
+                    // leads with the detected one and falls back to the saved
+                    // address when location is off or refused.
+                    val detected = rememberDeviceLocation()
+                    val locationState = detected.state
                     LocationBar(
-                        city = if (userName.isBlank()) "Deliver to" else "Hi $userName",
-                        address = deliveryAddress,
-                        onClick = onAddressClick
+                        city = when {
+                            locationState is LocationState.Locating -> "Finding you..."
+                            locationState is LocationState.Found -> "Current location"
+                            userName.isBlank() -> "Deliver to"
+                            else -> "Hi $userName"
+                        },
+                        address = when (locationState) {
+                            is LocationState.Found -> locationState.address
+                            is LocationState.Locating -> "Please wait"
+                            is LocationState.Unavailable -> locationState.reason
+                            LocationState.Idle -> deliveryAddress
+                        },
+                        onClick = onAddressClick,
+                        onLocateClick = detected.refresh,
+                        locating = locationState is LocationState.Locating
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -91,7 +138,9 @@ fun HomeScreen(
                     StoreSearchBar(
                         query = searchQuery,
                         onQueryChange = onSearchQueryChange,
-                        onMicClick = {}
+                        // Null when the device has no speech recogniser, which
+                        // leaves the mic out rather than showing a dead button.
+                        onMicClick = rememberVoiceSearch { onSearchQueryChange(it) }
                     )
                 }
             }

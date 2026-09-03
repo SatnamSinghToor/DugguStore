@@ -44,7 +44,10 @@ fun LocationBar(
     city: String,
     address: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Re-detects the device location. Null leaves the crosshair out. */
+    onLocateClick: (() -> Unit)? = null,
+    locating: Boolean = false
 ) {
     Row(
         modifier = modifier
@@ -71,6 +74,24 @@ fun LocationBar(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+        if (onLocateClick != null) {
+            if (locating) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Teal,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                IconButton(onClick = onLocateClick, modifier = Modifier.size(34.dp)) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Use my current location",
+                        tint = Teal,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+            }
         }
         Icon(Icons.Default.ChevronRight, null, tint = TextSecondary)
     }
