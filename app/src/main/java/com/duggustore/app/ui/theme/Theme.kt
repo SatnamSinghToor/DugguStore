@@ -1,11 +1,12 @@
 package com.duggustore.app.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -28,7 +29,11 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = TextSecondary,
     outline = BorderGray,
     error = AccentRed,
-    onError = SurfaceWhite
+    onError = SurfaceWhite,
+    surfaceContainer = SurfaceWhite,
+    surfaceContainerLow = SurfaceWhite,
+    surfaceContainerHigh = SurfaceWhite,
+    surfaceContainerHighest = SurfaceWhite
 )
 
 @Composable
@@ -41,8 +46,9 @@ fun DugguStoreTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = PrimaryGreen.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            window.statusBarColor = Color.Transparent.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+            window.navigationBarColor = Color.White.toArgb()
         }
     }
 
