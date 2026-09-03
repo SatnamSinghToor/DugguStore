@@ -5,14 +5,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Product
-import com.duggustore.app.ui.components.*
+import com.duggustore.app.ui.components.StoreProductCard
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -20,33 +28,101 @@ fun FavoritesScreen(
     favoriteProducts: List<Product>,
     onAddToCart: (Product) -> Unit,
     onBack: () -> Unit,
-    onProductClick: (Product) -> Unit = {}
+    onProductClick: (Product) -> Unit = {},
+    cartQuantities: Map<String, Int> = emptyMap(),
+    onIncrease: (Product) -> Unit = {},
+    onDecrease: (Product) -> Unit = {},
+    onRemoveFavorite: (Product) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
     ) {
-        DugguTopBar(title = "My Favorites", onBackClick = onBack)
+        Surface(color = Teal) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                }
+                Column {
+                    Text(
+                        text = "Favourites",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (favoriteProducts.size == 1) "1 product"
+                               else "${favoriteProducts.size} products",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
 
         if (favoriteProducts.isEmpty()) {
-            EmptyState(
-                icon = Icons.Default.FavoriteBorder,
-                title = "No favorites yet",
-                subtitle = "Tap the heart icon on products to add them here"
-            )
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(CircleShape)
+                        .background(CoralSurface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.FavoriteBorder,
+                        contentDescription = null,
+                        tint = Coral,
+                        modifier = Modifier.size(46.dp)
+                    )
+                }
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    "No favourites yet",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Tap the heart on a product to save it here",
+                    modifier = Modifier.padding(horizontal = 40.dp),
+                    fontSize = 14.sp,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+            }
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                items(favoriteProducts) { product ->
-                    ProductCard(
+                items(favoriteProducts, key = { it.id }) { product ->
+                    StoreProductCard(
                         product = product,
-                        onAddClick = onAddToCart,
-                        onClick = onProductClick
+                        quantityInCart = cartQuantities[product.id] ?: 0,
+                        // Everything on this screen is a favourite by
+                        // definition, so the heart is always filled and
+                        // tapping it removes the product.
+                        isFavorite = true,
+                        onAdd = { onAddToCart(product) },
+                        onIncrease = { onIncrease(product) },
+                        onDecrease = { onDecrease(product) },
+                        onToggleFavorite = { onRemoveFavorite(product) },
+                        onClick = { onProductClick(product) }
                     )
                 }
             }

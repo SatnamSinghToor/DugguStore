@@ -1,13 +1,21 @@
 package com.duggustore.app.ui.screens.customer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,162 +40,189 @@ fun AccountScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .verticalScroll(rememberScrollState())
     ) {
-        // Header
-        Surface(color = PrimaryGreen) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-                    }
-                }
+        AccountHeader(user = user, onBack = onBack)
 
-                // Avatar
-                Surface(
-                    modifier = Modifier.size(80.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = user?.fullName?.firstOrNull()?.toString() ?: "U",
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
+        Spacer(Modifier.height(18.dp))
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = user?.fullName ?: "User",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = user?.email ?: user?.phone ?: "",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
-                Surface(
-                    modifier = Modifier.padding(top = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White.copy(alpha = 0.2f)
-                ) {
-                    Text(
-                        text = user?.role?.uppercase() ?: "CUSTOMER",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Menu Items
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column {
-                AccountMenuItem(
-                    icon = Icons.Default.Receipt,
-                    title = "My Orders",
-                    subtitle = "View your order history",
-                    onClick = onOrdersClick
-                )
-                Divider(color = BorderGray)
-                AccountMenuItem(
-                    icon = Icons.Default.Favorite,
-                    title = "Favorites",
-                    subtitle = "Your saved products",
-                    onClick = onFavoritesClick
-                )
-                Divider(color = BorderGray)
-                AccountMenuItem(
-                    icon = Icons.Default.LocationOn,
-                    title = "Addresses",
-                    subtitle = "Manage delivery addresses",
-                    onClick = onAddressesClick
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
+        MenuGroup {
             AccountMenuItem(
-                icon = Icons.Default.Logout,
-                title = "Sign Out",
-                subtitle = "Log out of your account",
-                onClick = onSignOut,
-                tint = AccentRed
+                icon = Icons.Default.Receipt,
+                title = "My orders",
+                subtitle = "Track and review past orders",
+                onClick = onOrdersClick
+            )
+            Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+            AccountMenuItem(
+                icon = Icons.Default.Favorite,
+                title = "Favourites",
+                subtitle = "Products you saved",
+                tint = Coral,
+                onClick = onFavoritesClick
+            )
+            Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+            AccountMenuItem(
+                icon = Icons.Default.LocationOn,
+                title = "Addresses",
+                subtitle = "Where your orders are delivered",
+                tint = Orange,
+                onClick = onAddressesClick
             )
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        MenuGroup {
+            AccountMenuItem(
+                icon = Icons.Default.Logout,
+                title = "Sign out",
+                subtitle = "Log out of this device",
+                tint = Coral,
+                showChevron = false,
+                onClick = onSignOut
+            )
+        }
+
+        Spacer(Modifier.height(28.dp))
+
+        Text(
+            text = "Duggu Store",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            fontSize = 12.sp,
+            color = TextLight,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
+private fun AccountHeader(user: UserProfile?, onBack: () -> Unit) {
+    Box {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Teal)
+                .statusBarsPadding()
+                .padding(bottom = 44.dp)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+            }
+        }
+
+        // The card straddles the band, as the sheets do on the other screens.
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .offset(y = 34.dp)
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(22.dp),
+            color = SurfaceWhite,
+            shadowElevation = 4.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(TealSurface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = user?.fullName?.trim()?.firstOrNull()?.uppercase() ?: "U",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Teal
+                    )
+                }
+
+                Spacer(Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = user?.fullName?.takeIf { it.isNotBlank() } ?: "User",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    // The profiles table carries no email, only the phone.
+                    val phone = user?.phone?.takeIf { it.isNotBlank() }
+                    if (phone != null) {
+                        Text(text = phone, fontSize = 13.sp, color = TextSecondary)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Surface(shape = RoundedCornerShape(8.dp), color = OrangeSurface) {
+                        Text(
+                            text = (user?.role ?: "customer").uppercase(),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = OrangeDark
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // Room for the part of the card that hangs below the band.
+    Spacer(Modifier.height(34.dp))
+}
+
+@Composable
+private fun MenuGroup(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = SurfaceWhite,
+        shadowElevation = 2.dp
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
 fun AccountMenuItem(
     icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    tint: androidx.compose.ui.graphics.Color = PrimaryGreen
+    tint: Color = Teal,
+    showChevron: Boolean = true
 ) {
-    Surface(
-        onClick = onClick,
-        color = Color.Transparent
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
         ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = tint.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
-                }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text(text = subtitle, fontSize = 12.sp, color = TextSecondary)
-            }
+            Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text(subtitle, fontSize = 12.sp, color = TextSecondary)
+        }
+        if (showChevron) {
             Icon(Icons.Default.ChevronRight, null, tint = TextLight)
         }
     }
 }
-
-// Extension to get email - in real app, this comes from Supabase user
-private val UserProfile?.email: String?
-    get() = this?.let { "" }

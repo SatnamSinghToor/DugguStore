@@ -346,7 +346,17 @@ fun AppNavGraph(
                 favoriteProducts = favState.favoriteProducts,
                 onAddToCart = { cartViewModel.addToCart(it) },
                 onBack = { navController.popBackStack() },
-                onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) }
+                onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) },
+                cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
+                onIncrease = { cartViewModel.addToCart(it) },
+                onDecrease = { product ->
+                    cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
+                        cartViewModel.updateQuantity(item.id, item.quantity - 1)
+                    }
+                },
+                onRemoveFavorite = { product ->
+                    authState.user?.let { favoriteViewModel.toggleFavorite(it.id, product.id) }
+                }
             )
 
             LaunchedEffect(Unit) {
