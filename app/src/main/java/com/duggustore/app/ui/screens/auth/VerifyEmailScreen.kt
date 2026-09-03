@@ -1,4 +1,5 @@
 package com.duggustore.app.ui.screens.auth
+import androidx.compose.ui.draw.scale
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background

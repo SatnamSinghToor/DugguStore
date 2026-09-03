@@ -2,7 +2,6 @@ package com.duggustore.app.ui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -29,11 +28,7 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = TextSecondary,
     outline = BorderGray,
     error = AccentRed,
-    onError = SurfaceWhite,
-    surfaceContainer = SurfaceWhite,
-    surfaceContainerLow = SurfaceWhite,
-    surfaceContainerHigh = SurfaceWhite,
-    surfaceContainerHighest = SurfaceWhite
+    onError = SurfaceWhite
 )
 
 @Composable
