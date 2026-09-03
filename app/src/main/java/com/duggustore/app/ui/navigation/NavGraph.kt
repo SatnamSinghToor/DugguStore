@@ -17,6 +17,7 @@ import com.duggustore.app.data.model.UserRole
 import com.duggustore.app.ui.screens.auth.ForgotPasswordScreen
 import com.duggustore.app.ui.screens.auth.LoginScreen
 import com.duggustore.app.ui.screens.auth.RegisterScreen
+import com.duggustore.app.ui.screens.auth.ResetPasswordScreen
 import com.duggustore.app.ui.screens.auth.SplashScreen
 import com.duggustore.app.ui.screens.auth.VerifyEmailScreen
 import com.duggustore.app.ui.screens.customer.*
@@ -80,6 +81,19 @@ fun AppNavGraph(
     // shows the login screen for a moment and then jumps to a dashboard.
     if (authState.isRestoringSession) {
         SplashScreen()
+        return
+    }
+
+    // A password-reset deep link arrives with a recovery session attached and has to be
+    // finished before anything else, so it takes over ahead of the nav graph.
+    if (authState.awaitingNewPassword) {
+        ResetPasswordScreen(
+            onSubmit = { pass, confirm -> authViewModel.updatePassword(pass, confirm) },
+            onCancel = { authViewModel.cancelPasswordRecovery() },
+            isLoading = authState.isLoading,
+            error = authState.error,
+            onClearError = { authViewModel.clearError() }
+        )
         return
     }
 

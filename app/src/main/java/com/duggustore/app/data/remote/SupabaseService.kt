@@ -208,15 +208,30 @@ object SupabaseService {
         executeRequest(request)
     }
 
-    /** Sends the password-reset mail. Supabase returns 200 even for an unknown address. */
+    /**
+     * Sends the password-reset mail. Supabase returns 200 even for an unknown address.
+     * redirect_to brings the user back into the app instead of the project's Site URL,
+     * which on a fresh project is still http://localhost:3000 and dead on a phone.
+     */
     suspend fun sendPasswordReset(email: String) {
         val body = buildJsonObject { put("email", email) }
         val request = Request.Builder()
-            .url("$BASE_URL/auth/v1/recover")
+            .url("$BASE_URL/auth/v1/recover?redirect_to=${encode(AUTH_REDIRECT_URL)}")
             .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .apply { headers().forEach { (k, v) -> addHeader(k, v) } }
             .build()
         executeRequest(request)
+    }
+
+    /** Sets a new password for the session in [token]. */
+    suspend fun updatePassword(token: String, newPassword: String): JsonObject {
+        val body = buildJsonObject { put("password", newPassword) }
+        val request = Request.Builder()
+            .url("$BASE_URL/auth/v1/user")
+            .put(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        return parseJsonObject(executeRequest(request))
     }
 
     suspend fun signOut(token: String) {

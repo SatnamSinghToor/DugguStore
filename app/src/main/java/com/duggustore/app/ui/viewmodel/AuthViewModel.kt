@@ -3,6 +3,7 @@ package com.duggustore.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.UserProfile
+import com.duggustore.app.data.remote.AuthDeepLink
 import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,10 @@ data class AuthState(
     val requiresEmailVerification: Boolean = false,
     val pendingVerificationEmail: String = "",
     val verificationResent: Boolean = false,
-    val passwordResetSent: Boolean = false
+    val passwordResetSent: Boolean = false,
+    /** True once a reset deep link handed us a session and the new password is due. */
+    val awaitingNewPassword: Boolean = false,
+    val passwordUpdated: Boolean = false
 )
 
 const val VERIFICATION_CODE_LENGTH = 6
@@ -187,6 +191,74 @@ class AuthViewModel : ViewModel() {
                     )
                 }
         }
+    }
+
+    /** Called when the activity receives the password-reset deep link. */
+    fun onAuthDeepLink(link: AuthDeepLink) {
+        when (link) {
+            is AuthDeepLink.Recovery -> {
+                repository.beginPasswordRecovery(link.accessToken, link.refreshToken)
+                _state.value = _state.value.copy(
+                    isRestoringSession = false,
+                    awaitingNewPassword = true,
+                    passwordResetSent = false,
+                    error = null
+                )
+            }
+            is AuthDeepLink.Failed -> {
+                _state.value = _state.value.copy(
+                    isRestoringSession = false,
+                    awaitingNewPassword = false,
+                    error = link.message
+                )
+            }
+        }
+    }
+
+    fun updatePassword(newPassword: String, confirmPassword: String) {
+        when {
+            newPassword.length < 6 -> {
+                _state.value = _state.value.copy(error = "Password must be at least 6 characters.")
+                return
+            }
+            newPassword != confirmPassword -> {
+                _state.value = _state.value.copy(error = "Passwords don't match.")
+                return
+            }
+        }
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            repository.updatePassword(newPassword)
+                .onSuccess { profile ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        awaitingNewPassword = false,
+                        passwordUpdated = true,
+                        passwordResetSent = false,
+                        // A recovery session is a real session, so finish the sign-in
+                        // rather than making them log in again with the new password.
+                        isLoggedIn = profile != null,
+                        user = profile
+                    )
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "Could not update the password"
+                    )
+                }
+        }
+    }
+
+    fun clearPasswordUpdated() {
+        _state.value = _state.value.copy(passwordUpdated = false)
+    }
+
+    /** Abandons a reset the user no longer wants to finish. */
+    fun cancelPasswordRecovery() {
+        SessionManager.clearSession()
+        _state.value = AuthState(isRestoringSession = false)
     }
 
     fun resetPasswordResetState() {

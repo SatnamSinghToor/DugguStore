@@ -25,10 +25,27 @@
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.DugguStore"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Supabase redirects here after the user opens a password-reset mail.
+                The matching URL must be on the Redirect URLs allow list in
+                Authentication -> URL Configuration, or Supabase refuses the redirect.
+                singleTask above means a running app receives it via onNewIntent
+                instead of starting a second copy.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="duggustore"
+                    android:host="auth-callback" />
             </intent-filter>
         </activity>
     </application>

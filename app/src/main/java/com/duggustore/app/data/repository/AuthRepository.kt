@@ -274,6 +274,60 @@ class AuthRepository {
         }
     }
 
+    /**
+     * Accepts the session handed back by a password-reset deep link. The user is not
+     * treated as signed in yet — the session only exists so the new password can be
+     * submitted; the caller sends them to the reset screen.
+     */
+    fun beginPasswordRecovery(accessToken: String, refreshToken: String) {
+        SessionManager.saveSession(
+            accessToken,
+            refreshToken,
+            SessionManager.getUserId().orEmpty(),
+            SessionManager.getEmail().orEmpty()
+        )
+    }
+
+    /** Sets a new password using the recovery session, then loads the profile. */
+    suspend fun updatePassword(newPassword: String): Result<UserProfile?> {
+        return try {
+            val token = SessionManager.getAccessToken()
+                ?: return Result.failure(Exception("That reset link has expired. Request a new email."))
+
+            val resp = SupabaseService.updatePassword(token, newPassword)
+            val userId = extractUserId(resp) ?: SessionManager.getUserId()
+            val email = str(resp["email"]) ?: SessionManager.getEmail().orEmpty()
+
+            if (userId.isNullOrBlank()) return Result.success(null)
+            SessionManager.saveSession(token, SessionManager.getRefreshToken().orEmpty(), userId, email)
+
+            val metadata = extractUserMetadata(resp)
+            val fallback = UserProfile(
+                id = userId,
+                fullName = metadataString(metadata, "full_name", ""),
+                phone = metadataString(metadata, "phone", ""),
+                role = metadataString(metadata, "role", "customer")
+            )
+            Result.success(resolveProfile(userId, token, fallback))
+        } catch (e: Exception) {
+            val code = (e as? SupabaseException)?.errorCode ?: ""
+            val status = (e as? SupabaseException)?.statusCode ?: 0
+            val msg = e.message ?: ""
+            val friendly = when {
+                code == "not_configured" || code == "network_error" -> msg
+                status == 401 || code == "invalid_token" || msg.contains("expired", ignoreCase = true) ->
+                    "That reset link has expired. Request a new email."
+                code == "weak_password" || msg.contains("Password should be", ignoreCase = true) ->
+                    "Password must be at least 6 characters."
+                code == "same_password" ->
+                    "That is already your current password. Choose a different one."
+                msg.isBlank() -> "Could not update the password."
+                else -> msg
+            }
+            Result.failure(Exception(friendly))
+        }
+    }
+
     suspend fun signOut(): Result<Unit> {
         return try {
             SessionManager.getAccessToken()?.let {
