@@ -56,8 +56,8 @@ fun AddEditProductScreen(
     val selectedCategory = categories.firstOrNull { it.id == categoryId }
     val shownError = localError ?: error
 
-    Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
-        Surface(color = Teal.copy(alpha = 0.92f)) {
+    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+        Surface(color = Teal) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

@@ -41,7 +41,7 @@ fun OrderListScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Background)
     ) {
         OrderTopBar(
             title = "My orders",
@@ -163,7 +163,7 @@ fun OrderTrackingDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Background)
     ) {
         OrderTopBar(
             title = "Order #${order.id.takeLast(8).uppercase()}",
@@ -309,7 +309,7 @@ private fun CancelledNotice() {
 
 @Composable
 private fun OrderTopBar(title: String, caption: String, onBack: () -> Unit) {
-    Surface(color = Teal.copy(alpha = 0.92f)) {
+    Surface(color = Teal) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

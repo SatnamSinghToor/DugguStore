@@ -65,7 +65,7 @@ fun HomeScreen(
     val detected = rememberDeviceLocation()
     val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+    Box(modifier = Modifier.fillMaxSize().background(Background)) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Pinned. The wordmark, the location strip and the search field were
@@ -74,10 +74,7 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    // Translucent, not solid white — the pattern behind
-                    // the whole app shell is meant to show through the
-                    // pinned header too, not just the scrolling area below it.
-                    .background(SurfaceWhite.copy(alpha = 0.92f))
+                    .background(SurfaceWhite)
                     .statusBarsPadding()
                     // 20dp, not the usual 16 — this is what lines the search
                     // bar's edges up with the offer cards below it, whose

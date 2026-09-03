@@ -41,7 +41,7 @@ fun AccountScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Background)
             .verticalScroll(rememberScrollState())
     ) {
         AccountHeader(user = user, onBack = onBack)
@@ -107,7 +107,7 @@ private fun AccountHeader(user: UserProfile?, onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Teal.copy(alpha = 0.92f))
+                .background(Teal)
                 .statusBarsPadding()
                 .padding(bottom = 44.dp)
         ) {

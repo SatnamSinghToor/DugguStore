@@ -42,8 +42,8 @@ fun AddressesScreen(
     var editing by remember { mutableStateOf<Address?>(null) }
     var showSheet by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
-        Surface(color = Teal.copy(alpha = 0.92f)) {
+    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+        Surface(color = Teal) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

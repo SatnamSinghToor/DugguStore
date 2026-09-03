@@ -41,12 +41,9 @@ fun CategoriesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Background)
     ) {
-        // Translucent, not solid: the background pattern is meant to show
-        // through every part of the app, headers included, not just the
-        // plain areas around them.
-        Surface(color = Teal.copy(alpha = 0.92f)) {
+        Surface(color = Teal) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

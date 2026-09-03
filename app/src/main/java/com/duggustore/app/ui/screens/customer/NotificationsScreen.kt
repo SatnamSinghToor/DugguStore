@@ -41,9 +41,9 @@ fun NotificationsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Background)
     ) {
-        Surface(color = Teal.copy(alpha = 0.92f)) {
+        Surface(color = Teal) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

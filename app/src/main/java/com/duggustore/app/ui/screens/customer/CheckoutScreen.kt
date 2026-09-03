@@ -52,7 +52,7 @@ fun CheckoutScreen(
     }
     val selected = addresses.firstOrNull { it.id == selectedId }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
+    Column(modifier = Modifier.fillMaxSize().background(Background)) {
         CheckoutHeader(onBack = onBack)
 
         Column(
@@ -215,7 +215,7 @@ fun CheckoutScreen(
         }
 
         Surface(
-            color = SurfaceWhite.copy(alpha = 0.92f),
+            color = SurfaceWhite,
             shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
             shadowElevation = 18.dp
         ) {
@@ -277,7 +277,7 @@ fun CheckoutScreen(
 
 @Composable
 private fun CheckoutHeader(onBack: () -> Unit) {
-    Surface(color = Teal.copy(alpha = 0.92f)) {
+    Surface(color = Teal) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

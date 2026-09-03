@@ -5,7 +5,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,7 +26,6 @@ import com.duggustore.app.platform.rememberRiderPosition
 import com.duggustore.app.ui.components.BottomBarCentre
 import com.duggustore.app.ui.components.StoreBottomBar
 import com.duggustore.app.ui.components.StoreBottomBarHeight
-import com.duggustore.app.ui.components.appPatternOverlay
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -51,7 +49,6 @@ import com.duggustore.app.ui.screens.seller.SellerDashboard
 import com.duggustore.app.ui.screens.delivery.DeliveryDashboard
 import com.duggustore.app.ui.screens.delivery.RouteMapScreen
 import com.duggustore.app.ui.screens.admin.AdminDashboard
-import com.duggustore.app.ui.theme.Background
 import com.duggustore.app.ui.viewmodel.*
 
 sealed class Screen(val route: String) {
@@ -214,13 +211,7 @@ fun AppNavGraph(
             WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     } else 0.dp
 
-    // Painted once here, behind the NavHost AND the bottom bar, rather than
-    // per screen — a per-screen background stopped at the NavHost's own
-    // padding, so it never reached under the bar at all. Every screen's own
-    // root now stays transparent so this one continuous backdrop shows
-    // through everything, edge to edge, rather than each screen carrying an
-    // opaque copy that blocks it out again.
-    Box(modifier = Modifier.fillMaxSize().background(Background).appPatternOverlay()) {
+    Box(modifier = Modifier.fillMaxSize()) {
 
     NavHost(
         modifier = Modifier

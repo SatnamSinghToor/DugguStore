@@ -55,7 +55,7 @@ fun SellerDashboard(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Background)
     ) {
         DashboardHeader(
             title = "Seller dashboard",

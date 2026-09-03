@@ -51,7 +51,7 @@ fun CartScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Transparent)
+            .background(Background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             CartHeader(itemCount = cartItems.size, onBack = onBack)
@@ -109,7 +109,7 @@ fun CartScreen(
 /** Teal band with the back arrow, matching the other detail screens. */
 @Composable
 private fun CartHeader(itemCount: Int, onBack: () -> Unit) {
-    Surface(color = Teal.copy(alpha = 0.92f), shadowElevation = 0.dp) {
+    Surface(color = Teal, shadowElevation = 0.dp) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -340,7 +340,7 @@ private fun SummarySheet(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
-        color = SurfaceWhite.copy(alpha = 0.92f),
+        color = SurfaceWhite,
         shadowElevation = 18.dp
     ) {
         Column(
