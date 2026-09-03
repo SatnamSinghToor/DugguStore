@@ -1,25 +1,37 @@
 package com.duggustore.app.ui.screens.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.duggustore.app.data.model.UserProfile
+import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
+
+private val ROLES = listOf("customer", "seller", "delivery", "admin")
 
 @Composable
 fun AdminDashboard(
@@ -34,301 +46,294 @@ fun AdminDashboard(
     onSignOut: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Overview", "Users", "Orders", "Products")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
     ) {
-        // Header
-        Surface(color = PrimaryGreenDark) {
-            Column(
+        DashboardHeader(
+            title = "Admin",
+            subtitle = "Everything across the store",
+            stats = listOf(
+                "Revenue" to "₹${trimAmount(totalRevenue)}",
+                "Orders" to "$totalOrders",
+                "Users" to "$totalUsers",
+                "Delivered" to "$totalDeliveries"
+            ),
+            onSignOut = onSignOut
+        )
+
+        DashboardTabs(
+            tabs = listOf("Overview", "Users", "Orders", "Products"),
+            selected = selectedTab,
+            onSelect = { selectedTab = it }
+        )
+
+        Box(modifier = Modifier.weight(1f)) {
+            when (selectedTab) {
+                0 -> OverviewTab(orders = orders, products = products)
+                1 -> UsersTab(users = users, onUpdateUserRole = onUpdateUserRole)
+                2 -> OrdersTab(orders = orders)
+                else -> ProductsTab(products = products)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverviewTab(orders: List<Order>, products: List<Product>) {
+    if (orders.isEmpty() && products.isEmpty()) {
+        DashboardEmpty(
+            icon = Icons.Default.Inventory,
+            title = "Nothing to show yet",
+            subtitle = "Orders and products will appear here as the store is used"
+        )
+        return
+    }
+
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        if (orders.isNotEmpty()) {
+            item { GroupTitle("Recent orders") }
+            items(orders.take(5), key = { "recent-${it.id}" }) { OrderRow(it) }
+        }
+        if (products.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(6.dp))
+                GroupTitle("Products")
+            }
+            items(products.take(5), key = { "top-${it.id}" }) { ProductRow(it) }
+        }
+    }
+}
+
+@Composable
+private fun UsersTab(users: List<UserProfile>, onUpdateUserRole: (String, String) -> Unit) {
+    if (users.isEmpty()) {
+        DashboardEmpty(
+            icon = Icons.Default.Person,
+            title = "No users",
+            subtitle = "Accounts will appear here as people sign up"
+        )
+        return
+    }
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(users, key = { it.id }) { user ->
+            UserManagementCard(
+                user = user,
+                onUpdateRole = { role -> onUpdateUserRole(user.id, role) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrdersTab(orders: List<Order>) {
+    if (orders.isEmpty()) {
+        DashboardEmpty(
+            icon = Icons.Default.Receipt,
+            title = "No orders",
+            subtitle = "Orders placed in the store will appear here"
+        )
+        return
+    }
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(orders, key = { it.id }) { OrderRow(order = it, showDate = true) }
+    }
+}
+
+@Composable
+private fun ProductsTab(products: List<Product>) {
+    if (products.isEmpty()) {
+        DashboardEmpty(
+            icon = Icons.Default.ShoppingBag,
+            title = "No products",
+            subtitle = "Products added by sellers will appear here"
+        )
+        return
+    }
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(products, key = { it.id }) { ProductRow(product = it) }
+    }
+}
+
+@Composable
+private fun GroupTitle(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(bottom = 2.dp),
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        color = TextPrimary
+    )
+}
+
+@Composable
+private fun OrderRow(order: Order, showDate: Boolean = false) {
+    DashboardPanel {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "#${order.id.takeLast(8).uppercase()}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "₹${trimAmount(order.totalAmount)}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Teal
+                )
+                if (showDate) {
+                    Text(order.createdAt.take(10), fontSize = 11.sp, color = TextLight)
+                }
+            }
+            StatusBadge(status = order.status)
+        }
+    }
+}
+
+@Composable
+private fun ProductRow(product: Product) {
+    DashboardPanel {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(16.dp)
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceMuted),
+                contentAlignment = Alignment.Center
             ) {
+                if (product.imageUrl.isNullOrBlank()) {
+                    Icon(
+                        Icons.Default.ShoppingBag,
+                        null,
+                        tint = TextLight,
+                        modifier = Modifier.size(21.dp)
+                    )
+                } else {
+                    AsyncImage(
+                        model = product.imageUrl,
+                        contentDescription = product.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = product.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "₹${trimAmount(product.effectivePrice())} · stock ${product.stock}",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+            if (!product.isActive) {
+                Surface(shape = RoundedCornerShape(7.dp), color = CoralSurface) {
+                    Text(
+                        text = "INACTIVE",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CoralDark
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserManagementCard(user: UserProfile, onUpdateRole: (String) -> Unit) {
+    var showRoleMenu by remember { mutableStateOf(false) }
+    val (bg, fg) = roleColors(user.role)
+
+    DashboardPanel {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(TealSurface),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = user.fullName.trim().firstOrNull()?.uppercase() ?: "U",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Teal
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = user.fullName.takeIf { it.isNotBlank() } ?: "Unnamed",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = user.phone.takeIf { it.isNotBlank() } ?: "No phone on file",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+
+            Box {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(bg)
+                        .clickable { showRoleMenu = true }
+                        .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Admin Dashboard",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    IconButton(onClick = onSignOut) {
-                        Icon(Icons.Default.Logout, "Sign Out", tint = Color.White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Analytics Grid
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AnalyticsCard("Total Delivery", "$totalDeliveries", Modifier.weight(1f))
-                    AnalyticsCard("Total Ordered", "$totalOrders", Modifier.weight(1f))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AnalyticsCard("Total Users", "$totalUsers", Modifier.weight(1f))
-                    AnalyticsCard("Revenue", "₹${"%.0f".format(totalRevenue)}", Modifier.weight(1f))
-                }
-            }
-        }
-
-        // Tabs
-        ScrollableTabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = Color.White,
-            contentColor = PrimaryGreen
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = {
-                        Text(
-                            title,
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 13.sp
-                        )
-                    }
-                )
-            }
-        }
-
-        when (selectedTab) {
-            0 -> {
-                // Overview
-                LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    item {
-                        SectionHeader(title = "Recent Orders")
-                    }
-                    items(orders.take(5)) { order ->
-                        Card(
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text("Order #${order.id.takeLast(8).uppercase()}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("₹${"%.1f".format(order.totalAmount)}", fontSize = 14.sp, color = PrimaryGreen, fontWeight = FontWeight.SemiBold)
-                                }
-                                StatusBadge(status = order.status)
-                            }
-                        }
-                    }
-
-                    item {
-                        SectionHeader(title = "Top Products")
-                    }
-                    items(products.take(5)) { product ->
-                        Card(
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.ShoppingBag, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                                    Text("Stock: ${product.stock}", fontSize = 12.sp, color = TextSecondary)
-                                }
-                                Text("₹${product.effectivePrice()}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
-                            }
-                        }
-                    }
-                }
-            }
-            1 -> {
-                // Users
-                LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(users) { user ->
-                        UserManagementCard(user = user, onUpdateRole = { role -> onUpdateUserRole(user.id, role) })
-                    }
-                }
-            }
-            2 -> {
-                // Orders
-                LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(orders) { order ->
-                        Card(
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text("Order #${order.id.takeLast(8).uppercase()}", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("₹${"%.1f".format(order.totalAmount)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
-                                    Text(order.createdAt, fontSize = 11.sp, color = TextLight)
-                                }
-                                StatusBadge(status = order.status)
-                            }
-                        }
-                    }
-                }
-            }
-            3 -> {
-                // Products
-                LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(products) { product ->
-                        Card(
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.ShoppingBag, null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(product.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                                    Row {
-                                        Text("₹${product.effectivePrice()}", fontSize = 12.sp, color = PrimaryGreen, fontWeight = FontWeight.SemiBold)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Stock: ${product.stock}", fontSize = 12.sp, color = TextSecondary)
-                                    }
-                                }
-                                if (!product.isActive) {
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = AccentRed.copy(alpha = 0.1f)
-                                    ) {
-                                        Text(
-                                            "Inactive",
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                            fontSize = 10.sp,
-                                            color = AccentRed
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AnalyticsCard(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
-            Text(text = label, fontSize = 11.sp, color = Color.White.copy(alpha = 0.8f))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun UserManagementCard(
-    user: UserProfile,
-    onUpdateRole: (String) -> Unit
-) {
-    var showRoleMenu by remember { mutableStateOf(false) }
-
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Avatar
-            Surface(
-                modifier = Modifier.size(44.dp),
-                shape = RoundedCornerShape(22.dp),
-                color = PrimaryGreen.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = user.fullName.firstOrNull()?.toString() ?: "U",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryGreen
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(user.fullName, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Text(user.phone, fontSize = 12.sp, color = TextSecondary)
-            }
-
-            // Role Selector
-            Box {
-                Surface(
-                    onClick = { showRoleMenu = true },
-                    shape = RoundedCornerShape(8.dp),
-                    color = when (user.role) {
-                        "admin" -> AccentRed.copy(alpha = 0.1f)
-                        "seller" -> PrimaryGreen.copy(alpha = 0.1f)
-                        "delivery" -> InfoBlue.copy(alpha = 0.1f)
-                        else -> WarningYellow.copy(alpha = 0.1f)
-                    }
-                ) {
-                    Text(
                         text = user.role.uppercase(),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = when (user.role) {
-                            "admin" -> AccentRed
-                            "seller" -> PrimaryGreen
-                            "delivery" -> InfoBlue
-                            else -> WarningYellow
-                        }
+                        fontWeight = FontWeight.Bold,
+                        color = fg
+                    )
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = "Change role",
+                        tint = fg,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
@@ -336,12 +341,21 @@ fun UserManagementCard(
                     expanded = showRoleMenu,
                     onDismissRequest = { showRoleMenu = false }
                 ) {
-                    listOf("customer", "seller", "delivery", "admin").forEach { role ->
+                    ROLES.forEach { role ->
                         DropdownMenuItem(
-                            text = { Text(role.uppercase()) },
+                            text = {
+                                Text(
+                                    text = role.replaceFirstChar { it.uppercase() },
+                                    fontWeight = if (role == user.role) FontWeight.Bold
+                                                 else FontWeight.Normal,
+                                    color = if (role == user.role) Teal else TextPrimary
+                                )
+                            },
                             onClick = {
-                                onUpdateRole(role)
                                 showRoleMenu = false
+                                // Re-sending the role the user already has is a
+                                // write for nothing.
+                                if (role != user.role) onUpdateRole(role)
                             }
                         )
                     }
@@ -349,4 +363,11 @@ fun UserManagementCard(
             }
         }
     }
+}
+
+private fun roleColors(role: String): Pair<Color, Color> = when (role) {
+    "admin" -> CoralSurface to CoralDark
+    "seller" -> TealSurface to TealDark
+    "delivery" -> Color(0xFFE3F0FD) to InfoBlue
+    else -> OrangeSurface to OrangeDark
 }
