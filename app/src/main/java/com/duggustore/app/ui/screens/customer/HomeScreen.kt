@@ -57,7 +57,8 @@ fun HomeScreen(
     onSelectAddress: (Address) -> Unit = {},
     onSaveDetectedAddress: (String, Double, Double) -> Unit = { _, _, _ -> },
     offers: List<Coupon> = emptyList(),
-    onOfferClick: (Coupon) -> Unit = {}
+    onOfferClick: (Coupon) -> Unit = {},
+    isLoading: Boolean = false
 ) {
     // Both sheets are owned here so the header can stay a plain row of
     // controls and the sheets sit above the whole screen.
@@ -162,6 +163,20 @@ fun HomeScreen(
                 )
             }
 
+            if (isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
+                // Fills the same weight(1f) area the list below would, so
+                // there is no jump in the page's overall height once real
+                // content replaces it — a small "nothing here" block that
+                // then suddenly grows into a full page, right below the
+                // search bar, was the actual first-load stutter this
+                // screen used to show.
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Teal)
+                }
+            } else {
             LazyColumn(
                 // weight, not fillMaxSize: the header above has already taken
                 // its height, and fillMaxSize here would ask for the whole
@@ -268,6 +283,7 @@ fun HomeScreen(
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
+            }
             }
             }
         }

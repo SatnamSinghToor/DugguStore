@@ -8,6 +8,7 @@ import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.repository.CategoryRepository
 import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.ProductRepository
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -39,14 +40,21 @@ class HomeViewModel : ViewModel() {
     fun loadData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
-            val categories = categoryRepo.getAllCategories()
-            val products = productRepo.getAllProducts()
-            val offers = offerRepo.getOffers()
 
-            categories.onSuccess { cats ->
+            // Fired together rather than awaited one after another — three
+            // sequential round trips left the screen sitting on its empty
+            // state for roughly their combined latency, and then had the
+            // carousel, categories and the whole product grid all pop in
+            // at once, right below the search bar. Started concurrently,
+            // the wait is only as long as the slowest of the three.
+            val categoriesDeferred = async { categoryRepo.getAllCategories() }
+            val productsDeferred = async { productRepo.getAllProducts() }
+            val offersDeferred = async { offerRepo.getOffers() }
+
+            categoriesDeferred.await().onSuccess { cats ->
                 _state.value = _state.value.copy(categories = cats)
             }
-            products.onSuccess { prods ->
+            productsDeferred.await().onSuccess { prods ->
                 _state.value = _state.value.copy(
                     products = prods.filter { it.isActive },
                     filteredProducts = prods.filter { it.isActive }
@@ -54,7 +62,7 @@ class HomeViewModel : ViewModel() {
             }
             // A store with no coupons is a normal state, not an error worth
             // showing; the carousel simply does not render.
-            offers.onSuccess { _state.value = _state.value.copy(offers = it) }
+            offersDeferred.await().onSuccess { _state.value = _state.value.copy(offers = it) }
 
             _state.value = _state.value.copy(isLoading = false)
         }
