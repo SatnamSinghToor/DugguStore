@@ -63,7 +63,14 @@ fun RegisterScreen(
 
     AuthScaffold(
         title = stringResource(R.string.auth_create_title),
-        subtitle = stringResource(R.string.auth_create_sub)
+        subtitle = stringResource(R.string.auth_create_sub),
+        footer = {
+            AuthSwitchRow(
+                question = stringResource(R.string.auth_have_account),
+                action = stringResource(R.string.auth_sign_in),
+                onClick = onNavigateToLogin
+            )
+        }
     ) {
         if (shownError != null) {
             AuthErrorBanner(
@@ -170,14 +177,6 @@ fun RegisterScreen(
             },
             isLoading = isLoading
         )
-
-        Spacer(Modifier.height(20.dp))
-
-        AuthSwitchRow(
-            question = stringResource(R.string.auth_have_account),
-            action = stringResource(R.string.auth_sign_in),
-            onClick = onNavigateToLogin
-        )
     }
 }
 
@@ -192,7 +191,7 @@ private fun RoleChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) Teal else SurfaceMuted)
+            .background(if (selected) Teal else SurfaceWhite)
             .border(
                 width = 1.dp,
                 color = if (selected) Teal else BorderGray,

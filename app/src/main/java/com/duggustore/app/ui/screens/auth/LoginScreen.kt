@@ -32,7 +32,14 @@ fun LoginScreen(
 
     AuthScaffold(
         title = stringResource(R.string.auth_welcome_back),
-        subtitle = stringResource(R.string.auth_welcome_back_sub)
+        subtitle = stringResource(R.string.auth_welcome_back_sub),
+        footer = {
+            AuthSwitchRow(
+                question = stringResource(R.string.auth_new_here),
+                action = stringResource(R.string.auth_create_account),
+                onClick = onNavigateToRegister
+            )
+        }
     ) {
         if (error != null) {
             AuthErrorBanner(message = error, onDismiss = onClearError)
@@ -79,14 +86,6 @@ fun LoginScreen(
             isLoading = isLoading,
             // Nothing to send until both fields carry something.
             enabled = email.isNotBlank() && password.isNotBlank()
-        )
-
-        Spacer(Modifier.height(20.dp))
-
-        AuthSwitchRow(
-            question = stringResource(R.string.auth_new_here),
-            action = stringResource(R.string.auth_create_account),
-            onClick = onNavigateToRegister
         )
     }
 }

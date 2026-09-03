@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,74 +28,70 @@ import androidx.compose.ui.unit.sp
 import com.duggustore.app.ui.theme.*
 
 /**
- * Shared frame for the auth screens: a teal band carrying the wordmark and the
- * screen's title, with the form in a white sheet whose rounded top overlaps it.
+ * Shared frame for the auth screens: a centred title over a bordered card
+ * holding the form, rather than the earlier full-width teal band — that band
+ * pushed the whole form down a screen's worth before any field was visible.
+ * This stays compact and leans on the app's own palette (teal border/accent
+ * on a plain white ground) instead of a flat colour block.
  */
 @Composable
 fun AuthScaffold(
     title: String,
     subtitle: String,
+    footer: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SurfaceWhite)
+            .background(Background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
+            .padding(horizontal = 22.dp)
+            .padding(top = 32.dp, bottom = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Teal)
-                .statusBarsPadding()
-                .padding(horizontal = 24.dp)
-                .padding(top = 36.dp, bottom = 48.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(58.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color.White.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("🛒", fontSize = 28.sp)
-            }
-            Spacer(Modifier.height(18.dp))
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = subtitle,
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 14.sp
-            )
-        }
+        Text(
+            text = title,
+            color = TextPrimary,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = subtitle,
+            color = TextSecondary,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(22.dp))
 
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-26).dp),
-            shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
-            color = SurfaceWhite
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = SurfaceMuted,
+            border = BorderStroke(1.dp, BorderGray)
         ) {
             Column(
                 modifier = Modifier
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp)
-                    .padding(top = 28.dp, bottom = 28.dp),
+                    .padding(horizontal = 18.dp)
+                    .padding(top = 20.dp, bottom = 20.dp),
                 content = content
             )
         }
+
+        Spacer(Modifier.height(20.dp))
+        footer()
     }
 }
 
 /**
- * Filled field with the label above it, rather than the floating label the
- * pre-redesign screens used, so the forms read like the reference.
+ * Outlined field with a floating label, matching the compact pre-redesign
+ * look the filled version replaced — the filled fields with a label stacked
+ * above them took noticeably more vertical space per field for no real gain.
  */
 @Composable
 fun AuthField(
@@ -107,39 +104,32 @@ fun AuthField(
     keyboardType: KeyboardType = KeyboardType.Text,
     isPassword: Boolean = false
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextSecondary
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        label = { Text(label, fontSize = 13.sp) },
+        placeholder = if (placeholder.isBlank()) null else {
+            { Text(placeholder, color = TextLight, fontSize = 14.sp) }
+        },
+        leadingIcon = leadingIcon?.let {
+            { Icon(it, contentDescription = null, tint = Teal, modifier = Modifier.size(20.dp)) }
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        visualTransformation =
+            if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        singleLine = true,
+        shape = RoundedCornerShape(14.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = SurfaceWhite,
+            unfocusedContainerColor = SurfaceWhite,
+            focusedBorderColor = Teal,
+            unfocusedBorderColor = BorderGray,
+            focusedLabelColor = Teal,
+            unfocusedLabelColor = TextSecondary,
+            cursorColor = Teal
         )
-        Spacer(Modifier.height(6.dp))
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = if (placeholder.isBlank()) null else {
-                { Text(placeholder, color = TextLight, fontSize = 14.sp) }
-            },
-            leadingIcon = leadingIcon?.let {
-                { Icon(it, contentDescription = null, tint = Teal, modifier = Modifier.size(20.dp)) }
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            visualTransformation =
-                if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = SurfaceMuted,
-                unfocusedContainerColor = SurfaceMuted,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                cursorColor = Teal
-            )
-        )
-    }
+    )
 }
 
 /** Full-width teal action button used at the bottom of each auth form. */
@@ -155,8 +145,8 @@ fun AuthPrimaryButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp),
-        shape = RoundedCornerShape(16.dp),
+            .height(52.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Teal,
             disabledContainerColor = BorderGray
