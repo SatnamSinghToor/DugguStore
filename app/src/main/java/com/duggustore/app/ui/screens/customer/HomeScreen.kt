@@ -66,99 +66,106 @@ fun HomeScreen(
     val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 24.dp)
-        ) {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(SurfaceWhite)
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp, bottom = 16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        StoreWordmark()
-                        Spacer(Modifier.weight(1f))
-                        LanguagePicker()
-                        Spacer(Modifier.width(12.dp))
-                        Box(contentAlignment = Alignment.TopEnd) {
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // Pinned. The wordmark, the location strip and the search field were
+            // the first item of the list, so they scrolled away with the
+            // products — searching meant scrolling back to the top first.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(SurfaceWhite)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 8.dp, bottom = 16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StoreWordmark()
+                    Spacer(Modifier.weight(1f))
+                    LanguagePicker()
+                    Spacer(Modifier.width(12.dp))
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(SurfaceMuted)
+                                .clickable { onNotificationsClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.NotificationsNone,
+                                stringResource(R.string.home_notifications),
+                                tint = Coral,
+                                modifier = Modifier.size(21.dp)
+                            )
+                        }
+                        if (notificationCount > 0) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .defaultMinSize(minWidth = 17.dp, minHeight = 17.dp)
                                     .clip(CircleShape)
-                                    .background(SurfaceMuted)
-                                    .clickable { onNotificationsClick() },
+                                    .background(Coral),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    Icons.Default.NotificationsNone,
-                                    stringResource(R.string.home_notifications),
-                                    tint = Coral,
-                                    modifier = Modifier.size(21.dp)
+                                Text(
+                                    text = if (notificationCount > 9) "9+" else "$notificationCount",
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
                                 )
-                            }
-                            if (notificationCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .defaultMinSize(minWidth = 17.dp, minHeight = 17.dp)
-                                        .clip(CircleShape)
-                                        .background(Coral),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = if (notificationCount > 9) "9+" else "$notificationCount",
-                                        color = Color.White,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 4.dp)
-                                    )
-                                }
                             }
                         }
                     }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    // The strip showed only the saved default address. It now
-                    // leads with the detected one and falls back to the saved
-                    // address when location is off or refused.
-                    val locationState = detected.state
-                    LocationBar(
-                        city = when {
-                            locationState is LocationState.Locating ->
-                                stringResource(R.string.location_finding)
-                            locationState is LocationState.Found ->
-                                stringResource(R.string.location_current)
-                            userName.isBlank() -> stringResource(R.string.home_deliver_to)
-                            else -> stringResource(R.string.home_greeting, userName)
-                        },
-                        address = when (locationState) {
-                            is LocationState.Found -> locationState.address
-                            is LocationState.Locating -> stringResource(R.string.location_wait)
-                            is LocationState.Unavailable ->
-                                stringResource(locationState.messageRes)
-                            LocationState.Idle -> deliveryAddress
-                        },
-                        onClick = { showLocationSheet = true },
-                        onLocateClick = detected.refresh,
-                        locating = locationState is LocationState.Locating
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    StoreSearchBar(
-                        query = searchQuery,
-                        placeholder = stringResource(R.string.home_search_hint),
-                        onQueryChange = onSearchQueryChange,
-                        // Null when the device has no speech recogniser, which
-                        // leaves the mic out rather than showing a dead button.
-                        onMicClick = voice?.let { { it.open() } }
-                    )
                 }
+
+                Spacer(Modifier.height(10.dp))
+
+                // The strip showed only the saved default address. It now
+                // leads with the detected one and falls back to the saved
+                // address when location is off or refused.
+                val locationState = detected.state
+                LocationBar(
+                    city = when {
+                        locationState is LocationState.Locating ->
+                            stringResource(R.string.location_finding)
+                        locationState is LocationState.Found ->
+                            stringResource(R.string.location_current)
+                        userName.isBlank() -> stringResource(R.string.home_deliver_to)
+                        else -> stringResource(R.string.home_greeting, userName)
+                    },
+                    address = when (locationState) {
+                        is LocationState.Found -> locationState.address
+                        is LocationState.Locating -> stringResource(R.string.location_wait)
+                        is LocationState.Unavailable ->
+                            stringResource(locationState.messageRes)
+                        LocationState.Idle -> deliveryAddress
+                    },
+                    onClick = { showLocationSheet = true },
+                    onLocateClick = detected.refresh,
+                    locating = locationState is LocationState.Locating
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                StoreSearchBar(
+                    query = searchQuery,
+                    placeholder = stringResource(R.string.home_search_hint),
+                    onQueryChange = onSearchQueryChange,
+                    // Null when the device has no speech recogniser, which
+                    // leaves the mic out rather than showing a dead button.
+                    onMicClick = voice?.let { { it.open() } }
+                )
             }
+
+            LazyColumn(
+                // weight, not fillMaxSize: the header above has already taken
+                // its height, and fillMaxSize here would ask for the whole
+                // screen again and push the list off the bottom.
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
 
             if (offers.isNotEmpty()) {
                 item {
@@ -258,6 +265,7 @@ fun HomeScreen(
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
+            }
             }
         }
 
