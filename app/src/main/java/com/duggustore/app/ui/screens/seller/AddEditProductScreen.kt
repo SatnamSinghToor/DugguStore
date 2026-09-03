@@ -96,7 +96,15 @@ fun AddEditProductScreen(
                         bytes to mimeType
                     }
                 }
-                val (bytes, mimeType) = read.getOrElse { failed = true; continue }
+                // Not read.getOrElse { ... continue }: a continue inside an
+                // inline lambda needs an experimental compiler flag this
+                // project doesn't enable, so the skip is done here instead.
+                val pair = read.getOrNull()
+                if (pair == null) {
+                    failed = true
+                    continue
+                }
+                val (bytes, mimeType) = pair
 
                 // Best-effort: a photo the model can't cut out (or no Play
                 // Services / the model still downloading) just uploads as
