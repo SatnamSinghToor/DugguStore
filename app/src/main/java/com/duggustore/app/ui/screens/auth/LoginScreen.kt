@@ -52,6 +52,7 @@ fun LoginScreen(
             label = stringResource(R.string.auth_email),
             placeholder = stringResource(R.string.auth_email_hint),
             leadingIcon = Icons.Default.Email,
+            leadingIconTint = Orange,
             keyboardType = KeyboardType.Email
         )
 
@@ -63,6 +64,7 @@ fun LoginScreen(
             label = stringResource(R.string.auth_password),
             placeholder = stringResource(R.string.auth_password_hint),
             leadingIcon = Icons.Default.Lock,
+            leadingIconTint = Violet,
             isPassword = true
         )
 

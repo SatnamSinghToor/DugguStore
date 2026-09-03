@@ -52,6 +52,8 @@ fun AuthScaffold(
             .padding(top = 32.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        AppLogo()
+        Spacer(Modifier.height(16.dp))
         Text(
             text = title,
             color = TextPrimary,
@@ -89,9 +91,35 @@ fun AuthScaffold(
 }
 
 /**
+ * The app's mark: a rounded orange tile with a bold white "D", matching the
+ * launcher icon. Sign in and sign up were the two screens with no branding
+ * on them at all once the old teal header band was removed.
+ */
+@Composable
+fun AppLogo(size: Int = 64) {
+    Box(
+        modifier = Modifier
+            .size(size.dp)
+            .clip(RoundedCornerShape((size * 0.28).dp))
+            .background(Orange),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "D",
+            color = Color.White,
+            fontSize = (size * 0.52).sp,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
+}
+
+/**
  * Outlined field with a floating label, matching the compact pre-redesign
  * look the filled version replaced — the filled fields with a label stacked
  * above them took noticeably more vertical space per field for no real gain.
+ * The leading icon takes its own tint rather than a fixed one: a whole form
+ * of teal icons on a teal-bordered field reads as one flat colour rather
+ * than as distinct fields.
  */
 @Composable
 fun AuthField(
@@ -100,6 +128,7 @@ fun AuthField(
     label: String,
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
+    leadingIconTint: Color = Teal,
     placeholder: String = "",
     keyboardType: KeyboardType = KeyboardType.Text,
     isPassword: Boolean = false
@@ -113,7 +142,7 @@ fun AuthField(
             { Text(placeholder, color = TextLight, fontSize = 14.sp) }
         },
         leadingIcon = leadingIcon?.let {
-            { Icon(it, contentDescription = null, tint = Teal, modifier = Modifier.size(20.dp)) }
+            { Icon(it, contentDescription = null, tint = leadingIconTint, modifier = Modifier.size(20.dp)) }
         },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation =

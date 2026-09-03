@@ -4,10 +4,11 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Bold "D" mark: outer letterform plus an inset counter, evenOdd fill
+         punches the bowl's hole. Sized to stay inside the adaptive icon's
+         safe zone so it isn't clipped by a circular or squircle mask. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,30 L54,30 C67.25,30 78,40.75 78,54 C78,67.25 67.25,78 54,78 C40.75,78 30,67.25 30,54 C30,40.75 40.75,30 54,30Z" />
-    <path
-        android:fillColor="#2D6A4F"
-        android:pathData="M48,42 L48,66 L52,66 L52,58 L56,58 L60,66 L64.5,66 L59,56.5 C61.5,55 63,52.5 63,49.5 C63,44.8 59.2,42 54,42 Z M52,45 L55.5,45 C57.5,45 59,46 59,48 C59,50 57.5,51.5 55.5,51.5 L52,51.5 Z" />
+        android:fillType="evenOdd"
+        android:pathData="M40,30 L50,30 C61,30 70,40 70,54 C70,68 61,78 50,78 L40,78 Z M50,38 C59,38 62,45 62,54 C62,63 59,70 50,70 Z" />
 </vector>

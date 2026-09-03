@@ -66,9 +66,10 @@ fun OfferCarousel(
         HorizontalPager(
             state = pagerState,
             // This padding is what leaves a sliver of the previous and next card
-            // showing at each edge.
-            contentPadding = PaddingValues(horizontal = 34.dp),
-            pageSpacing = 12.dp,
+            // showing at each edge — smaller now so the card itself gets more
+            // of the screen's width instead of most of it going to the peek.
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            pageSpacing = 8.dp,
             modifier = Modifier.fillMaxWidth()
         ) { page ->
             val selected = page == pagerState.currentPage
@@ -125,7 +126,7 @@ private fun OfferCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(172.dp)
+            .height(188.dp)
             .clip(RoundedCornerShape(20.dp))
             // A light wash of the card's colour rather than the colour itself:
             // the reference banner is a pale tint with dark type on it, and a

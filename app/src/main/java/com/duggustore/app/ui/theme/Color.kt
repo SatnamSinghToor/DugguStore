@@ -18,6 +18,11 @@ val Coral = Color(0xFFEF6C6C)
 val CoralDark = Color(0xFFD94F4F)
 val CoralSurface = Color(0xFFFDECEC)
 
+// A fourth accent, so a row of icons (name/email/phone/password) doesn't run
+// out of brand colours and repeat one of the three above.
+val Violet = Color(0xFF8B6FD1)
+val VioletDark = Color(0xFF6B4FB0)
+
 // ── Neutrals ─────────────────────────────────────────────────────────────
 // The header and the bottom bar are white, so the page is too — the app reads
 // as one surface instead of white bands top and bottom around a grey middle.

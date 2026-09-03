@@ -1,25 +1,21 @@
 package com.duggustore.app.ui.screens.auth
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.ui.components.*
@@ -92,7 +88,8 @@ fun RegisterScreen(
             onValueChange = { fullName = it; localError = null; onClearError() },
             label = stringResource(R.string.auth_full_name),
             placeholder = stringResource(R.string.auth_full_name_hint),
-            leadingIcon = Icons.Default.Person
+            leadingIcon = Icons.Default.Person,
+            leadingIconTint = Teal
         )
 
         Spacer(Modifier.height(16.dp))
@@ -103,6 +100,7 @@ fun RegisterScreen(
             label = stringResource(R.string.auth_email),
             placeholder = stringResource(R.string.auth_email_hint),
             leadingIcon = Icons.Default.Email,
+            leadingIconTint = Orange,
             keyboardType = KeyboardType.Email
         )
 
@@ -114,30 +112,20 @@ fun RegisterScreen(
             label = stringResource(R.string.auth_phone),
             placeholder = stringResource(R.string.auth_phone_hint),
             leadingIcon = Icons.Default.Phone,
+            leadingIconTint = Coral,
             keyboardType = KeyboardType.Phone
         )
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
 
-        Text(
-            text = stringResource(R.string.auth_i_want_to),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextSecondary
+        RoleDropdownField(
+            label = stringResource(R.string.auth_i_want_to),
+            roles = roles,
+            selected = selectedRole,
+            onSelect = { selectedRole = it }
         )
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            roles.forEach { (value, label) ->
-                RoleChip(
-                    label = label,
-                    selected = selectedRole == value,
-                    modifier = Modifier.weight(1f),
-                    onClick = { selectedRole = value }
-                )
-            }
-        }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(16.dp))
 
         AuthField(
             value = password,
@@ -145,6 +133,7 @@ fun RegisterScreen(
             label = stringResource(R.string.auth_password),
             placeholder = stringResource(R.string.auth_password_min_hint),
             leadingIcon = Icons.Default.Lock,
+            leadingIconTint = Teal,
             isPassword = true
         )
 
@@ -156,6 +145,7 @@ fun RegisterScreen(
             label = stringResource(R.string.auth_confirm_password),
             placeholder = stringResource(R.string.auth_confirm_password_hint),
             leadingIcon = Icons.Default.Lock,
+            leadingIconTint = Orange,
             isPassword = true
         )
 
@@ -180,33 +170,70 @@ fun RegisterScreen(
     }
 }
 
-/** Replaces the role dropdown: all three choices are visible at once. */
+/**
+ * Back to a dropdown rather than the three-way chip row it was briefly
+ * replaced with — styled to match the outlined fields around it (border,
+ * leading icon, floating label) instead of a plain unlabeled box.
+ */
 @Composable
-private fun RoleChip(
+private fun RoleDropdownField(
     label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    roles: List<Pair<String, String>>,
+    selected: String,
+    onSelect: (String) -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) Teal else SurfaceWhite)
-            .border(
-                width = 1.dp,
-                color = if (selected) Teal else BorderGray,
-                shape = RoundedCornerShape(14.dp)
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = roles.firstOrNull { it.first == selected }?.second ?: ""
+
+    Box {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true },
+            enabled = false,
+            label = { Text(label, fontSize = 13.sp) },
+            leadingIcon = {
+                Icon(Icons.Default.Category, contentDescription = null, tint = Violet, modifier = Modifier.size(20.dp))
+            },
+            trailingIcon = {
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = TextSecondary)
+            },
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledContainerColor = SurfaceWhite,
+                disabledBorderColor = BorderGray,
+                disabledLabelColor = TextSecondary,
+                disabledTextColor = TextPrimary,
+                disabledLeadingIconColor = Violet,
+                disabledTrailingIconColor = TextSecondary
             )
-            .clickable { onClick() }
-            .padding(vertical = 13.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (selected) Color.White else TextSecondary,
-            textAlign = TextAlign.Center
         )
+
+        // A transparent click target the full size of the field: the field
+        // itself is disabled (so it can't be typed into) which would also
+        // swallow the click if this weren't layered on top separately.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable { expanded = true }
+        )
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            roles.forEach { (value, roleLabel) ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = roleLabel,
+                            fontWeight = if (value == selected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (value == selected) Violet else TextPrimary
+                        )
+                    },
+                    onClick = { onSelect(value); expanded = false }
+                )
+            }
+        }
     }
 }
