@@ -1,15 +1,21 @@
 package com.duggustore.app.ui.screens.seller
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -25,8 +32,12 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.repository.ProductRepository
 import com.duggustore.app.ui.components.AuthField
 import com.duggustore.app.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AddEditProductScreen(
@@ -50,11 +61,43 @@ fun AddEditProductScreen(
     var categoryId by remember(product) { mutableStateOf(product?.categoryId ?: "") }
     var isActive by remember(product) { mutableStateOf(product?.isActive ?: true) }
     var localError by remember { mutableStateOf<String?>(null) }
+    var uploadingImage by remember { mutableStateOf(false) }
 
     val priceValue = price.toDoubleOrNull()
     val discountValue = discountPrice.takeIf { it.isNotBlank() }?.toDoubleOrNull()
     val selectedCategory = categories.firstOrNull { it.id == categoryId }
     val shownError = localError ?: error
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val productRepo = remember { ProductRepository() }
+
+    val pickImage = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        uploadingImage = true
+        scope.launch {
+            val read = withContext(Dispatchers.IO) {
+                runCatching {
+                    val resolver = context.contentResolver
+                    val mimeType = resolver.getType(uri) ?: "image/jpeg"
+                    val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
+                        ?: error("Could not read the selected image")
+                    bytes to mimeType
+                }
+            }
+            val (bytes, mimeType) = read.getOrElse {
+                uploadingImage = false
+                localError = "Couldn't read that photo — try another one"
+                return@launch
+            }
+            productRepo.uploadProductImage(sellerId, bytes, mimeType)
+                .onSuccess { url -> imageUrl = url; localError = null }
+                .onFailure { localError = "Upload failed — check your connection and try again" }
+            uploadingImage = false
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         Surface(color = Teal) {
@@ -83,7 +126,13 @@ fun AddEditProductScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            ImagePreview(imageUrl = imageUrl)
+            ImagePreview(
+                imageUrl = imageUrl,
+                uploading = uploadingImage,
+                onPickPhoto = {
+                    pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+            )
 
             Spacer(Modifier.height(16.dp))
 
@@ -91,7 +140,7 @@ fun AddEditProductScreen(
                 value = imageUrl,
                 onValueChange = { imageUrl = it },
                 label = "Image URL",
-                placeholder = "Optional — paste a link to a photo"
+                placeholder = "Or paste a link to a photo instead"
             )
 
             Spacer(Modifier.height(16.dp))
@@ -290,15 +339,21 @@ fun AddEditProductScreen(
     }
 }
 
-/** Shows the image the URL points at, so a wrong link is obvious before saving. */
+/**
+ * Shows the image the URL points at, so a wrong link is obvious before
+ * saving — and doubles as the button for picking a photo straight off the
+ * seller's device, the more realistic path for a small seller who has no
+ * existing hosted image link to paste.
+ */
 @Composable
-private fun ImagePreview(imageUrl: String) {
+private fun ImagePreview(imageUrl: String, uploading: Boolean, onPickPhoto: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(160.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(SurfaceMuted),
+            .background(SurfaceMuted)
+            .clickable(enabled = !uploading) { onPickPhoto() },
         contentAlignment = Alignment.Center
     ) {
         if (imageUrl.isBlank()) {
@@ -310,7 +365,7 @@ private fun ImagePreview(imageUrl: String) {
                     modifier = Modifier.size(40.dp)
                 )
                 Spacer(Modifier.height(6.dp))
-                Text("No image", fontSize = 12.sp, color = TextLight)
+                Text("Tap to add a photo", fontSize = 12.sp, color = TextLight)
             }
         } else {
             AsyncImage(
@@ -319,6 +374,34 @@ private fun ImagePreview(imageUrl: String) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+        }
+
+        if (uploading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(10.dp)
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Teal),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = "Change photo",
+                    tint = Color.White,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
         }
     }
 }

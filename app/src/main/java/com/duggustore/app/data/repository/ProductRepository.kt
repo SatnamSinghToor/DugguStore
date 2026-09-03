@@ -96,6 +96,27 @@ class ProductRepository {
         }
     }
 
+    /**
+     * Uploads a product photo taken from the seller's own device to the
+     * `product-images` bucket and returns its public URL, ready to store on
+     * the product row — the alternative to asking the seller for an
+     * already-hosted image link.
+     */
+    suspend fun uploadProductImage(sellerId: String, bytes: ByteArray, mimeType: String): Result<String> {
+        return try {
+            val extension = when (mimeType) {
+                "image/png" -> "png"
+                "image/webp" -> "webp"
+                else -> "jpg"
+            }
+            val path = "$sellerId/${java.util.UUID.randomUUID()}.$extension"
+            val url = SupabaseService.uploadFile("product-images", path, bytes, mimeType, token())
+            Result.success(url)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun searchProducts(query: String): Result<List<Product>> {
         return try {
             val all = SupabaseService.selectAll("products", token())

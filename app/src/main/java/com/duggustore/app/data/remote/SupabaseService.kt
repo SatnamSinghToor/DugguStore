@@ -10,6 +10,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -334,6 +335,36 @@ object SupabaseService {
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()
         executeRequest(request)
+    }
+
+    /**
+     * Uploads raw bytes to Supabase Storage and hands back the object's
+     * public URL. [path] is expected to start with the uploader's own user
+     * id — the bucket's RLS policies key off that first path segment to
+     * decide who is allowed to write there.
+     */
+    suspend fun uploadFile(
+        bucket: String,
+        path: String,
+        bytes: ByteArray,
+        contentType: String,
+        token: String?
+    ): String {
+        val mediaType = contentType.toMediaTypeOrNull() ?: "application/octet-stream".toMediaType()
+        val encodedPath = path.split("/").joinToString("/") { encode(it) }
+        val request = Request.Builder()
+            .url("$BASE_URL/storage/v1/object/$bucket/$encodedPath")
+            .post(bytes.toRequestBody(mediaType))
+            .apply {
+                addHeader("apikey", ANON_KEY)
+                addHeader("Authorization", "Bearer ${token ?: ANON_KEY}")
+                // Overwrite rather than reject if the same path is ever
+                // uploaded to twice.
+                addHeader("x-upsert", "true")
+            }
+            .build()
+        executeRequest(request)
+        return "$BASE_URL/storage/v1/object/public/$bucket/$encodedPath"
     }
 
     suspend fun deleteWhere(table: String, column: String, value: String, token: String? = null) {

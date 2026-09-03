@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.CartItem
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.repository.CartRepository
+import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.OrderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,7 @@ data class CartState(
     val couponCode: String = "",
     val couponApplied: Boolean = false,
     val couponDiscount: Double = 0.0,
+    val couponError: String? = null,
     val isCartOpen: Boolean = false
 ) {
     val subtotal: Double
@@ -44,6 +46,7 @@ data class CartState(
 class CartViewModel : ViewModel() {
     private val cartRepo = CartRepository()
     private val orderRepo = OrderRepository()
+    private val offerRepo = OfferRepository()
 
     private val _state = MutableStateFlow(CartState())
     val state: StateFlow<CartState> = _state
@@ -97,18 +100,49 @@ class CartViewModel : ViewModel() {
         _state.value = _state.value.copy(isCartOpen = !_state.value.isCartOpen)
     }
 
+    /**
+     * Checks the typed code against the store's real coupons (the same rows
+     * the home carousel shows) instead of a fixed local list, so a code that
+     * was never actually issued — or one that has since been turned off —
+     * is rejected rather than silently accepted.
+     */
     fun applyCoupon(code: String) {
-        val discount = when (code.uppercase()) {
-            "DUGGU10" -> 10.0
-            "DUGGU50" -> 50.0
-            "SAVE20" -> 20.0
-            else -> 0.0
+        val trimmed = code.trim()
+        if (trimmed.isEmpty()) return
+
+        viewModelScope.launch {
+            val coupons = offerRepo.getOffers().getOrElse {
+                _state.value = _state.value.copy(
+                    couponApplied = false,
+                    couponDiscount = 0.0,
+                    couponError = "Couldn't check that code — try again"
+                )
+                return@launch
+            }
+            val match = coupons.firstOrNull { it.code.equals(trimmed, ignoreCase = true) }
+            val subtotal = _state.value.subtotal
+
+            _state.value = when {
+                match == null || !match.isActive -> _state.value.copy(
+                    couponCode = trimmed,
+                    couponApplied = false,
+                    couponDiscount = 0.0,
+                    couponError = "That code isn't valid"
+                )
+                subtotal < match.minOrderValue -> _state.value.copy(
+                    couponCode = trimmed,
+                    couponApplied = false,
+                    couponDiscount = 0.0,
+                    couponError = "Minimum order of ₹${match.minOrderValue} needed for this code"
+                )
+                else -> _state.value.copy(
+                    couponCode = trimmed,
+                    couponApplied = true,
+                    couponDiscount = minOf(subtotal * match.discountPercent / 100.0, match.maxDiscount.toDouble()),
+                    couponError = null
+                )
+            }
         }
-        _state.value = _state.value.copy(
-            couponCode = code,
-            couponApplied = discount > 0,
-            couponDiscount = discount
-        )
     }
 
     /**
@@ -169,7 +203,8 @@ class CartViewModel : ViewModel() {
                     cartItems = emptyList(),
                     isCartOpen = false,
                     couponApplied = false,
-                    couponDiscount = 0.0
+                    couponDiscount = 0.0,
+                    couponError = null
                 )
             }
             result.onFailure {

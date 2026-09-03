@@ -40,6 +40,7 @@ fun CartScreen(
     savings: Double,
     couponApplied: Boolean,
     couponDiscount: Double,
+    couponError: String?,
     isLoading: Boolean,
     onIncrementQuantity: (String, Int) -> Unit,
     onDecrementQuantity: (String, Int) -> Unit,
@@ -85,7 +86,13 @@ fun CartScreen(
                         }
                     }
 
-                    item { CouponCard(onApplyCoupon = onApplyCoupon, applied = couponApplied) }
+                    item {
+                        CouponCard(
+                            onApplyCoupon = onApplyCoupon,
+                            applied = couponApplied,
+                            error = couponError
+                        )
+                    }
                 }
             }
         }
@@ -259,68 +266,78 @@ private fun CartRow(
 }
 
 @Composable
-private fun CouponCard(onApplyCoupon: (String) -> Unit, applied: Boolean) {
+private fun CouponCard(onApplyCoupon: (String) -> Unit, applied: Boolean, error: String?) {
     var code by remember { mutableStateOf("") }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = OrangeSurface
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+    Column {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = OrangeSurface
         ) {
-            Icon(
-                Icons.Default.LocalOffer,
-                contentDescription = null,
-                tint = Orange,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(Modifier.width(10.dp))
-            if (applied) {
-                Text(
-                    text = stringResource(R.string.cart_coupon_applied),
-                    modifier = Modifier.weight(1f),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = OrangeDark
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.LocalOffer,
+                    contentDescription = null,
+                    tint = Orange,
+                    modifier = Modifier.size(22.dp)
                 )
-            } else {
-                TextField(
-                    value = code,
-                    onValueChange = { code = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = {
-                        Text(
-                            stringResource(R.string.cart_coupon_hint),
-                            fontSize = 13.sp,
-                            color = TextLight
-                        )
-                    },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    )
-                )
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Orange,
-                    modifier = Modifier.clickable { onApplyCoupon(code) }
-                ) {
+                Spacer(Modifier.width(10.dp))
+                if (applied) {
                     Text(
-                        text = stringResource(R.string.cart_apply),
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        text = stringResource(R.string.cart_coupon_applied),
+                        modifier = Modifier.weight(1f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = OrangeDark
                     )
+                } else {
+                    TextField(
+                        value = code,
+                        onValueChange = { code = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = {
+                            Text(
+                                stringResource(R.string.cart_coupon_hint),
+                                fontSize = 13.sp,
+                                color = TextLight
+                            )
+                        },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Orange,
+                        modifier = Modifier.clickable { onApplyCoupon(code) }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cart_apply),
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
+        }
+        if (!applied && error != null) {
+            Text(
+                text = error,
+                modifier = Modifier.padding(start = 6.dp, top = 4.dp),
+                fontSize = 12.sp,
+                color = CoralDark
+            )
         }
     }
 }

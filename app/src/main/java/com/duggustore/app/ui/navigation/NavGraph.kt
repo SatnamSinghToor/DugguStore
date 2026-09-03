@@ -392,6 +392,7 @@ fun AppNavGraph(
                 savings = cartState.savings,
                 couponApplied = cartState.couponApplied,
                 couponDiscount = cartState.couponDiscount,
+                couponError = cartState.couponError,
                 isLoading = cartState.isLoading,
                 // The screen passes the quantity it wants, already adjusted.
                 onIncrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty) },
@@ -440,6 +441,17 @@ fun AppNavGraph(
             LaunchedEffect(Unit) {
                 authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
             }
+
+            // Otherwise a seller accepting or a rider updating an order while
+            // this list is on screen never shows up until the customer backs
+            // out and re-enters it.
+            LaunchedEffect(authState.user?.id) {
+                val userId = authState.user?.id ?: return@LaunchedEffect
+                while (true) {
+                    delay(15_000L)
+                    orderViewModel.loadCustomerOrders(userId)
+                }
+            }
         }
 
         composable(
@@ -475,6 +487,23 @@ fun AppNavGraph(
                     while (true) {
                         orderViewModel.loadTracking(orderId)
                         delay(15_000L)
+                    }
+                }
+
+                // The order itself was only fetched once, when the list
+                // screen loaded — without this, a status change the seller
+                // or rider makes while the customer is sitting on this exact
+                // screen never appears until they back out and re-enter it.
+                // Stops once the order reaches a state that will not change
+                // again.
+                LaunchedEffect(orderId, it.status) {
+                    val terminal = it.status == OrderStatus.DELIVERED.value ||
+                        it.status == OrderStatus.CANCELLED.value
+                    if (terminal) return@LaunchedEffect
+                    val userId = authState.user?.id ?: return@LaunchedEffect
+                    while (true) {
+                        delay(10_000L)
+                        orderViewModel.loadCustomerOrders(userId)
                     }
                 }
             }
