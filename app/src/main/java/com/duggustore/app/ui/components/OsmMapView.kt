@@ -18,6 +18,9 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
+/** Esri World Imagery is reliably populated up to about here worldwide; past it, rural areas in particular fall back to blank grey tiles. */
+private const val MAX_USEFUL_ZOOM = 17.0
+
 /**
  * Satellite map via osmdroid, tiled from Esri's free World Imagery service
  * rather than a plain street map — no API key or billing account either
@@ -114,11 +117,24 @@ fun OsmMapView(
                 // measured size first, which it doesn't have on the same
                 // pass it was created.
                 view.post {
+                    // Unanimated: zoomLevelDouble below needs to already
+                    // reflect the box-fit zoom, not a value mid-animation.
                     view.zoomToBoundingBox(
                         BoundingBox.fromGeoPoints(listOf(origin, destination)),
-                        true,
+                        false,
                         140
                     )
+                    // When origin and destination are (near) the same point —
+                    // a rider standing at the pickup spot — the box has ~zero
+                    // area, so fitting it zooms all the way to the tile
+                    // source's max (19). Esri's satellite imagery has no real
+                    // photography that close in most areas, especially rural
+                    // ones, and serves flat grey placeholder tiles instead —
+                    // capping the zoom keeps it on a level that actually has
+                    // imagery.
+                    if (view.zoomLevelDouble > MAX_USEFUL_ZOOM) {
+                        view.controller.setZoom(MAX_USEFUL_ZOOM)
+                    }
                 }
             } else {
                 view.controller.setCenter(destination)
