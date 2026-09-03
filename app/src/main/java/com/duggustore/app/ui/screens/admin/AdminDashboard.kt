@@ -35,6 +35,8 @@ private val ROLES = listOf("customer", "seller", "delivery", "admin")
 
 @Composable
 fun AdminDashboard(
+    /** Driven by the bottom bar, which is the only tab control now. */
+    selectedTab: Int,
     users: List<UserProfile>,
     orders: List<Order>,
     products: List<Product>,
@@ -45,8 +47,6 @@ fun AdminDashboard(
     onUpdateUserRole: (String, String) -> Unit,
     onSignOut: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -62,12 +62,6 @@ fun AdminDashboard(
                 "Delivered" to "$totalDeliveries"
             ),
             onSignOut = onSignOut
-        )
-
-        DashboardTabs(
-            tabs = listOf("Overview", "Users", "Orders", "Products"),
-            selected = selectedTab,
-            onSelect = { selectedTab = it }
         )
 
         Box(modifier = Modifier.weight(1f)) {

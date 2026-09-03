@@ -5,8 +5,23 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.duggustore.app.ui.components.BottomBarCentre
+import com.duggustore.app.ui.components.StoreBottomBar
+import com.duggustore.app.ui.components.StoreBottomBarHeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -39,6 +54,7 @@ sealed class Screen(val route: String) {
     object CustomerCart : Screen("customer_cart")
     object CustomerOrders : Screen("customer_orders")
     object CustomerOrderTracking : Screen("customer_order_tracking/{orderId}")
+    object CustomerCategories : Screen("customer_categories")
     object CustomerFavorites : Screen("customer_favorites")
     object CustomerAccount : Screen("customer_account")
     object CustomerAddresses : Screen("customer_addresses")
@@ -155,7 +171,32 @@ fun AppNavGraph(
         }
     }
 
+    // The bar is part of the shell rather than of any one screen, so every
+    // top-level destination gets it and the selected item always matches where
+    // the user actually is.
+    val role = authState.user?.userRole() ?: UserRole.CUSTOMER
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val showBar = BottomNav.showsBar(currentRoute, role)
+    // The three dashboards are one screen each with tabs inside them, so the bar
+    // drives that index instead of navigating.
+    var dashboardTab by rememberSaveable { mutableStateOf(0) }
+
+    // The bar sits above the system navigation inset, so the space it occupies is
+    // its own height plus that inset. Consuming the same amount stops screens with
+    // their own pinned bottoms (the cart's bill sheet) adding the inset a second
+    // time underneath it.
+    val barSpace = if (showBar) {
+        StoreBottomBarHeight +
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    } else 0.dp
+
+    Box(modifier = Modifier.fillMaxSize()) {
+
     NavHost(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = barSpace)
+            .consumeWindowInsets(PaddingValues(bottom = barSpace)),
         navController = navController,
         startDestination = startDestination,
         enterTransition = { fadeIn(tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300)) },
@@ -224,19 +265,27 @@ fun AppNavGraph(
             )
         }
 
+        composable(Screen.CustomerCategories.route) {
+            CategoriesScreen(
+                categories = homeState.categories,
+                onCategoryClick = { category ->
+                    homeViewModel.selectCategory(category.id)
+                    navController.navigate(Screen.CustomerHome.route) {
+                        popUpTo(Screen.CustomerHome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.CustomerHome.route) {
             HomeScreen(
                 categories = homeState.categories,
                 filteredProducts = homeState.filteredProducts,
                 selectedCategoryId = homeState.selectedCategoryId,
                 searchQuery = homeState.searchQuery,
-                cartItemCount = cartState.itemCount,
                 onSearchQueryChange = { homeViewModel.search(it) },
                 onCategorySelected = { homeViewModel.selectCategory(it) },
                 onAddToCart = { cartViewModel.addToCart(it) },
-                onCartClick = { navController.navigate(Screen.CustomerCart.route) },
-                onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
-                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) },
                 onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) },
                 userName = authState.user?.fullName?.substringBefore(' ').orEmpty(),
                 deliveryAddress = addressState.defaultAddress?.fullAddress ?: "Set your delivery address",
@@ -382,6 +431,7 @@ fun AppNavGraph(
 
         composable(Screen.SellerDashboard.route) {
             SellerDashboard(
+                selectedTab = dashboardTab,
                 products = sellerState.products,
                 orders = sellerState.orders,
                 totalRevenue = sellerState.totalRevenue,
@@ -402,6 +452,7 @@ fun AppNavGraph(
 
         composable(Screen.DeliveryDashboard.route) {
             DeliveryDashboard(
+                selectedTab = dashboardTab,
                 activeOrders = deliveryState.activeOrders,
                 completedOrders = deliveryState.completedOrders,
                 totalEarnings = deliveryState.totalEarnings,
@@ -419,6 +470,7 @@ fun AppNavGraph(
 
         composable(Screen.AdminDashboard.route) {
             AdminDashboard(
+                selectedTab = dashboardTab,
                 users = adminState.users,
                 orders = adminState.orders,
                 products = adminState.products,
@@ -572,5 +624,45 @@ fun AppNavGraph(
                 }
             }
         }
+    }
+
+    if (showBar) {
+        StoreBottomBar(
+            items = BottomNav.itemsFor(role),
+            selectedKey = if (role == UserRole.CUSTOMER) {
+                BottomNav.selectedKeyFor(currentRoute)
+            } else {
+                dashboardTab.toString()
+            },
+            onSelect = { key ->
+                if (role == UserRole.CUSTOMER) {
+                    if (key != currentRoute) {
+                        navController.navigate(key) {
+                            // Tabs re-enter rather than stack, so tapping around
+                            // the bar does not build up a back stack of them.
+                            popUpTo(Screen.CustomerHome.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                } else {
+                    dashboardTab = key.toIntOrNull() ?: 0
+                }
+            },
+            centre = if (role == UserRole.CUSTOMER) {
+                BottomBarCentre(
+                    count = cartState.itemCount,
+                    selected = currentRoute == Screen.CustomerCart.route,
+                    onClick = {
+                        if (currentRoute != Screen.CustomerCart.route) {
+                            navController.navigate(Screen.CustomerCart.route)
+                        }
+                    }
+                )
+            } else null,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
     }
 }

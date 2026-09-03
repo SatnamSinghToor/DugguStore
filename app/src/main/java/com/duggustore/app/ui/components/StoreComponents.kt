@@ -151,11 +151,13 @@ fun CategoryTile(
     category: Category,
     color: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    // The size lives in the default rather than inside, so the categories grid can
+    // hand it a width-driven square instead of a fixed 104dp that would overflow
+    // three-across on a narrow phone.
+    modifier: Modifier = Modifier.size(104.dp)
 ) {
     Column(
         modifier = modifier
-            .size(width = 104.dp, height = 104.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(color)
             .clickable { onClick() }

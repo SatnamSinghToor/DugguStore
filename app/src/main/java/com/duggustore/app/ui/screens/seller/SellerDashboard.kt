@@ -32,6 +32,8 @@ import com.duggustore.app.ui.theme.*
 
 @Composable
 fun SellerDashboard(
+    /** Driven by the bottom bar, which is the only tab control now. */
+    selectedTab: Int,
     products: List<Product>,
     orders: List<Order>,
     totalRevenue: Double,
@@ -42,7 +44,6 @@ fun SellerDashboard(
     onUpdateOrderStatus: (String, OrderStatus) -> Unit,
     onSignOut: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
     val pendingCount = orders.count { it.status == OrderStatus.PENDING.value }
 
     Column(
@@ -61,12 +62,6 @@ fun SellerDashboard(
                 "Products" to "${products.size}"
             ),
             onSignOut = onSignOut
-        )
-
-        DashboardTabs(
-            tabs = listOf("Products", "Orders"),
-            selected = selectedTab,
-            onSelect = { selectedTab = it }
         )
 
         when (selectedTab) {

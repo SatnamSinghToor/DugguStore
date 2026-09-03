@@ -23,6 +23,8 @@ import com.duggustore.app.ui.theme.*
 
 @Composable
 fun DeliveryDashboard(
+    /** Driven by the bottom bar, which is the only tab control now. */
+    selectedTab: Int,
     activeOrders: List<Order>,
     completedOrders: List<Order>,
     totalEarnings: Double,
@@ -30,8 +32,6 @@ fun DeliveryDashboard(
     onMarkDelivered: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,12 +47,6 @@ fun DeliveryDashboard(
                 "Delivered" to "$totalDeliveries"
             ),
             onSignOut = onSignOut
-        )
-
-        DashboardTabs(
-            tabs = listOf("Active (${activeOrders.size})", "Completed (${completedOrders.size})"),
-            selected = selectedTab,
-            onSelect = { selectedTab = it }
         )
 
         Box(modifier = Modifier.weight(1f)) {

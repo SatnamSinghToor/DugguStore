@@ -30,13 +30,9 @@ fun HomeScreen(
     filteredProducts: List<Product>,
     selectedCategoryId: String?,
     searchQuery: String,
-    cartItemCount: Int,
     onSearchQueryChange: (String) -> Unit,
     onCategorySelected: (String?) -> Unit,
     onAddToCart: (Product) -> Unit,
-    onCartClick: () -> Unit,
-    onFavoritesClick: () -> Unit,
-    onAccountClick: () -> Unit,
     onProductClick: (Product) -> Unit = {},
     userName: String = "",
     deliveryAddress: String = "Set your delivery address",
@@ -50,7 +46,7 @@ fun HomeScreen(
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 110.dp)
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
                 Column(
@@ -200,21 +196,6 @@ fun HomeScreen(
                 }
             }
         }
-
-        StoreBottomBar(
-            selected = StoreTab.Home,
-            cartCount = cartItemCount,
-            onSelect = { tab ->
-                when (tab) {
-                    StoreTab.Favorites -> onFavoritesClick()
-                    StoreTab.Account -> onAccountClick()
-                    StoreTab.Categories -> onCategorySelected(null)
-                    StoreTab.Home -> Unit
-                }
-            },
-            onCartClick = onCartClick,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 
