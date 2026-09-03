@@ -106,6 +106,11 @@ dependencies {
     // osmdroid, no API key or billing account needed, unlike Google Maps SDK.
     implementation("org.osmdroid:osmdroid-android:6.1.18")
 
+    // Cuts a seller's product photo out from its background on-device — free,
+    // no API key, no server round trip. Model downloads on first use via
+    // Google Play Services rather than shipping in the APK.
+    implementation("com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1")
+
     // SLF4J nop (runtime dependency)
     implementation("org.slf4j:slf4j-nop:2.0.9")
 

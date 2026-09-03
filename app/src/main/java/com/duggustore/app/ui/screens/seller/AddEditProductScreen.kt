@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.repository.ProductRepository
+import com.duggustore.app.platform.BackgroundRemover
 import com.duggustore.app.ui.components.AuthField
 import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -96,7 +97,27 @@ fun AddEditProductScreen(
                     }
                 }
                 val (bytes, mimeType) = read.getOrElse { failed = true; continue }
-                productRepo.uploadProductImage(sellerId, bytes, mimeType)
+
+                // Best-effort: a photo the model can't cut out (or no Play
+                // Services / the model still downloading) just uploads as
+                // the seller took it rather than blocking the listing.
+                val cutout = try {
+                    withContext(Dispatchers.Default) {
+                        BackgroundRemover.decodeScaledBitmap(bytes)
+                            ?.let { BackgroundRemover.removeBackground(it) }
+                            ?.let { bitmap ->
+                                java.io.ByteArrayOutputStream().use { out ->
+                                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                                    out.toByteArray()
+                                }
+                            }
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+                val (uploadBytes, uploadMime) = if (cutout != null) cutout to "image/png" else bytes to mimeType
+
+                productRepo.uploadProductImage(sellerId, uploadBytes, uploadMime)
                     .onSuccess { url -> uploaded.add(url) }
                     .onFailure { failed = true }
             }
