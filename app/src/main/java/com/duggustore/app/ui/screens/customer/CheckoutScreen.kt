@@ -38,6 +38,8 @@ fun CheckoutScreen(
     deliveryFee: Double,
     total: Double,
     savings: Double,
+    belowMinimumOrder: Boolean,
+    minOrderValue: Double,
     isLoading: Boolean,
     error: String? = null,
     onManageAddresses: () -> Unit,
@@ -233,6 +235,14 @@ fun CheckoutScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+                if (belowMinimumOrder) {
+                    Text(
+                        text = "Add ₹${trimAmount(minOrderValue - subtotal)} more to place an order (minimum ₹${trimAmount(minOrderValue)})",
+                        fontSize = 12.sp,
+                        color = Coral
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
                 Button(
                     onClick = {
                         selected?.let {
@@ -251,9 +261,10 @@ fun CheckoutScreen(
                         containerColor = Teal,
                         disabledContainerColor = BorderGray
                     ),
-                    // An order with no address is not deliverable, so the button
-                    // stays disabled until one is picked.
-                    enabled = !isLoading && selected != null && cartItems.isNotEmpty()
+                    // An order with no address is not deliverable, and one
+                    // below the store's minimum is not worth fulfilling, so
+                    // the button stays disabled until both are satisfied.
+                    enabled = !isLoading && selected != null && cartItems.isNotEmpty() && !belowMinimumOrder
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(

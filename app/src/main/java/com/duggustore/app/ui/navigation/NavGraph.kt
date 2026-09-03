@@ -393,6 +393,8 @@ fun AppNavGraph(
                 couponApplied = cartState.couponApplied,
                 couponDiscount = cartState.couponDiscount,
                 couponError = cartState.couponError,
+                belowMinimumOrder = cartState.isBelowMinimumOrder,
+                minOrderValue = CartState.MIN_ORDER_VALUE,
                 isLoading = cartState.isLoading,
                 // The screen passes the quantity it wants, already adjusted.
                 onIncrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty) },
@@ -769,6 +771,8 @@ fun AppNavGraph(
                 deliveryFee = cartState.deliveryFee,
                 total = cartState.total,
                 savings = cartState.savings,
+                belowMinimumOrder = cartState.isBelowMinimumOrder,
+                minOrderValue = CartState.MIN_ORDER_VALUE,
                 isLoading = cartState.isLoading,
                 error = cartState.error,
                 onManageAddresses = { navController.navigate(Screen.CustomerAddresses.route) },

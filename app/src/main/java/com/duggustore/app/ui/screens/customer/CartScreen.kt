@@ -41,6 +41,8 @@ fun CartScreen(
     couponApplied: Boolean,
     couponDiscount: Double,
     couponError: String?,
+    belowMinimumOrder: Boolean,
+    minOrderValue: Double,
     isLoading: Boolean,
     onIncrementQuantity: (String, Int) -> Unit,
     onDecrementQuantity: (String, Int) -> Unit,
@@ -105,6 +107,8 @@ fun CartScreen(
                 savings = savings,
                 couponApplied = couponApplied,
                 couponDiscount = couponDiscount,
+                belowMinimumOrder = belowMinimumOrder,
+                minOrderValue = minOrderValue,
                 isLoading = isLoading,
                 onPlaceOrder = onPlaceOrder,
                 modifier = Modifier.align(Alignment.BottomCenter)
@@ -350,6 +354,8 @@ private fun SummarySheet(
     savings: Double,
     couponApplied: Boolean,
     couponDiscount: Double,
+    belowMinimumOrder: Boolean,
+    minOrderValue: Double,
     isLoading: Boolean,
     onPlaceOrder: () -> Unit,
     modifier: Modifier = Modifier
@@ -399,6 +405,15 @@ private fun SummarySheet(
 
             PriceRow(stringResource(R.string.cart_total), "₹${trimAmount(total)}", isBold = true)
 
+            if (belowMinimumOrder) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Add ₹${trimAmount(minOrderValue - subtotal)} more to place an order (minimum ₹${trimAmount(minOrderValue)})",
+                    fontSize = 12.sp,
+                    color = CoralDark
+                )
+            }
+
             Spacer(Modifier.height(14.dp))
 
             Button(
@@ -407,8 +422,8 @@ private fun SummarySheet(
                     .fillMaxWidth()
                     .height(54.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                enabled = !isLoading
+                colors = ButtonDefaults.buttonColors(containerColor = Teal, disabledContainerColor = BorderGray),
+                enabled = !isLoading && !belowMinimumOrder
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(

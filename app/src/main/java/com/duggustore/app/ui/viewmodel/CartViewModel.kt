@@ -23,11 +23,27 @@ data class CartState(
     val couponError: String? = null,
     val isCartOpen: Boolean = false
 ) {
+    companion object {
+        /** Below this, an order isn't worth a seller packing and a rider carrying. */
+        const val MIN_ORDER_VALUE = 99.0
+
+        /** At or above this subtotal, delivery is free instead of the flat fee. */
+        const val FREE_DELIVERY_THRESHOLD = 299.0
+        const val BASE_DELIVERY_FEE = 29.0
+    }
+
     val subtotal: Double
         get() = cartItems.sumOf { it.product?.effectivePrice()?.times(it.quantity) ?: 0.0 }
 
     val deliveryFee: Double
-        get() = if (subtotal > 0) maxOf(0.0, 29.0) else 0.0
+        get() = when {
+            subtotal <= 0 -> 0.0
+            subtotal >= FREE_DELIVERY_THRESHOLD -> 0.0
+            else -> BASE_DELIVERY_FEE
+        }
+
+    val isBelowMinimumOrder: Boolean
+        get() = subtotal > 0 && subtotal < MIN_ORDER_VALUE
 
     val total: Double
         get() = subtotal + deliveryFee - couponDiscount
