@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -75,6 +76,8 @@ sealed class Screen(val route: String) {
     object AdminDashboard : Screen("admin_dashboard")
 }
 
+// consumeWindowInsets is still marked experimental in this Compose version.
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
