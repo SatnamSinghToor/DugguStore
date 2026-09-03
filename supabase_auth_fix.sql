@@ -107,3 +107,30 @@ SELECT
 FROM auth.users u
 LEFT JOIN public.profiles p ON p.id = u.id
 WHERE p.id IS NULL;
+
+-- ============================================
+-- 5. EMAIL A CODE INSTEAD OF A LINK  (dashboard step — not SQL)
+-- ============================================
+-- The app now asks for a 6-digit code on the verify screen and exchanges it via
+-- POST /auth/v1/verify. Supabase decides what the mail contains, so the template
+-- has to be changed by hand — there is no SQL or API for it:
+--
+--   Dashboard -> Authentication -> Emails -> "Confirm signup"
+--   Replace the {{ .ConfirmationURL }} link with {{ .Token }}
+--
+-- For example:
+--
+--   <h2>Confirm your signup</h2>
+--   <p>Your Duggu Store verification code is:</p>
+--   <p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+--   <p>This code expires in 1 hour.</p>
+--
+-- Notes:
+--   * {{ .Token }} is the 6-digit code. {{ .TokenHash }} is a different value and
+--     will not work if the user types it in.
+--   * Keep "Confirm email" enabled under Authentication -> Providers -> Email.
+--     With it off, signup returns a session immediately and no mail is sent at all.
+--   * Code lifetime is Authentication -> Providers -> Email -> "Email OTP Expiration"
+--     (default 3600s). The app surfaces an expiry as "That code has expired".
+--   * Leaving the link in the template as well is fine — both keep working, and the
+--     app only needs the code.

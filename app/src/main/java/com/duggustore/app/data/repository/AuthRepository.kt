@@ -191,6 +191,54 @@ class AuthRepository {
         }
     }
 
+    /**
+     * Verifies the 6-digit code from the signup mail and signs the user in.
+     * Supabase returns a full session here, so there is no second login step.
+     */
+    suspend fun verifyEmailCode(email: String, code: String): Result<UserProfile> {
+        val cleanEmail = normalizeEmail(email)
+        val cleanCode = code.trim()
+        return try {
+            val resp = SupabaseService.verifyOtp(cleanEmail, cleanCode)
+            val token = extractToken(resp)
+                ?: return Result.failure(Exception("Verification failed: no session was returned."))
+            val userId = extractUserId(resp)
+                ?: return Result.failure(Exception("Verification failed: no user ID was returned."))
+
+            SessionManager.saveSession(token, extractRefreshToken(resp), userId, cleanEmail)
+
+            val metadata = extractUserMetadata(resp)
+            val fallback = UserProfile(
+                id = userId,
+                fullName = metadataString(metadata, "full_name", ""),
+                phone = metadataString(metadata, "phone", ""),
+                role = metadataString(metadata, "role", "customer")
+            )
+            Result.success(resolveProfile(userId, token, fallback))
+        } catch (e: Exception) {
+            Result.failure(Exception(verifyErrorMessage(e)))
+        }
+    }
+
+    private fun verifyErrorMessage(e: Exception): String {
+        val code = (e as? SupabaseException)?.errorCode ?: ""
+        val msg = e.message ?: ""
+        return when {
+            code == "not_configured" || code == "network_error" -> msg
+            code == "otp_expired" || msg.contains("expired", ignoreCase = true) ->
+                "That code has expired. Tap resend to get a new one."
+            code == "otp_disabled" ->
+                "Email codes are not enabled for this project yet."
+            msg.contains("Token has expired or is invalid", ignoreCase = true) ||
+                msg.contains("invalid", ignoreCase = true) ->
+                "That code is not correct. Please check and try again."
+            code == "over_email_send_rate_limit" || code == "429" ->
+                "Too many attempts. Please wait a moment and try again."
+            msg.isBlank() -> "Verification failed. Please try again."
+            else -> msg
+        }
+    }
+
     suspend fun resendVerificationEmail(email: String): Result<Unit> {
         return try {
             SupabaseService.resendVerification(normalizeEmail(email))

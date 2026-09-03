@@ -170,6 +170,28 @@ object SupabaseService {
     }
 
     /**
+     * Exchanges the emailed one-time code for a session. This is the same
+     * /auth/v1/verify endpoint that a confirmation link hits, but driven from the
+     * app with the code the user typed, so no link has to be opened.
+     *
+     * `type` must match how the code was issued: "signup" for the confirmation
+     * mail, "recovery" for a password reset, "email_change" for an address change.
+     */
+    suspend fun verifyOtp(email: String, code: String, type: String = "signup"): JsonObject {
+        val body = buildJsonObject {
+            put("type", type)
+            put("email", email)
+            put("token", code)
+        }
+        val request = Request.Builder()
+            .url("$BASE_URL/auth/v1/verify")
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .apply { headers().forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        return parseJsonObject(executeRequest(request))
+    }
+
+    /**
      * Re-sends the signup confirmation mail. This is /auth/v1/resend — /auth/v1/verify
      * consumes an existing token instead of issuing a new one.
      */

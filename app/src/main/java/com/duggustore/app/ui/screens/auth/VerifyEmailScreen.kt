@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +20,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.ui.components.DugguButton
 import com.duggustore.app.ui.theme.*
+
+private const val CODE_LENGTH = 6
 
 @Composable
 fun VerifyEmailScreen(
     email: String,
+    onVerifyCode: (String) -> Unit,
     onResendEmail: () -> Unit,
     onBackToLogin: () -> Unit,
     isLoading: Boolean = false,
@@ -30,6 +36,7 @@ fun VerifyEmailScreen(
     verificationResent: Boolean = false,
     onClearError: () -> Unit
 ) {
+    var code by remember { mutableStateOf("") }
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 0.9f,
@@ -93,7 +100,7 @@ fun VerifyEmailScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "We've sent a verification link to",
+            text = "We've sent a 6-digit code to",
             fontSize = 14.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center
@@ -112,34 +119,60 @@ fun VerifyEmailScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Open your email inbox and click the verification link to activate your account.",
+            text = "Enter the code from your email to activate your account.",
             fontSize = 14.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Steps card
-        Card(
+        OutlinedTextField(
+            value = code,
+            onValueChange = { input ->
+                // Digits only, capped at the code length, so the field cannot hold
+                // something the verify call would reject anyway.
+                val digits = input.filter { it.isDigit() }.take(CODE_LENGTH)
+                if (digits != code) {
+                    code = digits
+                    onClearError()
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading,
+            singleLine = true,
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                StepItem(number = "1", text = "Open your email inbox")
-                StepItem(number = "2", text = "Find the email from Duggu Store")
-                StepItem(number = "3", text = "Click the verification link")
-                StepItem(number = "4", text = "Come back and sign in!")
-            }
-        }
+            label = { Text("6-digit code") },
+            placeholder = { Text("000000") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 8.sp,
+                textAlign = TextAlign.Center
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = PrimaryGreen,
+                unfocusedBorderColor = BorderGray,
+                cursorColor = PrimaryGreen
+            )
+        )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        DugguButton(
+            text = "Verify",
+            onClick = {
+                onClearError()
+                onVerifyCode(code)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            isLoading = isLoading,
+            enabled = !isLoading && code.length == CODE_LENGTH
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (verificationResent) {
             Surface(
@@ -148,7 +181,7 @@ fun VerifyEmailScreen(
                 color = DeliveredGreen.copy(alpha = 0.1f)
             ) {
                 Text(
-                    text = "Verification email sent! Check your inbox.",
+                    text = "New code sent! Check your inbox.",
                     modifier = Modifier.padding(12.dp),
                     color = DeliveredGreen,
                     fontSize = 13.sp,
@@ -194,7 +227,7 @@ fun VerifyEmailScreen(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Resend Verification Email",
+                text = "Resend Code",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -218,33 +251,5 @@ fun VerifyEmailScreen(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-    }
-}
-
-@Composable
-private fun StepItem(number: String, text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Surface(
-            modifier = Modifier.size(28.dp),
-            shape = CircleShape,
-            color = PrimaryGreen
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = number,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            color = TextPrimary
-        )
     }
 }

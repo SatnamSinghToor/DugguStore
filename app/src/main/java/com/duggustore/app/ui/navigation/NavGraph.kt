@@ -168,7 +168,8 @@ fun AppNavGraph(
 
             VerifyEmailScreen(
                 email = email,
-                onResendEmail = { authViewModel.resendVerificationEmail() },
+                onVerifyCode = { code -> authViewModel.verifyEmailCode(email, code) },
+                onResendEmail = { authViewModel.resendVerificationEmail(email) },
                 onBackToLogin = {
                     authViewModel.resetVerificationState()
                     navController.navigate(Screen.Login.route) {
