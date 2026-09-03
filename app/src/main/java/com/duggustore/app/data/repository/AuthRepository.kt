@@ -5,10 +5,10 @@ import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.remote.SupabaseException
 import com.duggustore.app.data.remote.SupabaseService
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
@@ -21,32 +21,31 @@ data class SignUpResult(
 
 class AuthRepository {
 
-    private fun extractToken(resp: JsonObject): String? {
-        resp["access_token"]?.jsonPrimitive?.content?.let { return it }
-        resp["session"]?.jsonObject?.get("access_token")?.jsonPrimitive?.content?.let { return it }
-        return null
-    }
+    // Safe casts throughout: the shape of an auth response varies by endpoint and by
+    // whether email confirmation is on, and `.jsonObject` / `.jsonPrimitive` throw on a
+    // mismatch, which would turn a perfectly good login into a failure.
+    private fun obj(element: JsonElement?): JsonObject? = element as? JsonObject
 
-    private fun extractRefreshToken(resp: JsonObject): String {
-        resp["refresh_token"]?.jsonPrimitive?.content?.let { return it }
-        resp["session"]?.jsonObject?.get("refresh_token")?.jsonPrimitive?.content?.let { return it }
-        return ""
-    }
+    private fun str(element: JsonElement?): String? =
+        (element as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() && it != "null" }
 
-    private fun extractUserId(resp: JsonObject): String? {
-        resp["id"]?.jsonPrimitive?.content?.let { return it }
-        resp["user"]?.jsonObject?.get("id")?.jsonPrimitive?.content?.let { return it }
-        return null
-    }
+    private fun extractToken(resp: JsonObject): String? =
+        str(resp["access_token"]) ?: str(obj(resp["session"])?.get("access_token"))
+
+    private fun extractRefreshToken(resp: JsonObject): String =
+        str(resp["refresh_token"]) ?: str(obj(resp["session"])?.get("refresh_token")) ?: ""
+
+    private fun extractUserId(resp: JsonObject): String? =
+        str(resp["id"]) ?: str(obj(resp["user"])?.get("id"))
 
     /** The signup metadata Supabase echoes back, used as a fallback when the profile row is unreadable. */
     private fun extractUserMetadata(resp: JsonObject): JsonObject? {
-        val user = resp["user"]?.jsonObject ?: resp
-        return user["user_metadata"]?.jsonObject
+        val user = obj(resp["user"]) ?: obj(obj(resp["session"])?.get("user")) ?: resp
+        return obj(user["user_metadata"])
     }
 
     private fun metadataString(metadata: JsonObject?, key: String, default: String): String =
-        metadata?.get(key)?.jsonPrimitive?.content?.takeIf { it.isNotBlank() && it != "null" } ?: default
+        str(metadata?.get(key)) ?: default
 
     private fun normalizeEmail(email: String): String = email.trim().lowercase()
 
