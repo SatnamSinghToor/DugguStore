@@ -3,21 +3,21 @@ package com.duggustore.app.ui.screens.auth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LockReset
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.MarkEmailRead
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.duggustore.app.ui.components.DugguButton
-import com.duggustore.app.ui.components.DugguTextField
+import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -31,102 +31,76 @@ fun ForgotPasswordScreen(
 ) {
     var email by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    AuthScaffold(
+        title = if (resetSent) "Check your email" else "Reset password",
+        subtitle = if (resetSent) "The link is on its way"
+                   else "We'll email you a link to set a new one"
     ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(PrimaryGreen.copy(alpha = 0.12f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (resetSent) Icons.Default.MarkEmailRead else Icons.Default.LockReset,
-                contentDescription = null,
-                modifier = Modifier.size(46.dp),
-                tint = PrimaryGreen
+        if (resetSent) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(TealSurface),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.MarkEmailRead,
+                    contentDescription = null,
+                    tint = Teal,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                text = "If an account exists for that address, we've sent it a link " +
+                       "to set a new password. Open it on this phone and the app will " +
+                       "take you to the next step.",
+                modifier = Modifier.fillMaxWidth(),
+                fontSize = 14.sp,
+                color = TextSecondary,
+                lineHeight = 21.sp,
+                textAlign = TextAlign.Center
             )
-        }
+        } else {
+            if (error != null) {
+                AuthErrorBanner(message = error, onDismiss = onClearError)
+                Spacer(Modifier.height(18.dp))
+            }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = if (resetSent) "Check Your Email" else "Reset Password",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = if (resetSent) {
-                "If an account exists for that address, we've sent it a link to set a new password."
-            } else {
-                "Enter your email and we'll send you a link to set a new password."
-            },
-            fontSize = 14.sp,
-            color = TextSecondary,
-            textAlign = TextAlign.Center,
-            lineHeight = 20.sp
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (!resetSent) {
-            DugguTextField(
+            AuthField(
                 value = email,
                 onValueChange = { email = it; onClearError() },
                 label = "Email",
+                placeholder = "you@example.com",
+                leadingIcon = Icons.Default.Email,
                 keyboardType = KeyboardType.Email
             )
 
-            error?.let { err ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    color = AccentRed.copy(alpha = 0.1f)
-                ) {
-                    Text(
-                        text = err,
-                        modifier = Modifier.padding(12.dp),
-                        color = AccentRed,
-                        fontSize = 13.sp
-                    )
-                }
-            }
+            Spacer(Modifier.height(24.dp))
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            DugguButton(
-                text = "Send Reset Link",
-                onClick = {
-                    onClearError()
-                    onSendReset(email)
-                },
-                modifier = Modifier.fillMaxWidth(),
+            AuthPrimaryButton(
+                text = "Send reset link",
+                onClick = { onClearError(); onSendReset(email) },
                 isLoading = isLoading,
-                enabled = !isLoading && email.isNotBlank()
+                enabled = email.isNotBlank()
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(20.dp))
 
-        TextButton(onClick = { onClearError(); onBackToLogin() }) {
-            Text(
-                text = "Back to Sign In",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryGreen
-            )
-        }
+        Text(
+            text = "Back to sign in",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickableText { onClearError(); onBackToLogin() },
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = Teal,
+            textAlign = TextAlign.Center
+        )
     }
 }

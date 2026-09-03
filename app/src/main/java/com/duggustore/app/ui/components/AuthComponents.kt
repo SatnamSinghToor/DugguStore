@@ -242,3 +242,9 @@ fun AuthSwitchRow(question: String, action: String, onClick: () -> Unit) {
         )
     }
 }
+
+/**
+ * Lets a plain Text act as a link. TextButton would work but brings its own
+ * min-height and padding, which throws off the spacing in these forms.
+ */
+fun Modifier.clickableText(onClick: () -> Unit): Modifier = this.clickable { onClick() }

@@ -1,26 +1,28 @@
 package com.duggustore.app.ui.screens.auth
-import androidx.compose.ui.draw.scale
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.duggustore.app.ui.components.DugguButton
+import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
 private const val CODE_LENGTH = 6
@@ -37,219 +39,166 @@ fun VerifyEmailScreen(
     onClearError: () -> Unit
 ) {
     var code by remember { mutableStateOf("") }
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.9f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
-    )
 
-    val infiniteTransition2 = rememberInfiniteTransition(label = "float")
-    val floatOffset by infiniteTransition2.animateFloat(
-        initialValue = 0f,
-        targetValue = -10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "floatOffset"
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    AuthScaffold(
+        title = "Verify your email",
+        subtitle = "Enter the 6-digit code we sent you"
     ) {
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Animated envelope icon
         Box(
             modifier = Modifier
-                .size(120.dp)
-                .scale(pulseScale)
-                .offset(y = floatOffset.dp)
-                .background(PrimaryGreen.copy(alpha = 0.12f), CircleShape),
+                .align(Alignment.CenterHorizontally)
+                .size(88.dp)
+                .clip(CircleShape)
+                .background(TealSurface),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.MarkEmailRead,
-                contentDescription = "Email",
-                modifier = Modifier.size(56.dp),
-                tint = PrimaryGreen
+                Icons.Default.MarkEmailRead,
+                contentDescription = null,
+                tint = Teal,
+                modifier = Modifier.size(40.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Verify Your Email",
-            fontSize = 26.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "We've sent a 6-digit code to",
-            fontSize = 14.sp,
+            text = "Sent to",
+            modifier = Modifier.fillMaxWidth(),
+            fontSize = 13.sp,
             color = TextSecondary,
             textAlign = TextAlign.Center
         )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
         Text(
             text = email,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = PrimaryGreen,
+            modifier = Modifier.fillMaxWidth(),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = Teal,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(Modifier.height(24.dp))
 
-        Text(
-            text = "Enter the code from your email to activate your account.",
-            fontSize = 14.sp,
-            color = TextSecondary,
-            textAlign = TextAlign.Center,
-            lineHeight = 20.sp
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        OutlinedTextField(
-            value = code,
-            onValueChange = { input ->
-                // Digits only, capped at the code length, so the field cannot hold
-                // something the verify call would reject anyway.
-                val digits = input.filter { it.isDigit() }.take(CODE_LENGTH)
-                if (digits != code) {
-                    code = digits
+        CodeInput(
+            code = code,
+            enabled = !isLoading,
+            onCodeChange = {
+                if (it != code) {
+                    code = it
                     onClearError()
                 }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading,
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            label = { Text("6-digit code") },
-            placeholder = { Text("000000") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            textStyle = LocalTextStyle.current.copy(
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 8.sp,
-                textAlign = TextAlign.Center
-            ),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PrimaryGreen,
-                unfocusedBorderColor = BorderGray,
-                cursorColor = PrimaryGreen
-            )
+            }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(22.dp))
 
-        DugguButton(
+        AuthPrimaryButton(
             text = "Verify",
-            onClick = {
-                onClearError()
-                onVerifyCode(code)
-            },
-            modifier = Modifier.fillMaxWidth(),
+            onClick = { onClearError(); onVerifyCode(code) },
             isLoading = isLoading,
-            enabled = !isLoading && code.length == CODE_LENGTH
+            enabled = code.length == CODE_LENGTH
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         if (verificationResent) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                color = DeliveredGreen.copy(alpha = 0.1f)
-            ) {
-                Text(
-                    text = "New code sent! Check your inbox.",
-                    modifier = Modifier.padding(12.dp),
-                    color = DeliveredGreen,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
+            AuthInfoBanner(message = "New code sent. Check your inbox.")
         }
 
-        error?.let { err ->
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                color = AccentRed.copy(alpha = 0.1f)
-            ) {
-                Text(
-                    text = err,
-                    modifier = Modifier.padding(12.dp),
-                    color = AccentRed,
-                    fontSize = 13.sp
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+        if (error != null) {
+            Spacer(Modifier.height(16.dp))
+            AuthErrorBanner(message = error, onDismiss = onClearError)
         }
 
-        // Resend button
+        Spacer(Modifier.height(16.dp))
+
         OutlinedButton(
-            onClick = {
-                onClearError()
-                onResendEmail()
-            },
-            modifier = Modifier.fillMaxWidth(),
+            onClick = { onClearError(); onResendEmail() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
             enabled = !isLoading,
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = PrimaryGreen
-            )
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Teal)
         ) {
-            Icon(
-                Icons.Default.Refresh,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Resend Code",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Resend code", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(18.dp))
 
-        // Back to login
-        TextButton(
-            onClick = {
-                onClearError()
-                onBackToLogin()
-            }
-        ) {
-            Text(
-                text = "Back to Sign In",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextSecondary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = "Back to sign in",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickableText { onClearError(); onBackToLogin() },
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextSecondary,
+            textAlign = TextAlign.Center
+        )
     }
+}
+
+/**
+ * Six boxes fed by one hidden field. The field is what actually holds focus and
+ * takes the keyboard; the boxes only draw what it contains.
+ */
+@Composable
+private fun CodeInput(
+    code: String,
+    enabled: Boolean,
+    onCodeChange: (String) -> Unit
+) {
+    BasicTextField(
+        value = code,
+        onValueChange = { input ->
+            onCodeChange(input.filter { it.isDigit() }.take(CODE_LENGTH))
+        },
+        enabled = enabled,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        // The real text is never drawn; the boxes below stand in for it.
+        textStyle = TextStyle(color = Color.Transparent),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.Transparent),
+        decorationBox = { innerTextField ->
+          Box {
+            // The real field stays in the composition so it can hold focus and
+            // raise the keyboard. It draws nothing: its text and cursor are
+            // both transparent.
+            innerTextField()
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                repeat(CODE_LENGTH) { index ->
+                    val digit = code.getOrNull(index)
+                    val active = index == code.length
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (digit != null) TealSurface else SurfaceMuted)
+                            .border(
+                                width = if (active) 2.dp else 1.dp,
+                                color = if (active) Teal else BorderGray,
+                                shape = RoundedCornerShape(14.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = digit?.toString() ?: "",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+          }
+        }
+    )
 }
