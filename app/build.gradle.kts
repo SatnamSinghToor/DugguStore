@@ -102,6 +102,10 @@ dependencies {
     // OkHttp HTTP Client (all Supabase API calls via OkHttp)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // In-app map for the rider's route (pickup/drop) — OpenStreetMap tiles via
+    // osmdroid, no API key or billing account needed, unlike Google Maps SDK.
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
     // SLF4J nop (runtime dependency)
     implementation("org.slf4j:slf4j-nop:2.0.9")
 

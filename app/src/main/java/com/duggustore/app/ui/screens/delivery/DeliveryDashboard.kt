@@ -39,6 +39,11 @@ fun DeliveryDashboard(
     onClaimOrder: (String) -> Unit = {},
     claimError: String? = null,
     onDismissClaimError: () -> Unit = {},
+    // In-app map when the destination has a real fix; the caller falls back
+    // to an external maps app when it doesn't (openNavigation's text-search
+    // fallback needs no coordinates at all).
+    onNavigateToPickup: (Order) -> Unit = {},
+    onNavigateToDrop: (Order) -> Unit = {},
     onSignOut: () -> Unit,
     sharingLocation: Boolean = false,
     sharingError: String? = null,
@@ -102,7 +107,8 @@ fun DeliveryDashboard(
                             items(availableOrders, key = { it.id }) { order ->
                                 AvailableOrderCard(
                                     order = order,
-                                    onClaim = { onClaimOrder(order.id) }
+                                    onClaim = { onClaimOrder(order.id) },
+                                    onNavigateToPickup = { onNavigateToPickup(order) }
                                 )
                             }
                         }
@@ -123,7 +129,9 @@ fun DeliveryDashboard(
                             items(activeOrders, key = { it.id }) { order ->
                                 DeliveryOrderCard(
                                     order = order,
-                                    onMarkDelivered = { onMarkDelivered(order.id) }
+                                    onMarkDelivered = { onMarkDelivered(order.id) },
+                                    onNavigateToPickup = { onNavigateToPickup(order) },
+                                    onNavigateToDrop = { onNavigateToDrop(order) }
                                 )
                             }
                         }
@@ -159,7 +167,8 @@ fun DeliveryDashboard(
 @Composable
 fun AvailableOrderCard(
     order: Order,
-    onClaim: () -> Unit
+    onClaim: () -> Unit,
+    onNavigateToPickup: () -> Unit = {}
 ) {
     val context = LocalContext.current
     DashboardPanel {
@@ -211,12 +220,13 @@ fun AvailableOrderCard(
                     filled = false,
                     modifier = Modifier.weight(1f),
                     onClick = {
-                        openNavigation(
-                            context,
-                            order.seller?.storeAddress.orEmpty(),
-                            order.seller?.storeLatitude,
-                            order.seller?.storeLongitude
-                        )
+                        val lat = order.seller?.storeLatitude
+                        val lng = order.seller?.storeLongitude
+                        if (lat != null && lng != null) {
+                            onNavigateToPickup()
+                        } else {
+                            openNavigation(context, order.seller?.storeAddress.orEmpty(), lat, lng)
+                        }
                     }
                 )
                 DashboardAction(
@@ -234,7 +244,9 @@ fun AvailableOrderCard(
 fun DeliveryOrderCard(
     order: Order,
     onMarkDelivered: () -> Unit,
-    isCompleted: Boolean = false
+    isCompleted: Boolean = false,
+    onNavigateToPickup: () -> Unit = {},
+    onNavigateToDrop: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val active = !isCompleted && order.status != OrderStatus.DELIVERED.value
@@ -302,12 +314,13 @@ fun DeliveryOrderCard(
                         filled = false,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            openNavigation(
-                                context,
-                                order.seller?.storeAddress.orEmpty(),
-                                order.seller?.storeLatitude,
-                                order.seller?.storeLongitude
-                            )
+                            val lat = order.seller?.storeLatitude
+                            val lng = order.seller?.storeLongitude
+                            if (lat != null && lng != null) {
+                                onNavigateToPickup()
+                            } else {
+                                openNavigation(context, order.seller?.storeAddress.orEmpty(), lat, lng)
+                            }
                         }
                     )
                     DashboardAction(
@@ -316,12 +329,11 @@ fun DeliveryOrderCard(
                         filled = false,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            openNavigation(
-                                context,
-                                order.deliveryAddress,
-                                order.deliveryLatitude,
-                                order.deliveryLongitude
-                            )
+                            if (order.deliveryLatitude != null && order.deliveryLongitude != null) {
+                                onNavigateToDrop()
+                            } else {
+                                openNavigation(context, order.deliveryAddress, order.deliveryLatitude, order.deliveryLongitude)
+                            }
                         }
                     )
                 }

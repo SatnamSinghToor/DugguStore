@@ -47,6 +47,7 @@ import com.duggustore.app.ui.screens.customer.*
 import com.duggustore.app.ui.screens.seller.AddEditProductScreen
 import com.duggustore.app.ui.screens.seller.SellerDashboard
 import com.duggustore.app.ui.screens.delivery.DeliveryDashboard
+import com.duggustore.app.ui.screens.delivery.RouteMapScreen
 import com.duggustore.app.ui.screens.admin.AdminDashboard
 import com.duggustore.app.ui.viewmodel.*
 
@@ -79,6 +80,13 @@ sealed class Screen(val route: String) {
     object SellerDashboard : Screen("seller_dashboard")
     object DeliveryDashboard : Screen("delivery_dashboard")
     object AdminDashboard : Screen("admin_dashboard")
+    // kind is "pickup" or "drop" — orderId and kind are both safe as raw path
+    // segments (a UUID and a fixed enum string), unlike the free-text address
+    // labels the screen needs, which are looked up from view model state
+    // instead of round-tripped through the route.
+    object RiderRouteMap : Screen("rider_route_map/{orderId}/{kind}") {
+        fun createRoute(orderId: String, kind: String) = "rider_route_map/$orderId/$kind"
+    }
 }
 
 // consumeWindowInsets is still marked experimental in this Compose version.
@@ -547,6 +555,8 @@ fun AppNavGraph(
                 },
                 claimError = deliveryState.claimError,
                 onDismissClaimError = { deliveryViewModel.clearClaimError() },
+                onNavigateToPickup = { navController.navigate(Screen.RiderRouteMap.createRoute(it.id, "pickup")) },
+                onNavigateToDrop = { navController.navigate(Screen.RiderRouteMap.createRoute(it.id, "drop")) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
@@ -583,6 +593,54 @@ fun AppNavGraph(
                 while (true) {
                     deliveryViewModel.loadAvailableOrders()
                     delay(15_000L)
+                }
+            }
+        }
+
+        composable(
+            Screen.RiderRouteMap.route,
+            arguments = listOf(
+                navArgument("orderId") { type = NavType.StringType },
+                navArgument("kind") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            val kind = backStackEntry.arguments?.getString("kind") ?: "pickup"
+            // Looked up from what's already loaded rather than fetched again —
+            // the order (and its embedded seller store info) is already in
+            // deliveryState from the dashboard this screen was opened from.
+            val order = (deliveryState.activeOrders + deliveryState.availableOrders)
+                .firstOrNull { it.id == orderId }
+
+            if (order == null) {
+                LaunchedEffect(Unit) { navController.popBackStack() }
+            } else if (kind == "pickup") {
+                val lat = order.seller?.storeLatitude
+                val lng = order.seller?.storeLongitude
+                if (lat == null || lng == null) {
+                    LaunchedEffect(Unit) { navController.popBackStack() }
+                } else {
+                    RouteMapScreen(
+                        title = "Navigate to pickup",
+                        destinationLabel = order.seller?.storeAddress?.ifBlank { "Store" } ?: "Store",
+                        destinationLat = lat,
+                        destinationLng = lng,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+            } else {
+                val lat = order.deliveryLatitude
+                val lng = order.deliveryLongitude
+                if (lat == null || lng == null) {
+                    LaunchedEffect(Unit) { navController.popBackStack() }
+                } else {
+                    RouteMapScreen(
+                        title = "Navigate to drop",
+                        destinationLabel = order.deliveryAddress.ifBlank { "Customer" },
+                        destinationLat = lat,
+                        destinationLng = lng,
+                        onBack = { navController.popBackStack() }
+                    )
                 }
             }
         }
