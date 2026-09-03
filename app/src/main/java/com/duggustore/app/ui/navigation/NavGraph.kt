@@ -185,20 +185,20 @@ fun AppNavGraph(
         composable(Screen.CustomerHome.route) {
             HomeScreen(
                 categories = homeState.categories,
-                products = homeState.products,
+                filteredProducts = homeState.filteredProducts,
+                selectedCategoryId = homeState.selectedCategoryId,
                 searchQuery = homeState.searchQuery,
-                onSearchChange = { homeViewModel.updateSearch(it) },
-                onCategoryClick = { homeViewModel.filterByCategory(it) },
-                onProductClick = { },
+                cartItemCount = cartState.itemCount,
+                onSearchQueryChange = { homeViewModel.search(it) },
+                onCategorySelected = { homeViewModel.selectCategory(it) },
                 onAddToCart = { cartViewModel.addToCart(it) },
-                onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
                 onCartClick = { navController.navigate(Screen.CustomerCart.route) },
-                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) },
-                isLoading = homeState.isLoading
+                onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
+                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) }
             )
 
             LaunchedEffect(Unit) {
-                homeViewModel.loadHomeData()
+                homeViewModel.loadData()
             }
         }
 
@@ -208,13 +208,21 @@ fun AppNavGraph(
                 subtotal = cartState.subtotal,
                 deliveryFee = cartState.deliveryFee,
                 total = cartState.total,
-                onIncrement = { cartViewModel.incrementQuantity(it) },
-                onDecrement = { cartViewModel.decrementQuantity(it) },
-                onRemove = { cartViewModel.removeItem(it) },
-                onPlaceOrder = { cartViewModel.placeOrder() },
-                onBack = { navController.popBackStack() },
-                isPlacingOrder = cartState.isPlacingOrder
+                savings = cartState.savings,
+                couponApplied = cartState.couponApplied,
+                couponDiscount = cartState.couponDiscount,
+                isLoading = cartState.isLoading,
+                onIncrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty + 1) },
+                onDecrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty - 1) },
+                onRemoveItem = { cartViewModel.removeItem(it) },
+                onApplyCoupon = { cartViewModel.applyCoupon(it) },
+                onPlaceOrder = { cartViewModel.placeOrder(authState.user?.id ?: "", "") },
+                onBack = { navController.popBackStack() }
             )
+
+            LaunchedEffect(Unit) {
+                cartViewModel.loadCart()
+            }
 
             if (cartState.orderPlaced) {
                 AlertDialog(
