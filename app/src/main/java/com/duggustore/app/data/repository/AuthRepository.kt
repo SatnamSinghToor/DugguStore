@@ -257,6 +257,23 @@ class AuthRepository {
         }
     }
 
+    suspend fun sendPasswordReset(email: String): Result<Unit> {
+        return try {
+            SupabaseService.sendPasswordReset(normalizeEmail(email))
+            Result.success(Unit)
+        } catch (e: Exception) {
+            val code = (e as? SupabaseException)?.errorCode ?: ""
+            val msg = e.message ?: ""
+            when {
+                code == "not_configured" || code == "network_error" -> Result.failure(Exception(msg))
+                code == "over_email_send_rate_limit" || code == "429" ->
+                    Result.failure(Exception("Too many requests. Please wait a moment and try again."))
+                msg.isBlank() -> Result.failure(Exception("Could not send the reset email."))
+                else -> Result.failure(Exception(msg))
+            }
+        }
+    }
+
     suspend fun signOut(): Result<Unit> {
         return try {
             SessionManager.getAccessToken()?.let {

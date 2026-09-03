@@ -17,7 +17,14 @@ class CartRepository {
 
     suspend fun getCartItems(customerId: String): Result<List<CartItem>> {
         return try {
-            val list = SupabaseService.select("cart_items", token(), mapOf("customer_id" to customerId))
+            // Embed the product: without it every CartItem.product is null, which made
+            // the cart subtotal, savings and totals all compute as zero.
+            val list = SupabaseService.select(
+                "cart_items",
+                token(),
+                mapOf("customer_id" to customerId),
+                select = "*,product:products(*)"
+            )
             Result.success(list.map { json.decodeFromString(CartItem.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)

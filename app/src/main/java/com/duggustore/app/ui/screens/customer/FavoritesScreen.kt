@@ -19,7 +19,8 @@ import com.duggustore.app.ui.theme.*
 fun FavoritesScreen(
     favoriteProducts: List<Product>,
     onAddToCart: (Product) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onProductClick: (Product) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -44,7 +45,8 @@ fun FavoritesScreen(
                 items(favoriteProducts) { product ->
                     ProductCard(
                         product = product,
-                        onAddClick = onAddToCart
+                        onAddClick = onAddToCart,
+                        onClick = onProductClick
                     )
                 }
             }

@@ -208,6 +208,17 @@ object SupabaseService {
         executeRequest(request)
     }
 
+    /** Sends the password-reset mail. Supabase returns 200 even for an unknown address. */
+    suspend fun sendPasswordReset(email: String) {
+        val body = buildJsonObject { put("email", email) }
+        val request = Request.Builder()
+            .url("$BASE_URL/auth/v1/recover")
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+            .apply { headers().forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        executeRequest(request)
+    }
+
     suspend fun signOut(token: String) {
         val request = Request.Builder()
             .url("$BASE_URL/auth/v1/logout")
@@ -226,9 +237,19 @@ object SupabaseService {
         return parseJsonObject(executeRequest(request))
     }
 
-    suspend fun select(table: String, token: String? = null, params: Map<String, String> = emptyMap()): List<JsonObject> {
+    /**
+     * [select] is passed straight through to PostgREST, so a caller can pull an
+     * embedded resource in one round trip, e.g. "*,product:products(*)" to hydrate
+     * a cart row with its product instead of leaving the field null.
+     */
+    suspend fun select(
+        table: String,
+        token: String? = null,
+        params: Map<String, String> = emptyMap(),
+        select: String = "*"
+    ): List<JsonObject> {
         val filters = params.entries.joinToString("&") { "${it.key}=eq.${encode(it.value)}" }
-        val qs = if (filters.isEmpty()) "?select=*" else "?select=*&$filters"
+        val qs = if (filters.isEmpty()) "?select=${encode(select)}" else "?select=${encode(select)}&$filters"
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table$qs")
             .get()
@@ -237,9 +258,9 @@ object SupabaseService {
         return parseJsonArray(executeRequest(request))
     }
 
-    suspend fun selectAll(table: String, token: String? = null): List<JsonObject> {
+    suspend fun selectAll(table: String, token: String? = null, select: String = "*"): List<JsonObject> {
         val request = Request.Builder()
-            .url("$BASE_URL/rest/v1/$table?select=*")
+            .url("$BASE_URL/rest/v1/$table?select=${encode(select)}")
             .get()
             .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
             .build()

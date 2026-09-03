@@ -25,6 +25,7 @@ import com.duggustore.app.ui.theme.*
 fun LoginScreen(
 
     onNavigateToRegister: () -> Unit,
+    onForgotPassword: () -> Unit = {},
     isLoading: Boolean = false,
     error: String? = null,
     onLogin: (String, String) -> Unit,
@@ -132,6 +133,18 @@ fun LoginScreen(
                     onClick = { onLogin(email, password) },
                     isLoading = isLoading
                 )
+
+                TextButton(
+                    onClick = onForgotPassword,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(
+                        text = "Forgot password?",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = PrimaryGreen
+                    )
+                }
             }
         }
 

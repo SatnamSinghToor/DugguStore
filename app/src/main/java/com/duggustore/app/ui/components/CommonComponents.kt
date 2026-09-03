@@ -1,6 +1,7 @@
 package com.duggustore.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -167,10 +168,13 @@ fun ProductCard(
     product: Product,
     onAddClick: (Product) -> Unit,
     modifier: Modifier = Modifier,
-    showDiscount: Boolean = true
+    showDiscount: Boolean = true,
+    onClick: ((Product) -> Unit)? = null
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick(product) } else Modifier),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

@@ -14,17 +14,22 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.duggustore.app.data.model.UserRole
+import com.duggustore.app.ui.screens.auth.ForgotPasswordScreen
 import com.duggustore.app.ui.screens.auth.LoginScreen
 import com.duggustore.app.ui.screens.auth.RegisterScreen
+import com.duggustore.app.ui.screens.auth.SplashScreen
 import com.duggustore.app.ui.screens.auth.VerifyEmailScreen
 import com.duggustore.app.ui.screens.customer.*
+import com.duggustore.app.ui.screens.seller.AddEditProductScreen
 import com.duggustore.app.ui.screens.seller.SellerDashboard
 import com.duggustore.app.ui.screens.delivery.DeliveryDashboard
 import com.duggustore.app.ui.screens.admin.AdminDashboard
 import com.duggustore.app.ui.viewmodel.*
 
 sealed class Screen(val route: String) {
+    object Splash : Screen("splash")
     object Login : Screen("login")
+    object ForgotPassword : Screen("forgot_password")
     object Register : Screen("register")
     object VerifyEmail : Screen("verify_email/{email}") {
         fun createRoute(email: String) = "verify_email/$email"
@@ -35,6 +40,14 @@ sealed class Screen(val route: String) {
     object CustomerOrderTracking : Screen("customer_order_tracking/{orderId}")
     object CustomerFavorites : Screen("customer_favorites")
     object CustomerAccount : Screen("customer_account")
+    object CustomerAddresses : Screen("customer_addresses")
+    object CustomerCheckout : Screen("customer_checkout")
+    object ProductDetail : Screen("product_detail/{productId}") {
+        fun createRoute(productId: String) = "product_detail/$productId"
+    }
+    object SellerProductForm : Screen("seller_product_form?productId={productId}") {
+        fun createRoute(productId: String = "") = "seller_product_form?productId=$productId"
+    }
     object SellerDashboard : Screen("seller_dashboard")
     object DeliveryDashboard : Screen("delivery_dashboard")
     object AdminDashboard : Screen("admin_dashboard")
@@ -50,7 +63,8 @@ fun AppNavGraph(
     favoriteViewModel: FavoriteViewModel = viewModel(),
     sellerViewModel: SellerViewModel = viewModel(),
     deliveryViewModel: DeliveryViewModel = viewModel(),
-    adminViewModel: AdminViewModel = viewModel()
+    adminViewModel: AdminViewModel = viewModel(),
+    addressViewModel: AddressViewModel = viewModel()
 ) {
     val authState by authViewModel.state.collectAsState()
     val homeState by homeViewModel.state.collectAsState()
@@ -60,6 +74,14 @@ fun AppNavGraph(
     val sellerState by sellerViewModel.state.collectAsState()
     val deliveryState by deliveryViewModel.state.collectAsState()
     val adminState by adminViewModel.state.collectAsState()
+    val addressState by addressViewModel.state.collectAsState()
+
+    // Hold on the splash until the stored session has been checked, otherwise the app
+    // shows the login screen for a moment and then jumps to a dashboard.
+    if (authState.isRestoringSession) {
+        SplashScreen()
+        return
+    }
 
     val startDestination = remember(authState.isLoggedIn, authState.user) {
         if (!authState.isLoggedIn) Screen.Login.route
@@ -115,6 +137,7 @@ fun AppNavGraph(
     LaunchedEffect(authState.user) {
         authState.user?.let { user ->
             cartViewModel.setCustomer(user.id)
+            addressViewModel.setUser(user.id)
         }
     }
 
@@ -129,6 +152,10 @@ fun AppNavGraph(
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) },
+                onForgotPassword = {
+                    authViewModel.resetPasswordResetState()
+                    navController.navigate(Screen.ForgotPassword.route)
+                },
                 isLoading = authState.isLoading,
                 error = authState.error,
                 onLogin = { email, password -> authViewModel.signIn(email, password) },
@@ -195,7 +222,8 @@ fun AppNavGraph(
                 onAddToCart = { cartViewModel.addToCart(it) },
                 onCartClick = { navController.navigate(Screen.CustomerCart.route) },
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
-                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) }
+                onAccountClick = { navController.navigate(Screen.CustomerAccount.route) },
+                onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) }
             )
 
             LaunchedEffect(Unit) {
@@ -217,7 +245,7 @@ fun AppNavGraph(
                 onDecrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty - 1) },
                 onRemoveItem = { cartViewModel.removeItem(it) },
                 onApplyCoupon = { cartViewModel.applyCoupon(it) },
-                onPlaceOrder = { cartViewModel.placeOrder(authState.user?.id ?: "", "") },
+                onPlaceOrder = { navController.navigate(Screen.CustomerCheckout.route) },
                 onBack = { navController.popBackStack() }
             )
 
@@ -281,7 +309,8 @@ fun AppNavGraph(
             FavoritesScreen(
                 favoriteProducts = favState.favoriteProducts,
                 onAddToCart = { cartViewModel.addToCart(it) },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) }
             )
 
             LaunchedEffect(Unit) {
@@ -294,7 +323,7 @@ fun AppNavGraph(
                 user = authState.user,
                 onOrdersClick = { navController.navigate(Screen.CustomerOrders.route) },
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
-                onAddressesClick = { },
+                onAddressesClick = { navController.navigate(Screen.CustomerAddresses.route) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) {
@@ -311,8 +340,8 @@ fun AppNavGraph(
                 orders = sellerState.orders,
                 totalRevenue = sellerState.totalRevenue,
                 totalOrders = sellerState.totalOrders,
-                onAddProduct = { },
-                onEditProduct = { },
+                onAddProduct = { navController.navigate(Screen.SellerProductForm.createRoute()) },
+                onEditProduct = { navController.navigate(Screen.SellerProductForm.createRoute(it)) },
                 onDeleteProduct = { sellerViewModel.deleteProduct(it, authState.user?.id ?: "") },
                 onUpdateOrderStatus = { orderId, status -> orderViewModel.updateOrderStatus(orderId, status) },
                 onSignOut = {
@@ -359,6 +388,142 @@ fun AppNavGraph(
             )
             LaunchedEffect(Unit) {
                 adminViewModel.loadDashboard()
+            }
+        }
+
+        composable(Screen.Splash.route) {
+            SplashScreen()
+        }
+
+        composable(Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(
+                onSendReset = { authViewModel.sendPasswordReset(it) },
+                onBackToLogin = {
+                    authViewModel.resetPasswordResetState()
+                    navController.popBackStack()
+                },
+                isLoading = authState.isLoading,
+                error = authState.error,
+                resetSent = authState.passwordResetSent,
+                onClearError = { authViewModel.clearError() }
+            )
+        }
+
+        composable(
+            Screen.ProductDetail.route,
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId") ?: ""
+            // Look in the catalogue first, then favourites, so the screen still resolves
+            // when it is opened from the favourites grid.
+            val product = homeState.products.firstOrNull { it.id == productId }
+                ?: favState.favoriteProducts.firstOrNull { it.id == productId }
+
+            ProductDetailScreen(
+                product = product,
+                isFavorite = favState.favorites.any { it.productId == productId },
+                onAddToCart = { p, qty ->
+                    repeat(qty) { cartViewModel.addToCart(p) }
+                    navController.popBackStack()
+                },
+                onToggleFavorite = { p ->
+                    authState.user?.let { favoriteViewModel.toggleFavorite(it.id, p.id) }
+                },
+                onBack = { navController.popBackStack() }
+            )
+
+            LaunchedEffect(authState.user) {
+                authState.user?.let { favoriteViewModel.loadFavorites(it.id) }
+            }
+        }
+
+        composable(Screen.CustomerAddresses.route) {
+            AddressesScreen(
+                addresses = addressState.addresses,
+                isLoading = addressState.isLoading,
+                onSaveAddress = { label, full, isDefault, existingId ->
+                    addressViewModel.saveAddress(label, full, isDefault, existingId)
+                },
+                onDeleteAddress = { addressViewModel.deleteAddress(it) },
+                onSetDefault = { addressViewModel.setDefault(it) },
+                onBack = { navController.popBackStack() }
+            )
+
+            LaunchedEffect(Unit) { addressViewModel.loadAddresses() }
+        }
+
+        composable(Screen.CustomerCheckout.route) {
+            CheckoutScreen(
+                cartItems = cartState.cartItems,
+                addresses = addressState.addresses,
+                subtotal = cartState.subtotal,
+                deliveryFee = cartState.deliveryFee,
+                total = cartState.total,
+                savings = cartState.savings,
+                isLoading = cartState.isLoading,
+                error = cartState.error,
+                onManageAddresses = { navController.navigate(Screen.CustomerAddresses.route) },
+                onPlaceOrder = { address -> cartViewModel.placeOrder(address) },
+                onBack = { navController.popBackStack() }
+            )
+
+            LaunchedEffect(Unit) { addressViewModel.loadAddresses() }
+
+            if (cartState.orderPlaced) {
+                AlertDialog(
+                    onDismissRequest = { cartViewModel.resetOrderPlaced() },
+                    title = { Text("Order Placed!") },
+                    text = { Text("Your order has been placed successfully. You can track it in Orders.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            cartViewModel.resetOrderPlaced()
+                            navController.navigate(Screen.CustomerOrders.route) {
+                                popUpTo(Screen.CustomerHome.route)
+                            }
+                        }) {
+                            Text("View Orders")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            cartViewModel.resetOrderPlaced()
+                            navController.navigate(Screen.CustomerHome.route) {
+                                popUpTo(Screen.CustomerHome.route) { inclusive = true }
+                            }
+                        }) {
+                            Text("Continue Shopping")
+                        }
+                    }
+                )
+            }
+        }
+
+        composable(
+            Screen.SellerProductForm.route,
+            arguments = listOf(navArgument("productId") {
+                type = NavType.StringType
+                defaultValue = ""
+            })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId").orEmpty()
+            val existing = sellerState.products.firstOrNull { it.id == productId }
+
+            AddEditProductScreen(
+                product = existing,
+                categories = homeState.categories,
+                sellerId = authState.user?.id ?: "",
+                isLoading = sellerState.isLoading,
+                error = sellerState.error,
+                onSave = { sellerViewModel.saveProduct(it) },
+                onBack = { navController.popBackStack() }
+            )
+
+            LaunchedEffect(sellerState.productSaved) {
+                if (sellerState.productSaved) {
+                    sellerViewModel.resetProductSaved()
+                    authState.user?.let { sellerViewModel.loadSellerData(it.id) }
+                    navController.popBackStack()
+                }
             }
         }
     }

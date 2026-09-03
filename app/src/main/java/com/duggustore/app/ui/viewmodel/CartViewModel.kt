@@ -111,16 +111,36 @@ class CartViewModel : ViewModel() {
         )
     }
 
-    fun placeOrder(sellerId: String, deliveryAddress: String) {
+    /**
+     * [deliveryAddress] comes from the checkout screen. The seller is taken from the
+     * products in the cart rather than passed in: the caller used to hand over the
+     * signed-in customer's own id, which stored every order with
+     * seller_id = customer_id and left it invisible to the seller who has to fulfil it.
+     */
+    fun placeOrder(deliveryAddress: String) {
         viewModelScope.launch {
             val state = _state.value
             val customerId = state.customerId
             if (customerId.isEmpty() || state.cartItems.isEmpty()) return@launch
 
+            val sellerId = state.cartItems.firstNotNullOfOrNull { it.product?.sellerId }
+            if (sellerId.isNullOrBlank()) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = "Could not work out which seller these items belong to."
+                )
+                return@launch
+            }
+            if (deliveryAddress.isBlank()) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = "Choose a delivery address first."
+                )
+                return@launch
+            }
 
-            _state.value = _state.value.copy(isLoading = true)
+            _state.value = _state.value.copy(isLoading = true, error = null)
 
-            // Create the order using model classes imported
             val order = com.duggustore.app.data.model.Order(
                 customerId = customerId,
                 sellerId = sellerId,

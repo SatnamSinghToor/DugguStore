@@ -11,13 +11,16 @@ import kotlinx.coroutines.launch
 
 data class AuthState(
     val isLoading: Boolean = false,
+    /** True until the stored session has been checked, so the UI can hold on a splash. */
+    val isRestoringSession: Boolean = true,
     val isLoggedIn: Boolean = false,
     val user: UserProfile? = null,
     val error: String? = null,
     val successMessage: String? = null,
     val requiresEmailVerification: Boolean = false,
     val pendingVerificationEmail: String = "",
-    val verificationResent: Boolean = false
+    val verificationResent: Boolean = false,
+    val passwordResetSent: Boolean = false
 )
 
 const val VERIFICATION_CODE_LENGTH = 6
@@ -34,18 +37,22 @@ class AuthViewModel : ViewModel() {
 
     private fun checkCurrentUser() {
         viewModelScope.launch {
-            if (!SessionManager.isLoggedIn()) return@launch
+            if (!SessionManager.isLoggedIn()) {
+                _state.value = _state.value.copy(isRestoringSession = false)
+                return@launch
+            }
             _state.value = _state.value.copy(isLoading = true)
             val result = repository.getCurrentUserProfile()
             result.onSuccess { profile ->
                 _state.value = _state.value.copy(
                     isLoading = false,
+                    isRestoringSession = false,
                     isLoggedIn = profile != null,
                     user = profile
                 )
             }
             result.onFailure {
-                _state.value = _state.value.copy(isLoading = false)
+                _state.value = _state.value.copy(isLoading = false, isRestoringSession = false)
             }
         }
     }
@@ -162,10 +169,34 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun sendPasswordReset(email: String) {
+        if (email.isBlank()) {
+            _state.value = _state.value.copy(error = "Enter your email address.")
+            return
+        }
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            repository.sendPasswordReset(email)
+                .onSuccess {
+                    _state.value = _state.value.copy(isLoading = false, passwordResetSent = true)
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "Could not send the reset email"
+                    )
+                }
+        }
+    }
+
+    fun resetPasswordResetState() {
+        _state.value = _state.value.copy(passwordResetSent = false, error = null)
+    }
+
     fun signOut() {
         viewModelScope.launch {
             repository.signOut()
-            _state.value = AuthState()
+            _state.value = AuthState(isRestoringSession = false)
         }
     }
 

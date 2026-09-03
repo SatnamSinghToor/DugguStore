@@ -39,7 +39,7 @@ fun HomeScreen(
     onCartClick: () -> Unit,
     onFavoritesClick: () -> Unit,
     onAccountClick: () -> Unit,
-
+    onProductClick: (com.duggustore.app.data.model.Product) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -180,7 +180,8 @@ fun HomeScreen(
                 items(filteredProducts) { product ->
                     ProductCard(
                         product = product,
-                        onAddClick = onAddToCart
+                        onAddClick = onAddToCart,
+                        onClick = onProductClick
                     )
                 }
             }
