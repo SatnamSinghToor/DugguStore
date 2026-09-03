@@ -183,7 +183,8 @@ fun CategoryTile(
 fun iconForCategory(name: String): ImageVector = when {
     name.contains("groc", true) -> Icons.Default.LocalGroceryStore
     name.contains("veg", true) -> Icons.Default.Eco
-    name.contains("fruit", true) -> Icons.Default.Apple
+    // No fruit glyph in this icon set; a basket is the closest that resolves.
+    name.contains("fruit", true) -> Icons.Default.ShoppingBasket
     name.contains("snack", true) -> Icons.Default.Cookie
     name.contains("choc", true) -> Icons.Default.Cake
     name.contains("bread", true) || name.contains("baker", true) -> Icons.Default.BakeryDining
