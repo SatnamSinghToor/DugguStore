@@ -8,9 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import com.duggustore.app.R
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -18,11 +19,14 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
 /**
- * OpenStreetMap tiles via osmdroid — free, no API key or billing account,
- * unlike the Google Maps SDK. Draws an origin marker (the rider, when a fix
- * is available), a destination marker, and either the real road route (when
- * [routePoints] came back from OSRM) or a straight line between the two as
- * a fallback.
+ * Satellite map via osmdroid, tiled from Esri's free World Imagery service
+ * rather than a plain street map — no API key or billing account either
+ * way, unlike the Google Maps SDK. Draws an origin marker (the rider, when
+ * a fix is available) as a plain dot, a destination pin, and either the
+ * real road route (when [routePoints] came back from OSRM) or a straight
+ * line between the two as a fallback — the route is drawn with a white
+ * halo underneath its own colour so it still reads clearly over whatever
+ * terrain or rooftops sit beneath it.
  */
 @Composable
 fun OsmMapView(
@@ -38,9 +42,9 @@ fun OsmMapView(
 
     val mapView = remember {
         MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            setTileSource(EsriSatelliteTileSource)
             setMultiTouchControls(true)
-            controller.setZoom(14.0)
+            controller.setZoom(16.0)
         }
     }
 
@@ -67,26 +71,44 @@ fun OsmMapView(
 
             val destinationMarker = Marker(view).apply {
                 position = destination
+                icon = ContextCompat.getDrawable(context, R.drawable.marker_pin)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 title = destinationLabel
+                // The bottom info card already carries this; the default
+                // osmdroid tooltip bubble is plain and unbranded, so it's
+                // left off rather than tapping into it.
+                infoWindow = null
             }
             view.overlays.add(destinationMarker)
 
             if (origin != null) {
-                val originMarker = Marker(view).apply {
-                    position = origin
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    title = "You"
-                }
-                view.overlays.add(originMarker)
-
                 val linePoints = routePoints?.takeIf { it.size >= 2 } ?: listOf(origin, destination)
+
+                // A wider white line underneath the teal one, so the route
+                // stays legible over light-coloured roofs and roads in the
+                // satellite imagery instead of blending into them.
+                val haloLine = Polyline(view).apply {
+                    setPoints(linePoints)
+                    outlinePaint.color = android.graphics.Color.WHITE
+                    outlinePaint.strokeWidth = 14f
+                }
+                view.overlays.add(haloLine)
+
                 val line = Polyline(view).apply {
                     setPoints(linePoints)
                     outlinePaint.color = routeColor
-                    outlinePaint.strokeWidth = 10f
+                    outlinePaint.strokeWidth = 8f
                 }
                 view.overlays.add(line)
+
+                val originMarker = Marker(view).apply {
+                    position = origin
+                    icon = ContextCompat.getDrawable(context, R.drawable.marker_you)
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    title = "You"
+                    infoWindow = null
+                }
+                view.overlays.add(originMarker)
 
                 // Posted rather than called directly: the view needs a
                 // measured size first, which it doesn't have on the same
@@ -95,7 +117,7 @@ fun OsmMapView(
                     view.zoomToBoundingBox(
                         BoundingBox.fromGeoPoints(listOf(origin, destination)),
                         true,
-                        120
+                        140
                     )
                 }
             } else {
