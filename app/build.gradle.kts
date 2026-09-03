@@ -91,8 +91,10 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Coroutines (Dispatchers.IO for the Supabase calls)
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // Coroutines (Dispatchers.IO for the Supabase calls). Pinned to the version the
+    // lifecycle artifacts already resolve to, so declaring it explicitly does not bump
+    // the graph and change what R8 has to chew through on the release build.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
