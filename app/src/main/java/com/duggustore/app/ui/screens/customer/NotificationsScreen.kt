@@ -145,6 +145,7 @@ private fun iconFor(kind: StoreNotification.Kind): Pair<ImageVector, Color> = wh
     StoreNotification.Kind.Placed -> Icons.Default.Receipt to Orange
     StoreNotification.Kind.Confirmed -> Icons.Default.CheckCircle to Teal
     StoreNotification.Kind.Preparing -> Icons.Default.Inventory to Orange
+    StoreNotification.Kind.ReadyForPickup -> Icons.Default.ShoppingBag to Orange
     StoreNotification.Kind.OutForDelivery -> Icons.Default.LocalShipping to Teal
     StoreNotification.Kind.Delivered -> Icons.Default.CheckCircle to SuccessGreen
     StoreNotification.Kind.Cancelled -> Icons.Default.Cancel to Coral

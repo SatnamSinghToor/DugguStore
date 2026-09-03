@@ -216,7 +216,7 @@ CREATE TABLE IF NOT EXISTS orders (
     customer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     seller_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     delivery_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'preparing', 'ready_for_pickup', 'out_for_delivery', 'delivered', 'cancelled')),
     total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_address TEXT NOT NULL DEFAULT '',
@@ -247,6 +247,36 @@ CREATE POLICY "Delivery can view assigned orders" ON orders
 
 CREATE POLICY "Delivery can update assigned orders" ON orders
     FOR UPDATE USING (delivery_id = auth.uid());
+
+-- Lets a delivery-role user see orders a seller has packed but nobody has
+-- claimed yet, so any rider can pick one up rather than waiting for a
+-- manual assignment the app never actually made.
+CREATE OR REPLACE FUNCTION public.is_delivery_partner()
+RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid() AND role = 'delivery'
+    );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION public.is_delivery_partner() TO authenticated;
+
+CREATE POLICY "Delivery can view unclaimed ready orders" ON orders
+    FOR SELECT USING (
+        delivery_id IS NULL AND status = 'ready_for_pickup' AND public.is_delivery_partner()
+    );
+
+-- The claim itself: a conditional UPDATE gated on delivery_id still being
+-- null, so two riders racing for the same order can't both win it — only
+-- the first UPDATE to reach Postgres matches the row. The WITH CHECK then
+-- pins what the row is allowed to become, so a claim can only ever set
+-- delivery_id to the claimer's own id together with out_for_delivery.
+CREATE POLICY "Delivery can claim ready orders" ON orders
+    FOR UPDATE USING (
+        delivery_id IS NULL AND status = 'ready_for_pickup' AND public.is_delivery_partner()
+    ) WITH CHECK (
+        delivery_id = auth.uid() AND status = 'out_for_delivery'
+    );
 
 CREATE POLICY "Admin can manage all orders" ON orders
     FOR ALL USING (

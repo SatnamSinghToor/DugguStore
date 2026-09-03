@@ -244,6 +244,7 @@ fun OrderTrackingDetailScreen(
                                 OrderStatus.PENDING to "Order placed",
                                 OrderStatus.CONFIRMED to "Order confirmed",
                                 OrderStatus.PREPARING to "Being prepared",
+                                OrderStatus.READY_FOR_PICKUP to "Ready for pickup",
                                 OrderStatus.OUT_FOR_DELIVERY to "Out for delivery",
                                 OrderStatus.DELIVERED to "Delivered"
                             )

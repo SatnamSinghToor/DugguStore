@@ -14,7 +14,7 @@ data class StoreNotification(
     val orderId: String,
     val kind: Kind
 ) {
-    enum class Kind { Placed, Confirmed, Preparing, OutForDelivery, Delivered, Cancelled }
+    enum class Kind { Placed, Confirmed, Preparing, ReadyForPickup, OutForDelivery, Delivered, Cancelled }
 }
 
 fun Order.toNotification(): StoreNotification {
@@ -34,6 +34,11 @@ fun Order.toNotification(): StoreNotification {
             StoreNotification.Kind.Preparing,
             "Being prepared",
             "$short is being packed for you."
+        )
+        OrderStatus.READY_FOR_PICKUP -> Triple(
+            StoreNotification.Kind.ReadyForPickup,
+            "Ready for pickup",
+            "$short is packed and waiting for a rider to pick it up."
         )
         OrderStatus.OUT_FOR_DELIVERY -> Triple(
             StoreNotification.Kind.OutForDelivery,

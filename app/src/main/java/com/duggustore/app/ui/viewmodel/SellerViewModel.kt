@@ -2,6 +2,7 @@ package com.duggustore.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.repository.ProductRepository
@@ -66,6 +67,28 @@ class SellerViewModel : ViewModel() {
     fun deleteProduct(productId: String, sellerId: String) {
         viewModelScope.launch {
             val result = productRepo.deleteProduct(productId)
+            result.onSuccess { loadSellerData(sellerId) }
+            result.onFailure {
+                _state.value = _state.value.copy(error = it.message)
+            }
+        }
+    }
+
+    /**
+     * The seller's Accept/Reject/Start-preparing buttons all end up here.
+     *
+     * SellerDashboard is fed from this view model's own `orders`, not from
+     * OrderViewModel's — the dashboard's Accept button used to call through
+     * OrderViewModel.updateOrderStatus, which wrote the status correctly but
+     * then refreshed only OrderViewModel's own state. The seller's list never
+     * reloaded, so the button looked like it did nothing even though the order
+     * had, in fact, been accepted. Reloading here, on the view model that
+     * actually owns the list the dashboard renders, is what makes the card
+     * disappear from "pending" and the next action appear.
+     */
+    fun updateOrderStatus(orderId: String, status: OrderStatus, sellerId: String) {
+        viewModelScope.launch {
+            val result = orderRepo.updateOrderStatus(orderId, status.value)
             result.onSuccess { loadSellerData(sellerId) }
             result.onFailure {
                 _state.value = _state.value.copy(error = it.message)

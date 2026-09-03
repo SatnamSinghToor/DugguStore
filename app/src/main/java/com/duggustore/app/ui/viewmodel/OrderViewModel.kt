@@ -104,16 +104,6 @@ class OrderViewModel : ViewModel() {
         }
     }
 
-    fun assignDelivery(orderId: String, deliveryId: String) {
-        viewModelScope.launch {
-            val result = repository.assignDelivery(orderId, deliveryId)
-            result.onSuccess { refreshOrders() }
-            result.onFailure {
-                _state.value = _state.value.copy(error = it.message)
-            }
-        }
-    }
-
     private fun refreshOrders() {
         val state = _state.value
         // Re-trigger loads based on what was loaded

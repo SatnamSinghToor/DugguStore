@@ -400,6 +400,7 @@ fun StatusBadge(
     val (bgColor, textColor) = when (status.lowercase()) {
         "pending" -> Pair(PendingYellow.copy(alpha = 0.15f), WarningYellow)
         "confirmed", "preparing" -> Pair(InfoBlue.copy(alpha = 0.15f), InfoBlue)
+        "ready_for_pickup" -> Pair(WarningYellow.copy(alpha = 0.15f), WarningYellow)
         "out_for_delivery" -> Pair(PrimaryGreen.copy(alpha = 0.15f), PrimaryGreen)
         "delivered" -> Pair(DeliveredGreen.copy(alpha = 0.15f), DeliveredGreen)
         "cancelled" -> Pair(AccentRed.copy(alpha = 0.15f), AccentRed)

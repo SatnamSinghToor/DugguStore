@@ -23,6 +23,11 @@ enum class OrderStatus(val value: String) {
     @SerialName("pending") PENDING("pending"),
     @SerialName("confirmed") CONFIRMED("confirmed"),
     @SerialName("preparing") PREPARING("preparing"),
+    // Packed and waiting for a rider — nobody is carrying it yet. Distinct from
+    // OUT_FOR_DELIVERY, which means a specific rider has claimed it and it is
+    // actually moving; the tracking card on the customer's order screen is
+    // gated on that difference.
+    @SerialName("ready_for_pickup") READY_FOR_PICKUP("ready_for_pickup"),
     @SerialName("out_for_delivery") OUT_FOR_DELIVERY("out_for_delivery"),
     @SerialName("delivered") DELIVERED("delivered"),
     @SerialName("cancelled") CANCELLED("cancelled");
@@ -31,6 +36,7 @@ enum class OrderStatus(val value: String) {
         fun fromString(value: String): OrderStatus = when (value) {
             "confirmed" -> CONFIRMED
             "preparing" -> PREPARING
+            "ready_for_pickup" -> READY_FOR_PICKUP
             "out_for_delivery" -> OUT_FOR_DELIVERY
             "delivered" -> DELIVERED
             "cancelled" -> CANCELLED
@@ -42,6 +48,7 @@ enum class OrderStatus(val value: String) {
         PENDING -> "Pending"
         CONFIRMED -> "Confirmed"
         PREPARING -> "Preparing"
+        READY_FOR_PICKUP -> "Ready for Pickup"
         OUT_FOR_DELIVERY -> "Out for Delivery"
         DELIVERED -> "Delivered"
         CANCELLED -> "Cancelled"

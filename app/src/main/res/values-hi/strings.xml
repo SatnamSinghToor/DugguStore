@@ -6,6 +6,7 @@
     <string name="nav_account">खाता</string>
     <string name="nav_products">उत्पाद</string>
     <string name="nav_orders">ऑर्डर</string>
+    <string name="nav_available">उपलब्ध</string>
     <string name="nav_active">चालू</string>
     <string name="nav_completed">पूर्ण</string>
     <string name="nav_overview">सारांश</string>

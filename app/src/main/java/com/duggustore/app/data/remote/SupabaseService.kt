@@ -345,6 +345,29 @@ object SupabaseService {
         executeRequest(request)
     }
 
+    /**
+     * PATCH a row only while a named column is still NULL — built for
+     * claim-style writes, where a client should only win if nobody has beaten
+     * it there. Postgres evaluates the WHERE clause per row inside one UPDATE
+     * statement, so of two concurrent claims on the same row only the first
+     * PATCH still finds it matching; the second finds nothing and this returns
+     * an empty list rather than overwriting the first caller's write.
+     */
+    suspend fun updateIfColumnNull(
+        table: String,
+        id: String,
+        nullColumn: String,
+        body: String,
+        token: String? = null
+    ): List<JsonObject> {
+        val request = Request.Builder()
+            .url("$BASE_URL/rest/v1/$table?id=eq.${encode(id)}&$nullColumn=is.null")
+            .patch(body.toRequestBody(JSON_MEDIA_TYPE))
+            .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        return parseJsonArray(executeRequest(request))
+    }
+
     suspend fun updateWhere(table: String, column: String, value: String, body: String, token: String? = null): List<JsonObject> {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table?$column=eq.${encode(value)}")

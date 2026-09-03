@@ -7,6 +7,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -36,8 +37,9 @@ object BottomNav {
             BottomNavItem("1", stringResource(R.string.nav_orders), Icons.Default.Receipt)
         )
         UserRole.DELIVERY -> listOf(
-            BottomNavItem("0", stringResource(R.string.nav_active), Icons.Default.LocalShipping),
-            BottomNavItem("1", stringResource(R.string.nav_completed), Icons.Default.Receipt)
+            BottomNavItem("0", stringResource(R.string.nav_available), Icons.Default.ShoppingBag),
+            BottomNavItem("1", stringResource(R.string.nav_active), Icons.Default.LocalShipping),
+            BottomNavItem("2", stringResource(R.string.nav_completed), Icons.Default.Receipt)
         )
         UserRole.ADMIN -> listOf(
             BottomNavItem("0", stringResource(R.string.nav_overview), Icons.Outlined.GridView),

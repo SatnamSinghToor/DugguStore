@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -117,13 +118,14 @@ fun StoreSearchBar(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // The lens sits on its own teal tile, so it reads as part of the app
-            // rather than as a stray grey glyph, and balances the mic opposite.
+            // Orange here, not teal: the location pin right above this bar is
+            // already teal, and two blue tiles stacked in the same header made
+            // that whole strip read as one flat colour instead of two controls.
             Box(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(RoundedCornerShape(11.dp))
-                    .background(Teal),
+                    .background(Orange),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -290,6 +292,7 @@ fun StoreProductCard(
                     .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
                     .background(SurfaceWhite)
             ) {
+                val outOfStock = product.stock <= 0
                 if (product.imageUrl.isNullOrBlank()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Image, null, tint = TextLight, modifier = Modifier.size(44.dp))
@@ -298,9 +301,28 @@ fun StoreProductCard(
                     AsyncImage(
                         model = product.imageUrl,
                         contentDescription = product.name,
-                        modifier = Modifier.fillMaxSize().padding(10.dp),
+                        // Faded rather than full colour once it's unavailable, so
+                        // the image itself signals "can't buy this" at a glance
+                        // instead of only the text underneath.
+                        modifier = Modifier.fillMaxSize().padding(10.dp).alpha(if (outOfStock) 0.35f else 1f),
                         contentScale = ContentScale.Fit
                     )
+                }
+
+                if (outOfStock) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.Center).rotate(-8f),
+                        shape = RoundedCornerShape(6.dp),
+                        color = TextPrimary.copy(alpha = 0.85f)
+                    ) {
+                        Text(
+                            text = "OUT OF STOCK",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
 
                 IconButton(

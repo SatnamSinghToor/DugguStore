@@ -514,7 +514,9 @@ fun AppNavGraph(
                 onAddProduct = { navController.navigate(Screen.SellerProductForm.createRoute()) },
                 onEditProduct = { navController.navigate(Screen.SellerProductForm.createRoute(it)) },
                 onDeleteProduct = { sellerViewModel.deleteProduct(it, authState.user?.id ?: "") },
-                onUpdateOrderStatus = { orderId, status -> orderViewModel.updateOrderStatus(orderId, status) },
+                onUpdateOrderStatus = { orderId, status ->
+                    sellerViewModel.updateOrderStatus(orderId, status, authState.user?.id ?: "")
+                },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
@@ -528,11 +530,17 @@ fun AppNavGraph(
         composable(Screen.DeliveryDashboard.route) {
             DeliveryDashboard(
                 selectedTab = dashboardTab,
+                availableOrders = deliveryState.availableOrders,
                 activeOrders = deliveryState.activeOrders,
                 completedOrders = deliveryState.completedOrders,
                 totalEarnings = deliveryState.totalEarnings,
                 totalDeliveries = deliveryState.totalDeliveries,
                 onMarkDelivered = { deliveryViewModel.markDelivered(it, authState.user?.id ?: "") },
+                onClaimOrder = { orderId ->
+                    deliveryViewModel.claimOrder(orderId, authState.user?.id ?: "")
+                },
+                claimError = deliveryState.claimError,
+                onDismissClaimError = { deliveryViewModel.clearClaimError() },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
@@ -559,6 +567,17 @@ fun AppNavGraph(
 
             LaunchedEffect(authState.user) {
                 authState.user?.let { deliveryViewModel.loadDeliveryData(it.id) }
+            }
+
+            // Polled only while the Available tab is actually showing, same
+            // pattern as the customer's rider-position poll: other riders can
+            // claim a pool order at any time, so a one-time load would go stale.
+            LaunchedEffect(dashboardTab) {
+                if (dashboardTab != 0) return@LaunchedEffect
+                while (true) {
+                    deliveryViewModel.loadAvailableOrders()
+                    delay(15_000L)
+                }
             }
         }
 

@@ -173,7 +173,7 @@ CREATE TABLE orders (
     customer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     seller_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     delivery_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','preparing','out_for_delivery','delivered','cancelled')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','preparing','ready_for_pickup','out_for_delivery','delivered','cancelled')),
     total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_address TEXT NOT NULL DEFAULT '',
@@ -186,6 +186,17 @@ CREATE POLICY "Customers can cancel own orders" ON orders FOR UPDATE USING (cust
 CREATE POLICY "Sellers can manage orders" ON orders FOR ALL USING (seller_id = auth.uid() OR public.is_admin());
 CREATE POLICY "Delivery can view assigned orders" ON orders FOR SELECT USING (delivery_id = auth.uid());
 CREATE POLICY "Delivery can update assigned orders" ON orders FOR UPDATE USING (delivery_id = auth.uid());
+
+-- Self-claim pool: any delivery-role user can see and take an unclaimed
+-- ready_for_pickup order. The claim is a conditional UPDATE (delivery_id
+-- still null) so two riders racing for the same order can't both win it.
+CREATE OR REPLACE FUNCTION public.is_delivery_partner()
+RETURNS BOOLEAN AS $$
+    SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'delivery');
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+GRANT EXECUTE ON FUNCTION public.is_delivery_partner() TO authenticated;
+CREATE POLICY "Delivery can view unclaimed ready orders" ON orders FOR SELECT USING (delivery_id IS NULL AND status = 'ready_for_pickup' AND public.is_delivery_partner());
+CREATE POLICY "Delivery can claim ready orders" ON orders FOR UPDATE USING (delivery_id IS NULL AND status = 'ready_for_pickup' AND public.is_delivery_partner()) WITH CHECK (delivery_id = auth.uid() AND status = 'out_for_delivery');
 
 -- ============================================
 -- 7. ORDER ITEMS

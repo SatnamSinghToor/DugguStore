@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,13 +26,17 @@ import com.duggustore.app.ui.theme.*
 
 @Composable
 fun DeliveryDashboard(
-    /** Driven by the bottom bar, which is the only tab control now. */
+    /** Driven by the bottom bar, which is the only tab control now. 0=Available, 1=Active, 2=Completed */
     selectedTab: Int,
+    availableOrders: List<Order> = emptyList(),
     activeOrders: List<Order>,
     completedOrders: List<Order>,
     totalEarnings: Double,
     totalDeliveries: Int,
     onMarkDelivered: (String) -> Unit,
+    onClaimOrder: (String) -> Unit = {},
+    claimError: String? = null,
+    onDismissClaimError: () -> Unit = {},
     onSignOut: () -> Unit,
     sharingLocation: Boolean = false,
     sharingError: String? = null,
@@ -63,49 +68,136 @@ fun DeliveryDashboard(
             )
         }
 
+        // A lost claim is not an error the rider caused — someone else was
+        // faster — so it surfaces as a dismissible banner, not a blocking dialog.
+        if (claimError != null) {
+            Surface(color = OrangeSurface) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(claimError, fontSize = 12.sp, color = OrangeDark, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismissClaimError) { Text("Dismiss", fontSize = 12.sp) }
+                }
+            }
+        }
+
         Box(modifier = Modifier.weight(1f)) {
-            if (selectedTab == 0) {
-                if (activeOrders.isEmpty()) {
-                    DashboardEmpty(
-                        icon = Icons.Default.LocalShipping,
-                        title = "No active deliveries",
-                        subtitle = "New delivery requests will appear here"
-                    )
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(activeOrders, key = { it.id }) { order ->
-                            DeliveryOrderCard(
-                                order = order,
-                                onMarkDelivered = { onMarkDelivered(order.id) }
-                            )
+            when (selectedTab) {
+                0 -> {
+                    if (availableOrders.isEmpty()) {
+                        DashboardEmpty(
+                            icon = Icons.Default.ShoppingBag,
+                            title = "No orders waiting",
+                            subtitle = "Orders ready for pickup will show up here"
+                        )
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(availableOrders, key = { it.id }) { order ->
+                                AvailableOrderCard(
+                                    order = order,
+                                    onClaim = { onClaimOrder(order.id) }
+                                )
+                            }
                         }
                     }
                 }
-            } else {
-                if (completedOrders.isEmpty()) {
-                    DashboardEmpty(
-                        icon = Icons.Default.CheckCircle,
-                        title = "No completed deliveries",
-                        subtitle = "Your delivery history will appear here"
-                    )
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(completedOrders, key = { it.id }) { order ->
-                            DeliveryOrderCard(
-                                order = order,
-                                onMarkDelivered = {},
-                                isCompleted = true
-                            )
+                1 -> {
+                    if (activeOrders.isEmpty()) {
+                        DashboardEmpty(
+                            icon = Icons.Default.LocalShipping,
+                            title = "No active deliveries",
+                            subtitle = "Accept an order from Available to start your route"
+                        )
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(activeOrders, key = { it.id }) { order ->
+                                DeliveryOrderCard(
+                                    order = order,
+                                    onMarkDelivered = { onMarkDelivered(order.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    if (completedOrders.isEmpty()) {
+                        DashboardEmpty(
+                            icon = Icons.Default.CheckCircle,
+                            title = "No completed deliveries",
+                            subtitle = "Your delivery history will appear here"
+                        )
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(completedOrders, key = { it.id }) { order ->
+                                DeliveryOrderCard(
+                                    order = order,
+                                    onMarkDelivered = {},
+                                    isCompleted = true
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AvailableOrderCard(
+    order: Order,
+    onClaim: () -> Unit
+) {
+    DashboardPanel {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "#${order.id.takeLast(8).uppercase()}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "₹${trimAmount(order.totalAmount)}",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Teal
+                    )
+                }
+                StatusBadge(status = order.status)
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            InfoLine(
+                icon = { Icon(Icons.Default.LocationOn, null, tint = Coral, modifier = Modifier.size(16.dp)) },
+                text = order.deliveryAddress.ifBlank { "No address on this order" },
+                color = TextSecondary
+            )
+
+            Spacer(Modifier.height(14.dp))
+            DashboardAction(
+                text = "Accept delivery",
+                color = Teal,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onClaim
+            )
         }
     }
 }

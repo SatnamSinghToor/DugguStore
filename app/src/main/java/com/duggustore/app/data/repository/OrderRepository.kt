@@ -2,6 +2,7 @@ package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderItem
+import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.remote.SupabaseService
 import kotlinx.serialization.json.Json
@@ -108,14 +109,49 @@ class OrderRepository {
         }
     }
 
-    suspend fun assignDelivery(orderId: String, deliveryId: String): Result<Unit> {
+    /**
+     * The pool of orders a seller has packed but no rider has picked up yet —
+     * any delivery partner may claim one. Ordinary select(): the RLS policy
+     * that lets a delivery-role user see an unclaimed ready_for_pickup row
+     * already excludes everyone else, so there is nothing to filter here.
+     */
+    suspend fun getAvailableOrders(): Result<List<Order>> {
+        return try {
+            Result.success(
+                decodeOrders(
+                    SupabaseService.select(
+                        "orders",
+                        token(),
+                        mapOf("status" to OrderStatus.READY_FOR_PICKUP.value)
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * A rider taps Accept on a pool order. Filtered on delivery_id being still
+     * null, so this is the atomic half of claiming — see
+     * SupabaseService.updateIfColumnNull. Returns false rather than failing
+     * when nothing matched: that means another rider's claim landed first, not
+     * that anything went wrong.
+     */
+    suspend fun claimOrder(orderId: String, deliveryId: String): Result<Boolean> {
         return try {
             val body = buildJsonObject {
                 put("delivery_id", deliveryId)
-                put("status", "out_for_delivery")
+                put("status", OrderStatus.OUT_FOR_DELIVERY.value)
             }.toString()
-            SupabaseService.update("orders", orderId, body, token())
-            Result.success(Unit)
+            val rows = SupabaseService.updateIfColumnNull(
+                table = "orders",
+                id = orderId,
+                nullColumn = "delivery_id",
+                body = body,
+                token = token()
+            )
+            Result.success(rows.isNotEmpty())
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -258,7 +258,7 @@ fun OrderManagementCard(
             // handed to delivery — it sat as "confirmed" forever.
             val next = when (order.status) {
                 OrderStatus.CONFIRMED.value -> OrderStatus.PREPARING to "Start preparing"
-                OrderStatus.PREPARING.value -> OrderStatus.OUT_FOR_DELIVERY to "Send out for delivery"
+                OrderStatus.PREPARING.value -> OrderStatus.READY_FOR_PICKUP to "Mark ready for pickup"
                 else -> null
             }
 
