@@ -55,7 +55,7 @@ fun HomeScreen(
     onNotificationsClick: () -> Unit = {},
     savedAddresses: List<Address> = emptyList(),
     onSelectAddress: (Address) -> Unit = {},
-    onSaveDetectedAddress: (String) -> Unit = {},
+    onSaveDetectedAddress: (String, Double, Double) -> Unit = { _, _, _ -> },
     offers: List<Coupon> = emptyList(),
     onOfferClick: (Coupon) -> Unit = {}
 ) {
@@ -274,8 +274,8 @@ fun HomeScreen(
             locationState = detected.state,
             addresses = savedAddresses,
             onDetectLocation = detected.refresh,
-            onUseDetected = { address ->
-                onSaveDetectedAddress(address)
+            onUseDetected = { address, lat, lng ->
+                onSaveDetectedAddress(address, lat, lng)
                 showLocationSheet = false
             },
             onSelectAddress = { address ->

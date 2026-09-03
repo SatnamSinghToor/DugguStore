@@ -41,7 +41,7 @@ fun CheckoutScreen(
     isLoading: Boolean,
     error: String? = null,
     onManageAddresses: () -> Unit,
-    onPlaceOrder: (deliveryAddress: String) -> Unit,
+    onPlaceOrder: (deliveryAddress: String, latitude: Double?, longitude: Double?) -> Unit,
     onBack: () -> Unit
 ) {
     // Preselect the default address so the common case is a single tap.
@@ -234,7 +234,17 @@ fun CheckoutScreen(
                     Spacer(Modifier.height(8.dp))
                 }
                 Button(
-                    onClick = { selected?.let { onPlaceOrder(it.fullAddress) } },
+                    onClick = {
+                        selected?.let {
+                            // 0.0 is the column default for an address that was
+                            // typed by hand rather than detected — treated as
+                            // "no fix" rather than a real coordinate near
+                            // (0°, 0°).
+                            val lat = it.latitude.takeIf { v -> v != 0.0 }
+                            val lng = it.longitude.takeIf { v -> v != 0.0 }
+                            onPlaceOrder(it.fullAddress, lat, lng)
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(

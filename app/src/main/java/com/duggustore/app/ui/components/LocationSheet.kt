@@ -39,7 +39,7 @@ fun LocationSheet(
     locationState: LocationState,
     addresses: List<Address>,
     onDetectLocation: () -> Unit,
-    onUseDetected: (String) -> Unit,
+    onUseDetected: (String, Double, Double) -> Unit,
     onSelectAddress: (Address) -> Unit,
     onAddNewAddress: () -> Unit,
     onDismiss: () -> Unit
@@ -146,7 +146,7 @@ fun LocationSheet(
 private fun DetectedLocationRow(
     state: LocationState,
     onDetect: () -> Unit,
-    onUse: (String) -> Unit,
+    onUse: (String, Double, Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val found = state as? LocationState.Found
@@ -158,7 +158,7 @@ private fun DetectedLocationRow(
             .clip(RoundedCornerShape(16.dp))
             .background(TealSurface)
             .clickable(enabled = !busy) {
-                if (found != null) onUse(found.address) else onDetect()
+                if (found != null) onUse(found.address, found.latitude, found.longitude) else onDetect()
             }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically

@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS profiles (
     phone TEXT NOT NULL DEFAULT '',
     role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'seller', 'delivery', 'admin')),
     avatar_url TEXT,
+    -- Only meaningful for role = 'seller' — where a rider picks up their orders.
+    store_address TEXT,
+    store_latitude DOUBLE PRECISION,
+    store_longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -220,6 +224,10 @@ CREATE TABLE IF NOT EXISTS orders (
     total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_address TEXT NOT NULL DEFAULT '',
+    -- Captured from the customer's selected address at checkout, when that
+    -- address itself carries a fix; null on hand-typed addresses.
+    delivery_latitude DOUBLE PRECISION,
+    delivery_longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -281,6 +289,16 @@ CREATE POLICY "Delivery can claim ready orders" ON orders
 CREATE POLICY "Admin can manage all orders" ON orders
     FOR ALL USING (
         public.is_admin()
+    );
+
+-- The rider's order queries embed profiles!seller_id to read the store's
+-- pickup point. Scoped by role rather than by which orders the rider has:
+-- correlating this to a specific order (via an EXISTS against orders)
+-- round-trips back into profiles RLS through is_delivery_partner() and
+-- hits Postgres's infinite-recursion guard (42P17).
+CREATE POLICY "Delivery can view seller store info" ON profiles
+    FOR SELECT USING (
+        role = 'seller' AND public.is_delivery_partner()
     );
 
 -- ============================================

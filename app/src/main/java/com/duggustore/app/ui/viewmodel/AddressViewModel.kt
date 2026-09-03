@@ -41,7 +41,14 @@ class AddressViewModel : ViewModel() {
         }
     }
 
-    fun saveAddress(label: String, fullAddress: String, isDefault: Boolean, existingId: String = "") {
+    fun saveAddress(
+        label: String,
+        fullAddress: String,
+        isDefault: Boolean,
+        existingId: String = "",
+        latitude: Double = 0.0,
+        longitude: Double = 0.0
+    ) {
         val userId = _state.value.userId
         if (userId.isEmpty() || fullAddress.isBlank()) return
 
@@ -52,6 +59,8 @@ class AddressViewModel : ViewModel() {
                 userId = userId,
                 label = label.ifBlank { "Home" },
                 fullAddress = fullAddress.trim(),
+                latitude = latitude,
+                longitude = longitude,
                 // The first address saved becomes the default, so checkout always has one.
                 isDefault = isDefault || _state.value.addresses.isEmpty()
             )

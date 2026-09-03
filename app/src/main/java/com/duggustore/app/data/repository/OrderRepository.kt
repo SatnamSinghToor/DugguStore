@@ -12,6 +12,14 @@ import kotlinx.serialization.json.put
 
 private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
+/**
+ * Embeds the seller's store location on the order row via the seller_id FK,
+ * so the rider's navigate-to-pickup button has somewhere to point without a
+ * second round trip per order.
+ */
+private const val ORDER_WITH_SELLER_SELECT =
+    "*,seller:profiles!seller_id(full_name,store_address,store_latitude,store_longitude)"
+
 class OrderRepository {
 
     private fun token(): String? = SessionManager.getAccessToken()
@@ -29,6 +37,8 @@ class OrderRepository {
                 put("total_amount", order.totalAmount)
                 put("delivery_fee", order.deliveryFee)
                 put("delivery_address", order.deliveryAddress)
+                order.deliveryLatitude?.let { put("delivery_latitude", it) }
+                order.deliveryLongitude?.let { put("delivery_longitude", it) }
             }.toString()
 
             val created = SupabaseService.insert("orders", orderBody, token)
@@ -73,7 +83,16 @@ class OrderRepository {
 
     suspend fun getDeliveryOrders(deliveryId: String): Result<List<Order>> {
         return try {
-            Result.success(decodeOrders(SupabaseService.select("orders", token(), mapOf("delivery_id" to deliveryId))))
+            Result.success(
+                decodeOrders(
+                    SupabaseService.select(
+                        "orders",
+                        token(),
+                        mapOf("delivery_id" to deliveryId),
+                        select = ORDER_WITH_SELLER_SELECT
+                    )
+                )
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -122,7 +141,8 @@ class OrderRepository {
                     SupabaseService.select(
                         "orders",
                         token(),
-                        mapOf("status" to OrderStatus.READY_FOR_PICKUP.value)
+                        mapOf("status" to OrderStatus.READY_FOR_PICKUP.value),
+                        select = ORDER_WITH_SELLER_SELECT
                     )
                 )
             )

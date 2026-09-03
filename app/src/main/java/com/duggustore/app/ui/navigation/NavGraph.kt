@@ -344,11 +344,13 @@ fun AppNavGraph(
                 // A detected address is only useful if it survives the session,
                 // so picking it saves it as the new default rather than holding
                 // it in memory until the next launch.
-                onSaveDetectedAddress = { detected ->
+                onSaveDetectedAddress = { detected, lat, lng ->
                     addressViewModel.saveAddress(
                         label = "Current location",
                         fullAddress = detected,
-                        isDefault = true
+                        isDefault = true,
+                        latitude = lat,
+                        longitude = lng
                     )
                 },
                 offers = homeState.offers,
@@ -517,6 +519,10 @@ fun AppNavGraph(
                 onUpdateOrderStatus = { orderId, status ->
                     sellerViewModel.updateOrderStatus(orderId, status, authState.user?.id ?: "")
                 },
+                hasStoreLocation = authState.user?.storeLatitude != null,
+                onSaveStoreLocation = { address, lat, lng ->
+                    authViewModel.updateStoreLocation(address, lat, lng)
+                },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
@@ -674,7 +680,7 @@ fun AppNavGraph(
                 isLoading = cartState.isLoading,
                 error = cartState.error,
                 onManageAddresses = { navController.navigate(Screen.CustomerAddresses.route) },
-                onPlaceOrder = { address -> cartViewModel.placeOrder(address) },
+                onPlaceOrder = { address, lat, lng -> cartViewModel.placeOrder(address, lat, lng) },
                 onBack = { navController.popBackStack() }
             )
 

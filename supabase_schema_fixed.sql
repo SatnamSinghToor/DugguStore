@@ -28,6 +28,10 @@ CREATE TABLE profiles (
     phone TEXT NOT NULL DEFAULT '',
     role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer','seller','delivery','admin')),
     avatar_url TEXT,
+    -- Only meaningful for role = 'seller' — where a rider picks up their orders.
+    store_address TEXT,
+    store_latitude DOUBLE PRECISION,
+    store_longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -177,6 +181,10 @@ CREATE TABLE orders (
     total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
     delivery_address TEXT NOT NULL DEFAULT '',
+    -- Captured from the customer's selected address at checkout, when that
+    -- address itself carries a fix; null on hand-typed addresses.
+    delivery_latitude DOUBLE PRECISION,
+    delivery_longitude DOUBLE PRECISION,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
@@ -197,6 +205,11 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 GRANT EXECUTE ON FUNCTION public.is_delivery_partner() TO authenticated;
 CREATE POLICY "Delivery can view unclaimed ready orders" ON orders FOR SELECT USING (delivery_id IS NULL AND status = 'ready_for_pickup' AND public.is_delivery_partner());
 CREATE POLICY "Delivery can claim ready orders" ON orders FOR UPDATE USING (delivery_id IS NULL AND status = 'ready_for_pickup' AND public.is_delivery_partner()) WITH CHECK (delivery_id = auth.uid() AND status = 'out_for_delivery');
+
+-- The rider's order queries embed profiles!seller_id to read the store's
+-- pickup point. Scoped by role rather than by a specific order — see the
+-- 42P17 recursion note near is_admin() above.
+CREATE POLICY "Delivery can view seller store info" ON profiles FOR SELECT USING (role = 'seller' AND public.is_delivery_partner());
 
 -- ============================================
 -- 7. ORDER ITEMS

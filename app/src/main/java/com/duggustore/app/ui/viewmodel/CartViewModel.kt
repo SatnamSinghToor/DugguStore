@@ -117,7 +117,7 @@ class CartViewModel : ViewModel() {
      * signed-in customer's own id, which stored every order with
      * seller_id = customer_id and left it invisible to the seller who has to fulfil it.
      */
-    fun placeOrder(deliveryAddress: String) {
+    fun placeOrder(deliveryAddress: String, latitude: Double? = null, longitude: Double? = null) {
         viewModelScope.launch {
             val state = _state.value
             val customerId = state.customerId
@@ -147,7 +147,9 @@ class CartViewModel : ViewModel() {
                 status = "pending",
                 totalAmount = state.total,
                 deliveryFee = state.deliveryFee,
-                deliveryAddress = deliveryAddress
+                deliveryAddress = deliveryAddress,
+                deliveryLatitude = latitude,
+                deliveryLongitude = longitude
             )
 
             val orderItems = state.cartItems.map { item ->

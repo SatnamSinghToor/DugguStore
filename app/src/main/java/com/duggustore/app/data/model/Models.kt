@@ -62,9 +62,14 @@ data class UserProfile(
     val phone: String = "",
     val role: String = "customer",
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    // Only meaningful for role == "seller" — where the rider picks up from.
+    @SerialName("store_address") val storeAddress: String? = null,
+    @SerialName("store_latitude") val storeLatitude: Double? = null,
+    @SerialName("store_longitude") val storeLongitude: Double? = null,
     @SerialName("created_at") val createdAt: String = ""
 ) {
     fun userRole(): UserRole = UserRole.fromString(role)
+    fun hasStoreFix(): Boolean = storeLatitude != null && storeLongitude != null
 }
 
 @Serializable
@@ -116,10 +121,29 @@ data class Order(
     @SerialName("total_amount") val totalAmount: Double = 0.0,
     @SerialName("delivery_fee") val deliveryFee: Double = 0.0,
     @SerialName("delivery_address") val deliveryAddress: String = "",
+    // Captured from the customer's selected address at checkout, when that
+    // address itself carries a fix — null on any order placed before this,
+    // or against an address that was only ever typed in by hand.
+    @SerialName("delivery_latitude") val deliveryLatitude: Double? = null,
+    @SerialName("delivery_longitude") val deliveryLongitude: Double? = null,
     @SerialName("created_at") val createdAt: String = "",
-    val items: List<OrderItem> = emptyList()
+    val items: List<OrderItem> = emptyList(),
+    // Embedded via a PostgREST select on the seller_id FK; only populated by
+    // the delivery-side order queries that ask for it.
+    val seller: SellerStore? = null
 ) {
     fun orderStatus(): OrderStatus = OrderStatus.fromString(status)
+    fun hasDeliveryFix(): Boolean = deliveryLatitude != null && deliveryLongitude != null
+}
+
+@Serializable
+data class SellerStore(
+    @SerialName("full_name") val fullName: String = "",
+    @SerialName("store_address") val storeAddress: String? = null,
+    @SerialName("store_latitude") val storeLatitude: Double? = null,
+    @SerialName("store_longitude") val storeLongitude: Double? = null
+) {
+    fun hasFix(): Boolean = storeLatitude != null && storeLongitude != null
 }
 
 @Serializable

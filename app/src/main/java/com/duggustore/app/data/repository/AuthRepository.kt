@@ -434,9 +434,28 @@ class AuthRepository {
                 put("full_name", profile.fullName)
                 put("phone", profile.phone)
                 profile.avatarUrl?.let { put("avatar_url", it) }
+                profile.storeAddress?.let { put("store_address", it) }
+                profile.storeLatitude?.let { put("store_latitude", it) }
+                profile.storeLongitude?.let { put("store_longitude", it) }
             }.toString()
             SupabaseService.update("profiles", profile.id, body, token)
             Result.success(profile)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Sets where a seller's store is, so a rider can navigate to pick up their orders. */
+    suspend fun updateStoreLocation(userId: String, address: String, latitude: Double, longitude: Double): Result<Unit> {
+        return try {
+            val token = SessionManager.getAccessToken()
+            val body = buildJsonObject {
+                put("store_address", address)
+                put("store_latitude", latitude)
+                put("store_longitude", longitude)
+            }.toString()
+            SupabaseService.update("profiles", userId, body, token)
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

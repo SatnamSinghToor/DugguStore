@@ -313,4 +313,28 @@ class AuthViewModel : ViewModel() {
     fun refreshProfile() {
         checkCurrentUser()
     }
+
+    /**
+     * A seller sets their store's pickup point once; every rider who claims
+     * one of their orders reads it back through the order's embedded seller
+     * info to navigate there.
+     */
+    fun updateStoreLocation(address: String, latitude: Double, longitude: Double) {
+        val user = _state.value.user ?: return
+        viewModelScope.launch {
+            val result = repository.updateStoreLocation(user.id, address, latitude, longitude)
+            result.onSuccess {
+                _state.value = _state.value.copy(
+                    user = user.copy(
+                        storeAddress = address,
+                        storeLatitude = latitude,
+                        storeLongitude = longitude
+                    )
+                )
+            }
+            result.onFailure {
+                _state.value = _state.value.copy(error = it.message)
+            }
+        }
+    }
 }

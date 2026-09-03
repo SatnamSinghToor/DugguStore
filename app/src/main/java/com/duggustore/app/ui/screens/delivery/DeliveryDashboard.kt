@@ -16,11 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderStatus
+import com.duggustore.app.platform.openNavigation
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
@@ -159,6 +161,7 @@ fun AvailableOrderCard(
     order: Order,
     onClaim: () -> Unit
 ) {
+    val context = LocalContext.current
     DashboardPanel {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -186,18 +189,43 @@ fun AvailableOrderCard(
             Spacer(Modifier.height(10.dp))
 
             InfoLine(
+                icon = { Icon(Icons.Default.ShoppingBag, null, tint = Orange, modifier = Modifier.size(16.dp)) },
+                text = order.seller?.storeAddress?.takeIf { it.isNotBlank() }
+                    ?: "Pickup address not set by seller",
+                color = TextSecondary
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            InfoLine(
                 icon = { Icon(Icons.Default.LocationOn, null, tint = Coral, modifier = Modifier.size(16.dp)) },
                 text = order.deliveryAddress.ifBlank { "No address on this order" },
                 color = TextSecondary
             )
 
             Spacer(Modifier.height(14.dp))
-            DashboardAction(
-                text = "Accept delivery",
-                color = Teal,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onClaim
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DashboardAction(
+                    text = "Navigate to store",
+                    color = Teal,
+                    filled = false,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        openNavigation(
+                            context,
+                            order.seller?.storeAddress.orEmpty(),
+                            order.seller?.storeLatitude,
+                            order.seller?.storeLongitude
+                        )
+                    }
+                )
+                DashboardAction(
+                    text = "Accept delivery",
+                    color = Teal,
+                    modifier = Modifier.weight(1f),
+                    onClick = onClaim
+                )
+            }
         }
     }
 }
@@ -208,6 +236,9 @@ fun DeliveryOrderCard(
     onMarkDelivered: () -> Unit,
     isCompleted: Boolean = false
 ) {
+    val context = LocalContext.current
+    val active = !isCompleted && order.status != OrderStatus.DELIVERED.value
+
     DashboardPanel {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -233,6 +264,20 @@ fun DeliveryOrderCard(
             }
 
             Spacer(Modifier.height(10.dp))
+
+            // The claim never marks a distinct "picked up" step, so an active
+            // order might still need collecting from the store even though its
+            // status already reads out_for_delivery — both stops stay visible
+            // for the whole trip rather than the pickup one disappearing early.
+            if (active) {
+                InfoLine(
+                    icon = { Icon(Icons.Default.ShoppingBag, null, tint = Orange, modifier = Modifier.size(16.dp)) },
+                    text = order.seller?.storeAddress?.takeIf { it.isNotBlank() }
+                        ?: "Pickup address not set by seller",
+                    color = TextSecondary
+                )
+                Spacer(Modifier.height(4.dp))
+            }
 
             InfoLine(
                 icon = { Icon(Icons.Default.LocationOn, null, tint = Coral, modifier = Modifier.size(16.dp)) },
@@ -248,8 +293,40 @@ fun DeliveryOrderCard(
                 color = TextLight
             )
 
-            if (!isCompleted && order.status != OrderStatus.DELIVERED.value) {
+            if (active) {
                 Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DashboardAction(
+                        text = "Navigate to pickup",
+                        color = Orange,
+                        filled = false,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            openNavigation(
+                                context,
+                                order.seller?.storeAddress.orEmpty(),
+                                order.seller?.storeLatitude,
+                                order.seller?.storeLongitude
+                            )
+                        }
+                    )
+                    DashboardAction(
+                        text = "Navigate to drop",
+                        color = Coral,
+                        filled = false,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            openNavigation(
+                                context,
+                                order.deliveryAddress,
+                                order.deliveryLatitude,
+                                order.deliveryLongitude
+                            )
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
                 DashboardAction(
                     text = "Mark as delivered",
                     color = Teal,

@@ -1,6 +1,7 @@
 package com.duggustore.app.ui.screens.seller
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
@@ -27,6 +29,8 @@ import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.platform.LocationState
+import com.duggustore.app.platform.rememberDeviceLocation
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
@@ -42,6 +46,8 @@ fun SellerDashboard(
     onEditProduct: (String) -> Unit,
     onDeleteProduct: (String) -> Unit,
     onUpdateOrderStatus: (String, OrderStatus) -> Unit,
+    hasStoreLocation: Boolean = true,
+    onSaveStoreLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
     onSignOut: () -> Unit
 ) {
     val pendingCount = orders.count { it.status == OrderStatus.PENDING.value }
@@ -63,6 +69,13 @@ fun SellerDashboard(
             ),
             onSignOut = onSignOut
         )
+
+        // Without this, delivery_id gets set on their orders but no rider has
+        // any idea where the store actually is — nothing in the app ever
+        // asked. Stays up until it's saved once.
+        if (!hasStoreLocation) {
+            StoreLocationBanner(onSave = onSaveStoreLocation)
+        }
 
         when (selectedTab) {
             0 -> Box(modifier = Modifier.weight(1f)) {
@@ -210,6 +223,62 @@ private fun StockPill(stock: Int) {
             fontWeight = FontWeight.SemiBold,
             color = fg
         )
+    }
+}
+
+/**
+ * Prompt the seller taps once to record where their store actually is — a
+ * device GPS fix, reverse-geocoded to something readable. Every rider who
+ * later claims one of their orders reads this back to navigate to pickup.
+ */
+@Composable
+private fun StoreLocationBanner(onSave: (String, Double, Double) -> Unit) {
+    val detected = rememberDeviceLocation(autoStart = false)
+    val found = detected.state as? LocationState.Found
+    val busy = detected.state is LocationState.Locating
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = OrangeSurface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !busy) {
+                    if (found != null) onSave(found.address, found.latitude, found.longitude)
+                    else detected.refresh()
+                }
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.LocationOn, null, tint = OrangeDark, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Set your store location",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = OrangeDark
+                )
+                Text(
+                    text = when {
+                        busy -> "Finding you…"
+                        found != null -> "Tap to save: ${found.address}"
+                        else -> "So a rider knows where to pick up your orders"
+                    },
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (busy) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = OrangeDark, strokeWidth = 2.dp)
+            }
+        }
     }
 }
 

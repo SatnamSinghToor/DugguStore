@@ -24,7 +24,7 @@ sealed interface LocationState {
     /** Nothing asked for yet, or permission was never granted. */
     object Idle : LocationState
     object Locating : LocationState
-    data class Found(val address: String) : LocationState
+    data class Found(val address: String, val latitude: Double, val longitude: Double) : LocationState
     /** Permission refused, location switched off, or nothing came back. */
     data class Unavailable(@StringRes val messageRes: Int) : LocationState
 }
@@ -98,12 +98,13 @@ private suspend fun resolveLocation(context: Context): LocationState {
     val location = currentLocation(context)
         ?: return LocationState.Unavailable(R.string.location_turn_on)
     val address = describe(context, location)
-    return if (address.isNullOrBlank()) {
+    val label = if (address.isNullOrBlank()) {
         // Still a real fix, just no street name for it.
-        LocationState.Found("%.4f, %.4f".format(location.latitude, location.longitude))
+        "%.4f, %.4f".format(location.latitude, location.longitude)
     } else {
-        LocationState.Found(address)
+        address
     }
+    return LocationState.Found(label, location.latitude, location.longitude)
 }
 
 private suspend fun currentLocation(context: Context): Location? {
