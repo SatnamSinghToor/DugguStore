@@ -20,37 +20,66 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
+-- Admin check as a SECURITY DEFINER function. Inlining this as
+-- "EXISTS (SELECT 1 FROM profiles ...)" inside a policy ON profiles makes
+-- Postgres recurse and fail every authenticated read with error 42P17.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid() AND role = 'admin'
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
+
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON profiles
-    FOR SELECT USING (auth.uid() = id);
+    FOR SELECT USING (auth.uid() = id OR public.is_admin());
 
 CREATE POLICY "Users can update own profile" ON profiles
-    FOR UPDATE USING (auth.uid() = id);
+    FOR UPDATE USING (auth.uid() = id OR public.is_admin());
 
-CREATE POLICY "Admin can view all profiles" ON profiles
-    FOR SELECT USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-    );
-
-CREATE POLICY "Admin can update all profiles" ON profiles
-    FOR UPDATE USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-    );
+-- Lets the app create its own profile row if the signup trigger is missing.
+CREATE POLICY "Users can insert own profile" ON profiles
+    FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    meta_role TEXT;
 BEGIN
+    meta_role := COALESCE(NEW.raw_user_meta_data->>'role', 'customer');
+    IF meta_role NOT IN ('customer', 'seller', 'delivery', 'admin') THEN
+        meta_role := 'customer';
+    END IF;
+
     INSERT INTO public.profiles (id, full_name, phone, role)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
         COALESCE(NEW.raw_user_meta_data->>'phone', ''),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'customer')
-    );
+        meta_role
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- Never let profile creation abort the auth signup itself.
+    RAISE WARNING 'handle_new_user failed for %: %', NEW.id, SQLERRM;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
@@ -76,7 +105,7 @@ CREATE POLICY "Anyone can view active categories" ON categories
 
 CREATE POLICY "Admin can manage categories" ON categories
     FOR ALL USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 -- ============================================
@@ -116,13 +145,13 @@ CREATE POLICY "Sellers can insert products" ON products
 CREATE POLICY "Sellers can update own products" ON products
     FOR UPDATE USING (
         seller_id = auth.uid() OR
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 CREATE POLICY "Sellers can delete own products" ON products
     FOR DELETE USING (
         seller_id = auth.uid() OR
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 -- ============================================
@@ -210,7 +239,7 @@ CREATE POLICY "Customers can update own orders" ON orders
 CREATE POLICY "Sellers can view and manage orders" ON orders
     FOR ALL USING (
         seller_id = auth.uid() OR
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 CREATE POLICY "Delivery can view assigned orders" ON orders
@@ -221,7 +250,7 @@ CREATE POLICY "Delivery can update assigned orders" ON orders
 
 CREATE POLICY "Admin can manage all orders" ON orders
     FOR ALL USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 -- ============================================
@@ -251,12 +280,12 @@ CREATE POLICY "Customers can insert order items" ON order_items
 CREATE POLICY "Sellers can view order items for their orders" ON order_items
     FOR SELECT USING (
         EXISTS (SELECT 1 FROM orders WHERE order_items.order_id = orders.id AND orders.seller_id = auth.uid()) OR
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 CREATE POLICY "Admin can manage all order items" ON order_items
     FOR ALL USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 -- ============================================
@@ -306,7 +335,7 @@ CREATE POLICY "Customers can view tracking for their orders" ON delivery_trackin
 
 CREATE POLICY "Admin can view all tracking" ON delivery_tracking
     FOR SELECT USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+        public.is_admin()
     );
 
 -- ============================================

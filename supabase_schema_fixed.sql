@@ -32,24 +32,59 @@ CREATE TABLE profiles (
 );
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Admin can view all profiles" ON profiles FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Admin can update all profiles" ON profiles FOR UPDATE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+-- Admin check as a SECURITY DEFINER function. Inlining this as
+-- "EXISTS (SELECT 1 FROM profiles ...)" inside a policy ON profiles makes
+-- Postgres recurse and fail every authenticated read with error 42P17.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid() AND role = 'admin'
+    );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
+
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id OR public.is_admin());
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id OR public.is_admin());
+-- Lets the app create its own profile row if the signup trigger is missing.
+CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    meta_role TEXT;
 BEGIN
+    meta_role := COALESCE(NEW.raw_user_meta_data->>'role', 'customer');
+    IF meta_role NOT IN ('customer', 'seller', 'delivery', 'admin') THEN
+        meta_role := 'customer';
+    END IF;
+
     INSERT INTO public.profiles (id, full_name, phone, role)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
         COALESCE(NEW.raw_user_meta_data->>'phone', ''),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'customer')
-    );
+        meta_role
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- Never let profile creation abort the auth signup itself.
+    RAISE WARNING 'handle_new_user failed for %: %', NEW.id, SQLERRM;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
@@ -69,7 +104,7 @@ CREATE TABLE categories (
 );
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can view active categories" ON categories FOR SELECT USING (is_active = true);
-CREATE POLICY "Admin can manage categories" ON categories FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admin can manage categories" ON categories FOR ALL USING (public.is_admin());
 
 -- ============================================
 -- 3. PRODUCTS
@@ -91,8 +126,8 @@ CREATE TABLE products (
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can view active products" ON products FOR SELECT USING (is_active = true);
 CREATE POLICY "Sellers can insert products" ON products FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('seller','admin')));
-CREATE POLICY "Sellers can update products" ON products FOR UPDATE USING (seller_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
-CREATE POLICY "Sellers can delete products" ON products FOR DELETE USING (seller_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Sellers can update products" ON products FOR UPDATE USING (seller_id = auth.uid() OR public.is_admin());
+CREATE POLICY "Sellers can delete products" ON products FOR DELETE USING (seller_id = auth.uid() OR public.is_admin());
 
 -- ============================================
 -- 4. CART ITEMS
@@ -148,7 +183,7 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Customers can view own orders" ON orders FOR SELECT USING (customer_id = auth.uid());
 CREATE POLICY "Customers can insert orders" ON orders FOR INSERT WITH CHECK (customer_id = auth.uid());
 CREATE POLICY "Customers can cancel own orders" ON orders FOR UPDATE USING (customer_id = auth.uid() AND status IN ('pending','confirmed'));
-CREATE POLICY "Sellers can manage orders" ON orders FOR ALL USING (seller_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Sellers can manage orders" ON orders FOR ALL USING (seller_id = auth.uid() OR public.is_admin());
 CREATE POLICY "Delivery can view assigned orders" ON orders FOR SELECT USING (delivery_id = auth.uid());
 CREATE POLICY "Delivery can update assigned orders" ON orders FOR UPDATE USING (delivery_id = auth.uid());
 
@@ -166,7 +201,7 @@ CREATE TABLE order_items (
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Customers can view own order items" ON order_items FOR SELECT USING (EXISTS (SELECT 1 FROM orders WHERE order_items.order_id = orders.id AND orders.customer_id = auth.uid()));
 CREATE POLICY "Customers can insert order items" ON order_items FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM orders WHERE order_items.order_id = orders.id AND orders.customer_id = auth.uid()));
-CREATE POLICY "Sellers can view order items" ON order_items FOR SELECT USING (EXISTS (SELECT 1 FROM orders WHERE order_items.order_id = orders.id AND orders.seller_id = auth.uid()) OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Sellers can view order items" ON order_items FOR SELECT USING (EXISTS (SELECT 1 FROM orders WHERE order_items.order_id = orders.id AND orders.seller_id = auth.uid()) OR public.is_admin());
 
 -- ============================================
 -- 8. FAVORITES
@@ -198,7 +233,7 @@ CREATE TABLE delivery_tracking (
 ALTER TABLE delivery_tracking ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Delivery can manage own tracking" ON delivery_tracking FOR ALL USING (delivery_id = auth.uid());
 CREATE POLICY "Customers can view tracking" ON delivery_tracking FOR SELECT USING (EXISTS (SELECT 1 FROM orders WHERE delivery_tracking.order_id = orders.id AND orders.customer_id = auth.uid()));
-CREATE POLICY "Admin can view all tracking" ON delivery_tracking FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Admin can view all tracking" ON delivery_tracking FOR SELECT USING (public.is_admin());
 
 -- ============================================
 -- 10. INDEXES

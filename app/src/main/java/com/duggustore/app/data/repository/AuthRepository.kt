@@ -2,6 +2,7 @@ package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.data.remote.SessionManager
+import com.duggustore.app.data.remote.SupabaseException
 import com.duggustore.app.data.remote.SupabaseService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -26,15 +27,76 @@ class AuthRepository {
         return null
     }
 
+    private fun extractRefreshToken(resp: JsonObject): String {
+        resp["refresh_token"]?.jsonPrimitive?.content?.let { return it }
+        resp["session"]?.jsonObject?.get("refresh_token")?.jsonPrimitive?.content?.let { return it }
+        return ""
+    }
+
     private fun extractUserId(resp: JsonObject): String? {
         resp["id"]?.jsonPrimitive?.content?.let { return it }
         resp["user"]?.jsonObject?.get("id")?.jsonPrimitive?.content?.let { return it }
         return null
     }
 
-    suspend fun signUp(email: String, password: String, fullName: String, phone: String, role: String): Result<SignUpResult> {
+    /** The signup metadata Supabase echoes back, used as a fallback when the profile row is unreadable. */
+    private fun extractUserMetadata(resp: JsonObject): JsonObject? {
+        val user = resp["user"]?.jsonObject ?: resp
+        return user["user_metadata"]?.jsonObject
+    }
+
+    private fun metadataString(metadata: JsonObject?, key: String, default: String): String =
+        metadata?.get(key)?.jsonPrimitive?.content?.takeIf { it.isNotBlank() && it != "null" } ?: default
+
+    private fun normalizeEmail(email: String): String = email.trim().lowercase()
+
+    /**
+     * Reads the caller's own profile row. The token must be passed through: with only the
+     * anon key the "Users can view own profile" policy never matches and the query comes
+     * back empty, which used to silently downgrade every seller/admin to "customer".
+     */
+    private suspend fun fetchProfile(userId: String, token: String): UserProfile? {
+        val profiles = SupabaseService.select("profiles", token, mapOf("id" to userId))
+        return profiles.firstOrNull()?.let {
+            json.decodeFromString(UserProfile.serializer(), it.toString())
+        }
+    }
+
+    /**
+     * Returns the profile row for a freshly authenticated user. The `on_auth_user_created`
+     * trigger normally creates it; if that trigger is missing we create it here, and if the
+     * row is unreadable we fall back to the signup metadata so the role is still correct.
+     */
+    private suspend fun resolveProfile(
+        userId: String,
+        token: String,
+        fallback: UserProfile
+    ): UserProfile {
+        val existing = try {
+            fetchProfile(userId, token)
+        } catch (e: Exception) {
+            return fallback
+        }
+        if (existing != null) return existing
+
         return try {
-            val resp = SupabaseService.signUp(email, password, buildJsonObject {
+            val body = buildJsonObject {
+                put("id", userId)
+                put("full_name", fallback.fullName)
+                put("phone", fallback.phone)
+                put("role", fallback.role)
+            }.toString()
+            SupabaseService.insert("profiles", body, token)
+            fallback
+        } catch (e: Exception) {
+            fallback
+        }
+    }
+
+    suspend fun signUp(email: String, password: String, fullName: String, phone: String, role: String): Result<SignUpResult> {
+        val cleanEmail = normalizeEmail(email)
+        return try {
+            val resp = SupabaseService.signUp(cleanEmail, password, buildJsonObject {
                 put("full_name", fullName)
                 put("phone", phone)
                 put("role", role)
@@ -42,127 +104,182 @@ class AuthRepository {
 
             val token = extractToken(resp)
 
-            if (token != null) {
-                val userId = extractUserId(resp) ?: throw Exception("No user ID")
-                SessionManager.saveSession(token, "", userId, email)
-                val profile = UserProfile(id = userId, fullName = fullName, phone = phone, role = role)
-                SupabaseService.insert("profiles", json.encodeToString(UserProfile.serializer(), profile))
-                return Result.success(SignUpResult(profile = profile))
+            // No session in the response means email confirmation is enabled on the project:
+            // the account exists but cannot be used until the link is clicked.
+            if (token == null) {
+                return Result.success(
+                    SignUpResult(profile = null, requiresVerification = true, email = cleanEmail)
+                )
             }
 
             val userId = extractUserId(resp)
-            if (userId != null) {
-                try {
-                    val signInResp = SupabaseService.signIn(email, password)
-                    val signInToken = extractToken(signInResp)
-                    if (signInToken != null) {
-                        SessionManager.saveSession(signInToken, "", userId, email)
-                        val profiles = SupabaseService.select("profiles", params = mapOf("id" to userId))
-                        val profile = profiles.firstOrNull()?.let {
-                            json.decodeFromString(UserProfile.serializer(), it.toString())
-                        } ?: UserProfile(id = userId, fullName = fullName, phone = phone, role = role)
-                        return Result.success(SignUpResult(profile = profile))
-                    }
-                } catch (_: Exception) {}
-            }
+                ?: return Result.failure(Exception("Signup succeeded but no user ID was returned."))
 
-            val errorMsg = resp["msg"]?.jsonPrimitive?.content ?: ""
-            val errorCode = resp["error_code"]?.jsonPrimitive?.content ?: ""
+            SessionManager.saveSession(token, extractRefreshToken(resp), userId, cleanEmail)
 
-            if (errorCode == "email_not_confirmed" || errorMsg.contains("confirm")) {
-                return Result.success(SignUpResult(
-                    profile = null,
-                    requiresVerification = true,
-                    email = email
-                ))
-            }
-
-            Result.success(SignUpResult(
-                profile = null,
-                requiresVerification = true,
-                email = email
-            ))
+            val profile = resolveProfile(
+                userId,
+                token,
+                UserProfile(id = userId, fullName = fullName, phone = phone, role = role)
+            )
+            Result.success(SignUpResult(profile = profile))
         } catch (e: Exception) {
-            val msg = e.message ?: ""
-            when {
-                msg.contains("User already registered") -> Result.failure(Exception("This email is already registered. Try signing in."))
-                msg.contains("Password should be") -> Result.failure(Exception("Password must be at least 6 characters."))
-                msg.contains("Signup requires") -> Result.failure(Exception("Please fill all required fields."))
-                msg.contains("HTTP 4") -> Result.failure(Exception("Invalid input. Please check your details."))
-                else -> Result.failure(Exception("Signup failed: $msg"))
-            }
+            Result.failure(Exception(signUpErrorMessage(e)))
+        }
+    }
+
+    private fun signUpErrorMessage(e: Exception): String {
+        val code = (e as? SupabaseException)?.errorCode ?: ""
+        val msg = e.message ?: ""
+        return when {
+            code == "not_configured" || code == "network_error" -> msg
+            code == "user_already_exists" || code == "email_exists" ||
+                msg.contains("already registered", ignoreCase = true) ->
+                "This email is already registered. Try signing in."
+            code == "weak_password" || msg.contains("Password should be", ignoreCase = true) ->
+                "Password must be at least 6 characters."
+            code == "email_address_invalid" ||
+                (msg.contains("invalid", ignoreCase = true) && msg.contains("email", ignoreCase = true)) ->
+                "Please enter a valid email address."
+            code == "signup_disabled" -> "Sign ups are currently disabled for this app."
+            code == "over_email_send_rate_limit" || code == "429" ->
+                "Too many attempts. Please wait a moment and try again."
+            msg.isBlank() -> "Signup failed. Please try again."
+            else -> msg
         }
     }
 
     suspend fun signIn(email: String, password: String): Result<UserProfile> {
+        val cleanEmail = normalizeEmail(email)
         return try {
-            val resp = SupabaseService.signIn(email, password)
+            val resp = SupabaseService.signIn(cleanEmail, password)
             val token = extractToken(resp)
-                ?: throw Exception("No access token received")
+                ?: return Result.failure(Exception("Login failed: no access token received."))
 
-            val userId = extractUserId(resp) ?: throw Exception("No user ID")
-            SessionManager.saveSession(token, "", userId, email)
+            val userId = extractUserId(resp)
+                ?: return Result.failure(Exception("Login failed: no user ID received."))
 
-            val profiles = SupabaseService.select("profiles", params = mapOf("id" to userId))
-            val profile = profiles.firstOrNull()?.let {
-                json.decodeFromString(UserProfile.serializer(), it.toString())
-            } ?: UserProfile(id = userId, fullName = "", phone = "", role = "customer")
+            SessionManager.saveSession(token, extractRefreshToken(resp), userId, cleanEmail)
 
-            Result.success(profile)
+            val metadata = extractUserMetadata(resp)
+            val fallback = UserProfile(
+                id = userId,
+                fullName = metadataString(metadata, "full_name", ""),
+                phone = metadataString(metadata, "phone", ""),
+                role = metadataString(metadata, "role", "customer")
+            )
+
+            Result.success(resolveProfile(userId, token, fallback))
         } catch (e: Exception) {
-            val msg = e.message ?: ""
-            when {
-                msg.contains("email_not_confirmed") -> Result.failure(Exception("Please verify your email first. Check your inbox for the verification link."))
-                msg.contains("Invalid login") -> Result.failure(Exception("Invalid email or password."))
-                msg.contains("HTTP 400") -> Result.failure(Exception("Invalid email or password."))
-                else -> Result.failure(Exception("Login failed: $msg"))
-            }
+            Result.failure(Exception(signInErrorMessage(e)))
+        }
+    }
+
+    private fun signInErrorMessage(e: Exception): String {
+        val code = (e as? SupabaseException)?.errorCode ?: ""
+        val msg = e.message ?: ""
+        return when {
+            code == "not_configured" || code == "network_error" -> msg
+            code == "email_not_confirmed" || msg.contains("not confirmed", ignoreCase = true) ->
+                "Please verify your email first. Check your inbox for the verification link."
+            code == "invalid_credentials" || code == "invalid_grant" ||
+                msg.contains("Invalid login", ignoreCase = true) ->
+                "Invalid email or password."
+            code == "over_request_rate_limit" || code == "429" ->
+                "Too many attempts. Please wait a moment and try again."
+            msg.isBlank() -> "Login failed. Please try again."
+            else -> msg
         }
     }
 
     suspend fun resendVerificationEmail(email: String): Result<Unit> {
         return try {
-            SupabaseService.resendVerification(email)
+            SupabaseService.resendVerification(normalizeEmail(email))
             Result.success(Unit)
         } catch (e: Exception) {
+            val code = (e as? SupabaseException)?.errorCode ?: ""
             val msg = e.message ?: ""
             when {
-                msg.contains("already confirmed") -> Result.failure(Exception("This email is already verified. Try signing in."))
-                msg.contains("HTTP 429") -> Result.failure(Exception("Too many requests. Please wait a moment and try again."))
-                else -> Result.failure(Exception("Failed to resend: $msg"))
+                msg.contains("already confirmed", ignoreCase = true) ->
+                    Result.failure(Exception("This email is already verified. Try signing in."))
+                code == "over_email_send_rate_limit" || code == "429" ->
+                    Result.failure(Exception("Too many requests. Please wait a moment and try again."))
+                msg.isBlank() -> Result.failure(Exception("Failed to resend verification email."))
+                else -> Result.failure(Exception(msg))
             }
         }
     }
 
     suspend fun signOut(): Result<Unit> {
         return try {
+            SessionManager.getAccessToken()?.let {
+                try {
+                    SupabaseService.signOut(it)
+                } catch (_: Exception) {
+                    // Revoking server side is best effort; the local session is cleared either way.
+                }
+            }
             SessionManager.clearSession()
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            SessionManager.clearSession()
+            Result.success(Unit)
         }
     }
 
+    /**
+     * Restores the profile for a stored session, refreshing the access token first when the
+     * stored one has expired (Supabase access tokens last about an hour).
+     */
     suspend fun getCurrentUserProfile(): Result<UserProfile?> {
         return try {
             val token = SessionManager.getAccessToken() ?: return Result.success(null)
             val userId = SessionManager.getUserId() ?: return Result.success(null)
 
-            val profiles = SupabaseService.select("profiles", token, mapOf("id" to userId))
-            val profile = profiles.firstOrNull()?.let {
-                json.decodeFromString(UserProfile.serializer(), it.toString())
+            try {
+                Result.success(fetchProfile(userId, token))
+            } catch (e: SupabaseException) {
+                if (e.statusCode != 401) throw e
+                val refreshed = refreshAccessToken() ?: return Result.success(null)
+                Result.success(fetchProfile(userId, refreshed))
             }
-
-            Result.success(profile)
         } catch (e: Exception) {
             Result.success(null)
+        }
+    }
+
+    /** Swaps the stored refresh token for a new access token, returning null if it is no longer valid. */
+    private suspend fun refreshAccessToken(): String? {
+        val refreshToken = SessionManager.getRefreshToken()?.takeIf { it.isNotBlank() } ?: run {
+            SessionManager.clearSession()
+            return null
+        }
+        return try {
+            val resp = SupabaseService.refreshSession(refreshToken)
+            val token = extractToken(resp) ?: return null
+            val userId = extractUserId(resp) ?: SessionManager.getUserId() ?: return null
+            SessionManager.saveSession(
+                token,
+                extractRefreshToken(resp),
+                userId,
+                SessionManager.getEmail() ?: ""
+            )
+            token
+        } catch (e: Exception) {
+            SessionManager.clearSession()
+            null
         }
     }
 
     suspend fun updateProfile(profile: UserProfile): Result<UserProfile> {
         return try {
             val token = SessionManager.getAccessToken()
-            SupabaseService.update("profiles", profile.id, json.encodeToString(UserProfile.serializer(), profile), token)
+            val body = buildJsonObject {
+                put("full_name", profile.fullName)
+                put("phone", profile.phone)
+                profile.avatarUrl?.let { put("avatar_url", it) }
+            }.toString()
+            SupabaseService.update("profiles", profile.id, body, token)
             Result.success(profile)
         } catch (e: Exception) {
             Result.failure(e)
