@@ -237,8 +237,29 @@ fun AppNavGraph(
                 onCartClick = { navController.navigate(Screen.CustomerCart.route) },
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
                 onAccountClick = { navController.navigate(Screen.CustomerAccount.route) },
-                onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) }
+                onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) },
+                userName = authState.user?.fullName?.substringBefore(' ').orEmpty(),
+                deliveryAddress = addressState.defaultAddress?.fullAddress ?: "Set your delivery address",
+                // Lets a card show a stepper instead of "Add to cart" once the
+                // product is already in the cart, as in the design.
+                cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
+                favoriteIds = favState.favorites.map { it.productId }.toSet(),
+                onIncrease = { cartViewModel.addToCart(it) },
+                onDecrease = { product ->
+                    cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
+                        cartViewModel.updateQuantity(item.id, item.quantity - 1)
+                    }
+                },
+                onToggleFavorite = { product ->
+                    authState.user?.let { favoriteViewModel.toggleFavorite(it.id, product.id) }
+                },
+                onAddressClick = { navController.navigate(Screen.CustomerAddresses.route) }
             )
+
+            LaunchedEffect(authState.user) {
+                authState.user?.let { favoriteViewModel.loadFavorites(it.id) }
+                cartViewModel.loadCart()
+            }
 
             LaunchedEffect(Unit) {
                 homeViewModel.loadData()

@@ -1,237 +1,237 @@
 package com.duggustore.app.ui.screens.customer
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Category
+import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 fun HomeScreen(
     categories: List<Category>,
-    filteredProducts: List<com.duggustore.app.data.model.Product>,
+    filteredProducts: List<Product>,
     selectedCategoryId: String?,
     searchQuery: String,
     cartItemCount: Int,
     onSearchQueryChange: (String) -> Unit,
     onCategorySelected: (String?) -> Unit,
-    onAddToCart: (com.duggustore.app.data.model.Product) -> Unit,
+    onAddToCart: (Product) -> Unit,
     onCartClick: () -> Unit,
     onFavoritesClick: () -> Unit,
     onAccountClick: () -> Unit,
-    onProductClick: (com.duggustore.app.data.model.Product) -> Unit = {}
+    onProductClick: (Product) -> Unit = {},
+    userName: String = "",
+    deliveryAddress: String = "Set your delivery address",
+    cartQuantities: Map<String, Int> = emptyMap(),
+    favoriteIds: Set<String> = emptySet(),
+    onIncrease: (Product) -> Unit = {},
+    onDecrease: (Product) -> Unit = {},
+    onToggleFavorite: (Product) -> Unit = {},
+    onAddressClick: () -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-    ) {
-        // Top Header
-        Surface(
-            color = PrimaryGreen,
-            shadowElevation = 4.dp
+    Box(modifier = Modifier.fillMaxSize().background(Background)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 110.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(SurfaceWhite)
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 8.dp, bottom = 16.dp)
                 ) {
-                    Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        StoreWordmark()
+                        Spacer(Modifier.weight(1f))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Pankaj Residential",
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = null,
-                                tint = Color.White
-                            )
+                            Text("Eng", fontSize = 14.sp, color = TextPrimary)
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = TextPrimary, modifier = Modifier.size(18.dp))
                         }
-                        Text(
-                            text = "Lande Colony, Siyana Road, Ghaziabad",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 11.sp
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IconButton(onClick = onFavoritesClick) {
-                            Icon(Icons.Default.Favorite, "Favorites", tint = Color.White)
-                        }
-                        IconButton(onClick = onAccountClick) {
-                            Icon(Icons.Default.Person, "Account", tint = Color.White)
-                        }
-                        BadgedBox(
-                            badge = {
-                                if (cartItemCount > 0) {
-                                    Badge { Text("$cartItemCount") }
-                                }
-                            }
+                        Spacer(Modifier.width(12.dp))
+                        Box(
+                            modifier = Modifier.size(40.dp).background(SurfaceMuted, CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            IconButton(onClick = onCartClick) {
-                                Icon(Icons.Default.ShoppingCart, "Cart", tint = Color.White)
-                            }
+                            Icon(
+                                Icons.Default.NotificationsNone,
+                                "Notifications",
+                                tint = Coral,
+                                modifier = Modifier.size(21.dp)
+                            )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(Modifier.height(10.dp))
 
-                // Search Bar
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White
-                ) {
-                    TextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search for groceries...", color = TextLight) },
-                        leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        singleLine = true
+                    LocationBar(
+                        city = if (userName.isBlank()) "Deliver to" else "Hi $userName",
+                        address = deliveryAddress,
+                        onClick = onAddressClick
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    StoreSearchBar(
+                        query = searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        onMicClick = {}
                     )
                 }
             }
-        }
 
-        // Categories horizontal scroll
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // All category
-            CategoryChip(
-                name = "All",
-                colorHex = "#2D6A4F",
-                isSelected = selectedCategoryId == null,
-                onClick = { onCategorySelected(null) }
-            )
-            categories.forEach { category ->
-                CategoryChip(
-                    name = category.name,
-                    colorHex = category.colorHex,
-                    isSelected = selectedCategoryId == category.id,
-                    onClick = { onCategorySelected(category.id) }
+            item {
+                Spacer(Modifier.height(16.dp))
+                PromoBanner(
+                    title = "Happy Weekend",
+                    highlight = "25% OFF",
+                    caption = "*on selected items",
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
-        }
 
-        // Products Grid
-        if (filteredProducts.isEmpty()) {
-            EmptyState(
-                icon = Icons.Default.ShoppingBag,
-                title = "No products found",
-                subtitle = "Try a different category or search"
-            )
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredProducts) { product ->
-                    ProductCard(
-                        product = product,
-                        onAddClick = onAddToCart,
-                        onClick = onProductClick
-                    )
+            if (categories.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(22.dp))
+                    RowHeader("Categories", Modifier.padding(horizontal = 16.dp))
+                    Spacer(Modifier.height(12.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item {
+                            AllCategoriesTile(
+                                selected = selectedCategoryId == null,
+                                onClick = { onCategorySelected(null) }
+                            )
+                        }
+                        items(categories, key = { it.id }) { category ->
+                            CategoryTile(
+                                category = category,
+                                color = CategoryColors[
+                                    (categories.indexOf(category)).mod(CategoryColors.size)
+                                ],
+                                onClick = {
+                                    onCategorySelected(
+                                        if (selectedCategoryId == category.id) null else category.id
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(24.dp))
+                RowHeader(
+                    title = when {
+                        searchQuery.isNotBlank() -> "Results"
+                        selectedCategoryId != null ->
+                            categories.firstOrNull { it.id == selectedCategoryId }?.name ?: "Products"
+                        else -> "Popular Deals"
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+
+            if (filteredProducts.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Default.SearchOff, null, tint = TextLight, modifier = Modifier.size(64.dp))
+                        Spacer(Modifier.height(12.dp))
+                        Text("Nothing here yet", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = if (searchQuery.isBlank()) "Products will show up once a seller adds them"
+                                   else "Try a different search",
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            } else {
+                // Two per row, built manually so the whole page stays one scrolling
+                // LazyColumn rather than nesting a grid inside it.
+                items(filteredProducts.chunked(2)) { pair ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        pair.forEach { product ->
+                            StoreProductCard(
+                                product = product,
+                                quantityInCart = cartQuantities[product.id] ?: 0,
+                                isFavorite = favoriteIds.contains(product.id),
+                                onAdd = { onAddToCart(product) },
+                                onIncrease = { onIncrease(product) },
+                                onDecrease = { onDecrease(product) },
+                                onToggleFavorite = { onToggleFavorite(product) },
+                                onClick = { onProductClick(product) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
                 }
             }
         }
+
+        StoreBottomBar(
+            selected = StoreTab.Home,
+            cartCount = cartItemCount,
+            onSelect = { tab ->
+                when (tab) {
+                    StoreTab.Favorites -> onFavoritesClick()
+                    StoreTab.Account -> onAccountClick()
+                    StoreTab.Categories -> onCategorySelected(null)
+                    StoreTab.Home -> Unit
+                }
+            },
+            onCartClick = onCartClick,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
 @Composable
-fun CategoryChip(
-    name: String,
-    colorHex: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val chipColor = try {
-        Color(android.graphics.Color.parseColor(colorHex))
-    } catch (e: Exception) {
-        PrimaryGreen
-    }
-
+private fun AllCategoriesTile(selected: Boolean, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) chipColor else chipColor.copy(alpha = 0.15f),
-        border = if (isSelected) null else ButtonDefaults.outlinedButtonBorder
+        modifier = Modifier.size(104.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = if (selected) TextPrimary else SurfaceWhite,
+        onClick = onClick
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(if (isSelected) Color.White.copy(alpha = 0.3f) else chipColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = name.first().toString(),
-                    color = if (isSelected) Color.White else Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+        Box(contentAlignment = Alignment.Center) {
             Text(
-                text = name,
-                color = if (isSelected) Color.White else chipColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                text = "All",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (selected) Color.White else TextPrimary
             )
         }
     }
