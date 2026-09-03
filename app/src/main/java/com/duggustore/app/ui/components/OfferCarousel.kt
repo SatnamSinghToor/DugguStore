@@ -127,24 +127,27 @@ private fun OfferCard(
             .fillMaxWidth()
             .height(148.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(color)
+            // A light wash of the card's colour rather than the colour itself:
+            // the reference banner is a pale tint with dark type on it, and a
+            // fully saturated panel reads far heavier than the rest of the page.
+            .background(color.copy(alpha = 0.14f))
             .clickable { onClick() }
     ) {
-        // Two soft discs bleeding off the right edge, so a flat colour still has
+        // Two soft discs bleeding off the right edge, so a flat tint still has
         // some depth without needing artwork per offer.
         Box(
             modifier = Modifier
                 .size(150.dp)
                 .offset(x = 250.dp, y = (-50).dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f))
+                .background(color.copy(alpha = 0.16f))
         )
         Box(
             modifier = Modifier
                 .size(110.dp)
                 .offset(x = 285.dp, y = 92.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.10f))
+                .background(color.copy(alpha = 0.12f))
         )
 
         Column(
@@ -157,7 +160,7 @@ private fun OfferCard(
                 Icon(
                     Icons.Default.LocalOffer,
                     contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.9f),
+                    tint = color,
                     modifier = Modifier.size(15.dp)
                 )
                 Spacer(Modifier.width(6.dp))
@@ -165,7 +168,7 @@ private fun OfferCard(
                     text = coupon.expiryLabel.ifBlank { "Limited time" },
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.9f)
+                    color = color
                 )
             }
 
@@ -175,7 +178,7 @@ private fun OfferCard(
                 text = coupon.title.ifBlank { "${coupon.discountPercent}% OFF" },
                 fontSize = 25.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
+                color = TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -185,7 +188,7 @@ private fun OfferCard(
             Text(
                 text = coupon.description,
                 fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.92f),
+                color = TextSecondary,
                 maxLines = 2,
                 lineHeight = 16.sp,
                 overflow = TextOverflow.Ellipsis
@@ -198,7 +201,7 @@ private fun OfferCard(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.24f))
+                    .background(color)
                     .padding(horizontal = 10.dp, vertical = 5.dp)
             ) {
                 Text(
