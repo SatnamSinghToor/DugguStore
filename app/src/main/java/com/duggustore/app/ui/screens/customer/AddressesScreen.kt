@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.ui.components.AuthField
 import com.duggustore.app.ui.components.DashboardEmpty
+import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -42,7 +43,7 @@ fun AddressesScreen(
     var editing by remember { mutableStateOf<Address?>(null) }
     var showSheet by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(Background).appPatternOverlay()) {
         Surface(color = Teal) {
             Row(
                 modifier = Modifier

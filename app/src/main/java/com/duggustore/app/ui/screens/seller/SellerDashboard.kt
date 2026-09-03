@@ -56,6 +56,7 @@ fun SellerDashboard(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
     ) {
         DashboardHeader(
             title = "Seller dashboard",

@@ -47,6 +47,7 @@ fun AuthScaffold(
             .background(Background)
             .statusBarsPadding()
             .navigationBarsPadding()
+            .appPatternOverlay()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 22.dp)
             .padding(top = 32.dp, bottom = 24.dp),

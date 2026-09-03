@@ -26,6 +26,7 @@ import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.AuthField
+import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -56,7 +57,7 @@ fun AddEditProductScreen(
     val selectedCategory = categories.firstOrNull { it.id == categoryId }
     val shownError = localError ?: error
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(Background).appPatternOverlay()) {
         Surface(color = Teal) {
             Row(
                 modifier = Modifier

@@ -29,6 +29,7 @@ import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.ui.components.RiderLocationCard
 import com.duggustore.app.ui.components.StatusBadge
+import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
 
@@ -42,6 +43,7 @@ fun OrderListScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
     ) {
         OrderTopBar(
             title = "My orders",
@@ -164,6 +166,7 @@ fun OrderTrackingDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
     ) {
         OrderTopBar(
             title = "Order #${order.id.takeLast(8).uppercase()}",

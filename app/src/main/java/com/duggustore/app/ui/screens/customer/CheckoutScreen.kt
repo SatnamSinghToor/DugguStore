@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.CartItem
+import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
 
@@ -52,7 +53,7 @@ fun CheckoutScreen(
     }
     val selected = addresses.firstOrNull { it.id == selectedId }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+    Column(modifier = Modifier.fillMaxSize().background(Background).appPatternOverlay()) {
         CheckoutHeader(onBack = onBack)
 
         Column(

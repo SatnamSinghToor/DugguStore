@@ -51,6 +51,7 @@ fun AdminDashboard(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
     ) {
         DashboardHeader(
             title = "Admin",

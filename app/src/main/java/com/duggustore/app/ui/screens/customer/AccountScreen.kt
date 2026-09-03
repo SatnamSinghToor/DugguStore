@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.R
+import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -42,6 +43,7 @@ fun AccountScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
             .verticalScroll(rememberScrollState())
     ) {
         AccountHeader(user = user, onBack = onBack)

@@ -65,7 +65,7 @@ fun HomeScreen(
     val detected = rememberDeviceLocation()
     val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Background)) {
+    Box(modifier = Modifier.fillMaxSize().background(Background).appPatternOverlay()) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // Pinned. The wordmark, the location strip and the search field were
@@ -76,7 +76,10 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .background(SurfaceWhite)
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp)
+                    // 20dp, not the usual 16 — this is what lines the search
+                    // bar's edges up with the offer cards below it, whose
+                    // width comes from the pager's own 20dp contentPadding.
+                    .padding(horizontal = 20.dp)
                     .padding(top = 8.dp, bottom = 8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -180,10 +183,10 @@ fun HomeScreen(
             if (categories.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(22.dp))
-                    RowHeader("Categories", Modifier.padding(horizontal = 16.dp))
+                    RowHeader("Categories", Modifier.padding(horizontal = 20.dp))
                     Spacer(Modifier.height(12.dp))
                     LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
@@ -218,7 +221,7 @@ fun HomeScreen(
                             categories.firstOrNull { it.id == selectedCategoryId }?.name ?: "Products"
                         else -> "Popular Deals"
                     },
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    modifier = Modifier.padding(horizontal = 20.dp)
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -246,7 +249,7 @@ fun HomeScreen(
                 // LazyColumn rather than nesting a grid inside it.
                 items(filteredProducts.chunked(2)) { pair ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         pair.forEach { product ->

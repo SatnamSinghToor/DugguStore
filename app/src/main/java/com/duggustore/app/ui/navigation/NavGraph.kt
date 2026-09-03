@@ -351,12 +351,17 @@ fun AppNavGraph(
                 onSelectAddress = { addressViewModel.setDefault(it.id) },
                 // A detected address is only useful if it survives the session,
                 // so picking it saves it as the new default rather than holding
-                // it in memory until the next launch.
+                // it in memory until the next launch. Reuses the existing
+                // "Current location" row if one is already saved — every tap
+                // used to insert a fresh one instead of updating it, so the
+                // address list filled up with duplicates of the same spot.
                 onSaveDetectedAddress = { detected, lat, lng ->
+                    val existing = addressState.addresses.firstOrNull { it.label == "Current location" }
                     addressViewModel.saveAddress(
                         label = "Current location",
                         fullAddress = detected,
                         isDefault = true,
+                        existingId = existing?.id ?: "",
                         latitude = lat,
                         longitude = lng
                     )

@@ -53,6 +53,7 @@ fun DeliveryDashboard(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
     ) {
         DashboardHeader(
             title = "Deliveries",

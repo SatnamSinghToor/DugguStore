@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.StoreNotification
 import com.duggustore.app.ui.components.DashboardEmpty
+import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
@@ -42,6 +43,7 @@ fun NotificationsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
     ) {
         Surface(color = Teal) {
             Row(

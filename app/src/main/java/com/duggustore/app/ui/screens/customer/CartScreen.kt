@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import com.duggustore.app.data.model.CartItem
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.QuantityStepperRow
+import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
@@ -52,6 +53,7 @@ fun CartScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
+            .appPatternOverlay()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             CartHeader(itemCount = cartItems.size, onBack = onBack)

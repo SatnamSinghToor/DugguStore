@@ -41,7 +41,7 @@ fun StoreWordmark(first: String = "Duggu", second: String = "Store", size: Int =
     }
 }
 
-/** Location strip: teal pin, city over address, chevron. */
+/** Location strip: teal pin, city over address, reload. */
 @Composable
 fun LocationBar(
     city: String,
@@ -57,7 +57,12 @@ fun LocationBar(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
-            .padding(vertical = 6.dp),
+            .padding(vertical = 6.dp)
+            // Matches the search bar's own end inset directly below, so the
+            // reload icon here and the mic icon there land on the same
+            // vertical line instead of one sitting flush to the edge and
+            // the other tucked in from it.
+            .padding(end = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -79,24 +84,32 @@ fun LocationBar(
             )
         }
         if (onLocateClick != null) {
-            if (locating) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = Teal,
-                    strokeWidth = 2.dp
-                )
-            } else {
-                IconButton(onClick = onLocateClick, modifier = Modifier.size(34.dp)) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.location_use_current),
-                        tint = Teal,
-                        modifier = Modifier.size(19.dp)
+            // Fixed-size box for both states, so the reload icon and the
+            // loading spinner it swaps with sit at the same spot rather
+            // than the row reflowing between them.
+            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                if (locating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Orange,
+                        strokeWidth = 2.dp
                     )
+                } else {
+                    IconButton(onClick = onLocateClick, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.location_use_current),
+                            // Same colour as the search bar's lens icon
+                            // below, not teal — the pin above already
+                            // carries teal, and this is the one icon in
+                            // the strip that should read as its own action.
+                            tint = Orange,
+                            modifier = Modifier.size(21.dp)
+                        )
+                    }
                 }
             }
         }
-        Icon(Icons.Default.ChevronRight, null, tint = TextSecondary)
     }
 }
 
@@ -137,6 +150,7 @@ fun StoreSearchBar(
                 BasicSearchField(query, onQueryChange, placeholder)
             }
             if (onMicClick != null) {
+                Spacer(Modifier.width(8.dp))
                 Box(Modifier.width(1.dp).height(22.dp).background(BorderGray))
                 IconButton(onClick = onMicClick, modifier = Modifier.size(40.dp)) {
                     Icon(
