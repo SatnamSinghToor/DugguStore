@@ -223,7 +223,9 @@ CREATE POLICY "Users can delete own favorites" ON favorites FOR DELETE USING (cu
 -- ============================================
 CREATE TABLE delivery_tracking (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    -- One order has one rider at a time, so its live position is a single row
+    -- the rider overwrites rather than a growing history.
+    order_id UUID NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
     delivery_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     status TEXT NOT NULL DEFAULT '',
     latitude NUMERIC(10,7) DEFAULT 0,

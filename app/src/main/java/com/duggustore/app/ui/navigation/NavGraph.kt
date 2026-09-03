@@ -20,6 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.delay
+import com.duggustore.app.platform.RiderLocationPublisher
+import com.duggustore.app.platform.rememberRiderPosition
 import com.duggustore.app.ui.components.BottomBarCentre
 import com.duggustore.app.ui.components.StoreBottomBar
 import com.duggustore.app.ui.components.StoreBottomBarHeight
@@ -416,11 +419,33 @@ fun AppNavGraph(
             val order = orderState.customerOrders.find { it.id == orderId }
 
             order?.let {
+                val riderPosition = rememberRiderPosition(
+                    tracking = orderState.tracking,
+                    deliveryAddress = it.deliveryAddress
+                )
+
                 OrderTrackingDetailScreen(
                     order = it,
                     onCancelOrder = { orderViewModel.cancelOrder(orderId) },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    tracking = orderState.tracking,
+                    riderDistanceMetres = riderPosition.distanceMetres,
+                    riderFixAgeMinutes = riderPosition.ageMinutes
                 )
+
+                // Polled only while this screen is on top and the order is
+                // actually on the road; the effect is cancelled when either
+                // stops being true.
+                LaunchedEffect(orderId, it.status) {
+                    if (it.status != OrderStatus.OUT_FOR_DELIVERY.value) {
+                        orderViewModel.clearTracking()
+                        return@LaunchedEffect
+                    }
+                    while (true) {
+                        orderViewModel.loadTracking(orderId)
+                        delay(15_000L)
+                    }
+                }
             }
         }
 
@@ -495,8 +520,27 @@ fun AppNavGraph(
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
+                },
+                sharingLocation = deliveryState.sharingLocation,
+                sharingError = deliveryState.sharingError,
+                onSharingChange = { deliveryViewModel.setSharingLocation(it) }
+            )
+
+            // Runs only while the dashboard is on screen and the rider has the
+            // switch on; leaving the screen removes the location listener.
+            RiderLocationPublisher(
+                enabled = deliveryState.sharingLocation,
+                onFix = { location ->
+                    authState.user?.let { user ->
+                        deliveryViewModel.publishLocation(
+                            deliveryId = user.id,
+                            latitude = location.latitude,
+                            longitude = location.longitude
+                        )
+                    }
                 }
             )
+
             LaunchedEffect(authState.user) {
                 authState.user?.let { deliveryViewModel.loadDeliveryData(it.id) }
             }

@@ -24,8 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.data.model.DeliveryTracking
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderStatus
+import com.duggustore.app.ui.components.RiderLocationCard
 import com.duggustore.app.ui.components.StatusBadge
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
@@ -150,7 +152,11 @@ fun OrderCard(order: Order, onClick: () -> Unit) {
 fun OrderTrackingDetailScreen(
     order: Order,
     onCancelOrder: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    tracking: DeliveryTracking? = null,
+    /** Straight-line metres from the rider to the delivery address. */
+    riderDistanceMetres: Float? = null,
+    riderFixAgeMinutes: Long? = null
 ) {
     val cancelled = order.status == OrderStatus.CANCELLED.value
 
@@ -206,6 +212,19 @@ fun OrderTrackingDetailScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // Only while it is actually on the road: before that there is no
+            // rider, and afterwards where they are stopped being the customer's
+            // business.
+            if (order.status == OrderStatus.OUT_FOR_DELIVERY.value) {
+                item {
+                    RiderLocationCard(
+                        tracking = tracking,
+                        distanceMetres = riderDistanceMetres,
+                        ageMinutes = riderFixAgeMinutes
+                    )
                 }
             }
 

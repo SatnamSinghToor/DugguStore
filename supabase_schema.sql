@@ -320,7 +320,11 @@ CREATE TABLE IF NOT EXISTS delivery_tracking (
     status TEXT NOT NULL DEFAULT '',
     latitude NUMERIC(10,7) DEFAULT 0,
     longitude NUMERIC(10,7) DEFAULT 0,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    -- One order has one rider at a time, so its live position is a single row
+    -- the rider overwrites. Without this the app would append a row per update
+    -- and the customer would sort a history to find the current fix.
+    CONSTRAINT delivery_tracking_order_id_key UNIQUE (order_id)
 );
 
 ALTER TABLE delivery_tracking ENABLE ROW LEVEL SECURITY;

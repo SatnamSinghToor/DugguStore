@@ -291,6 +291,33 @@ object SupabaseService {
         return parseJsonArray(executeRequest(request)).firstOrNull() ?: buildJsonObject { }
     }
 
+    /**
+     * Insert, or overwrite the existing row when it collides on [onConflict].
+     *
+     * The rider's position is one row per order that is rewritten every few
+     * seconds; a plain insert would append a row per update and leave the
+     * customer sorting a history to find the current fix.
+     */
+    suspend fun upsert(
+        table: String,
+        body: String,
+        onConflict: String,
+        token: String? = null
+    ): JsonObject {
+        val request = Request.Builder()
+            .url("$BASE_URL/rest/v1/$table?on_conflict=${encode(onConflict)}")
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .apply {
+                // Overrides rather than appends: headers() already sets Prefer to
+                // return=representation, and two Prefer headers would leave
+                // PostgREST reading only one of them.
+                headers(token).forEach { (k, v) -> addHeader(k, v) }
+                header("Prefer", "return=representation,resolution=merge-duplicates")
+            }
+            .build()
+        return parseJsonArray(executeRequest(request)).firstOrNull() ?: buildJsonObject { }
+    }
+
     suspend fun update(table: String, id: String, body: String, token: String? = null): List<JsonObject> {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table?id=eq.${encode(id)}")

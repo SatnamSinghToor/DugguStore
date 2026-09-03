@@ -8,11 +8,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,7 +32,10 @@ fun DeliveryDashboard(
     totalEarnings: Double,
     totalDeliveries: Int,
     onMarkDelivered: (String) -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    sharingLocation: Boolean = false,
+    sharingError: String? = null,
+    onSharingChange: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -48,6 +53,15 @@ fun DeliveryDashboard(
             ),
             onSignOut = onSignOut
         )
+
+        if (activeOrders.isNotEmpty() || sharingLocation) {
+            LocationSharingRow(
+                sharing = sharingLocation,
+                error = sharingError,
+                orderCount = activeOrders.size,
+                onChange = onSharingChange
+            )
+        }
 
         Box(modifier = Modifier.weight(1f)) {
             if (selectedTab == 0) {
@@ -165,5 +179,65 @@ private fun InfoLine(
         Box(modifier = Modifier.padding(top = 2.dp)) { icon() }
         Spacer(Modifier.width(6.dp))
         Text(text = text, fontSize = 12.sp, color = color, maxLines = 2, lineHeight = 17.sp)
+    }
+}
+
+/**
+ * The rider decides when their position is visible. Nothing is published until
+ * this is on, and it goes off with the screen.
+ */
+@Composable
+private fun LocationSharingRow(
+    sharing: Boolean,
+    error: String?,
+    orderCount: Int,
+    onChange: (Boolean) -> Unit
+) {
+    Surface(color = if (sharing) TealSurface else OrangeSurface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (sharing) Icons.Default.LocationOn else Icons.Default.LocationOff,
+                    contentDescription = null,
+                    tint = if (sharing) TealDark else OrangeDark,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (sharing) "Sharing your location" else "Location not shared",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (sharing) TealDark else OrangeDark
+                    )
+                    Text(
+                        text = when {
+                            !sharing -> "Turn on so customers can follow their order"
+                            orderCount == 1 -> "1 customer can see where you are"
+                            else -> "$orderCount customers can see where you are"
+                        },
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
+                Switch(
+                    checked = sharing,
+                    onCheckedChange = onChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Teal
+                    )
+                )
+            }
+
+            if (error != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(error, fontSize = 12.sp, color = CoralDark)
+            }
+        }
     }
 }

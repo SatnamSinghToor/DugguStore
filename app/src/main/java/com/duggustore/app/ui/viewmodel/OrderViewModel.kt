@@ -5,12 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.repository.OrderRepository
+import com.duggustore.app.data.repository.TrackingRepository
+import com.duggustore.app.data.model.DeliveryTracking
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 data class OrderState(
     val isLoading: Boolean = false,
+    /** The rider's last reported position for the order being watched. */
+    val tracking: DeliveryTracking? = null,
     val customerOrders: List<Order> = emptyList(),
     val sellerOrders: List<Order> = emptyList(),
     val deliveryOrders: List<Order> = emptyList(),
@@ -21,6 +25,7 @@ data class OrderState(
 
 class OrderViewModel : ViewModel() {
     private val repository = OrderRepository()
+    private val trackingRepo = TrackingRepository()
 
     private val _state = MutableStateFlow(OrderState())
     val state: StateFlow<OrderState> = _state
@@ -121,5 +126,26 @@ class OrderViewModel : ViewModel() {
         if (state.allOrders.isNotEmpty()) {
             loadAllOrders()
         }
+    }
+
+    /**
+     * Reads the rider's last position for an order.
+     *
+     * The screen calls this on a timer rather than the app holding a socket
+     * open: the row changes every few seconds at most, and a poll while the
+     * tracking screen is on top costs less than a live subscription that has to
+     * be torn down and rebuilt on every navigation.
+     */
+    fun loadTracking(orderId: String) {
+        viewModelScope.launch {
+            trackingRepo.getTracking(orderId)
+                .onSuccess { _state.value = _state.value.copy(tracking = it) }
+            // A failure here is not worth an error banner: the tracking card
+            // reads "not sharing" and the rest of the screen is unaffected.
+        }
+    }
+
+    fun clearTracking() {
+        _state.value = _state.value.copy(tracking = null)
     }
 }

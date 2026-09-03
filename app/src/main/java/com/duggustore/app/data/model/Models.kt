@@ -162,6 +162,20 @@ data class ProfileResponse(val profiles: List<UserProfile> = emptyList())
 data class CategoryResponse(val categories: List<Category> = emptyList())
 
 @Serializable
+data class DeliveryTracking(
+    val id: String = "",
+    @SerialName("order_id") val orderId: String = "",
+    @SerialName("delivery_id") val deliveryId: String = "",
+    val status: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    @SerialName("updated_at") val updatedAt: String = ""
+) {
+    /** 0,0 is the column default, so it means "never reported" rather than a place. */
+    fun hasFix(): Boolean = latitude != 0.0 || longitude != 0.0
+}
+
+@Serializable
 data class ProductResponse(val products: List<Product> = emptyList())
 
 @Serializable
