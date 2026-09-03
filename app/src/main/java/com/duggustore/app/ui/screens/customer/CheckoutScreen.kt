@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.screens.customer
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,22 +9,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLocationAlt
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.CartItem
-import com.duggustore.app.ui.components.DugguButton
-import com.duggustore.app.ui.components.DugguTopBar
+import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -42,12 +46,14 @@ fun CheckoutScreen(
 ) {
     // Preselect the default address so the common case is a single tap.
     var selectedId by remember(addresses) {
-        mutableStateOf(addresses.firstOrNull { it.isDefault }?.id ?: addresses.firstOrNull()?.id ?: "")
+        mutableStateOf(
+            addresses.firstOrNull { it.isDefault }?.id ?: addresses.firstOrNull()?.id ?: ""
+        )
     }
     val selected = addresses.firstOrNull { it.id == selectedId }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
-        DugguTopBar(title = "Checkout", onBackClick = onBack)
+        CheckoutHeader(onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -55,25 +61,29 @@ fun CheckoutScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            SectionTitle(icon = Icons.Default.LocationOn, text = "Delivery Address")
-
-            Spacer(modifier = Modifier.height(10.dp))
+            SectionTitle(Icons.Default.LocationOn, "Delivery address", Teal)
+            Spacer(Modifier.height(10.dp))
 
             if (addresses.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { onManageAddresses() },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
+                Panel(modifier = Modifier.clickable { onManageAddresses() }) {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.AddLocationAlt, null, tint = PrimaryGreen)
-                        Spacer(modifier = Modifier.width(12.dp))
+                        IconTile(Icons.Default.AddLocationAlt, Teal)
+                        Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Add a delivery address", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Text("Required before placing an order", fontSize = 12.sp, color = TextSecondary)
+                            Text(
+                                "Add a delivery address",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                "Required before placing an order",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
                         }
                     }
                 }
@@ -84,53 +94,57 @@ fun CheckoutScreen(
                         selected = address.id == selectedId,
                         onSelect = { selectedId = address.id }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(10.dp))
                 }
-                TextButton(onClick = onManageAddresses) {
-                    Text("Manage addresses", color = PrimaryGreen, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                }
+                Text(
+                    text = "Manage addresses",
+                    modifier = Modifier.clickable { onManageAddresses() },
+                    color = Teal,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp
+                )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
 
-            SectionTitle(icon = Icons.Default.Payments, text = "Payment")
+            SectionTitle(Icons.Default.Payments, "Payment", Orange)
+            Spacer(Modifier.height(10.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
+            Panel {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.CheckCircle, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text("Cash on Delivery", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                        Text("Pay when your order arrives", fontSize = 12.sp, color = TextSecondary)
+                    IconTile(Icons.Default.Payments, Orange)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Cash on delivery",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            "Pay when your order arrives",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
                     }
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Teal,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
 
-            Text(
-                text = "Order Summary",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
+            SectionTitle(Icons.Default.Receipt, "Order summary", Coral)
+            Spacer(Modifier.height(10.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
+            Panel {
                 Column(modifier = Modifier.padding(16.dp)) {
                     cartItems.forEach { item ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -141,106 +155,195 @@ fun CheckoutScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                text = "₹${"%.2f".format((item.product?.effectivePrice() ?: 0.0) * item.quantity)}",
+                                text = "₹${trimAmount((item.product?.effectivePrice() ?: 0.0) * item.quantity)}",
                                 fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
                                 color = TextPrimary
                             )
                         }
                     }
 
-                    Divider(modifier = Modifier.padding(vertical = 10.dp), color = BorderGray)
+                    Divider(Modifier.padding(vertical = 10.dp), color = BorderGray)
 
-                    SummaryRow("Subtotal", subtotal)
-                    SummaryRow("Delivery fee", deliveryFee)
-                    if (savings > 0) SummaryRow("Savings", -savings, valueColor = SuccessGreen)
+                    SummaryRow("Subtotal", "₹${trimAmount(subtotal)}")
+                    SummaryRow(
+                        label = "Delivery fee",
+                        value = if (deliveryFee <= 0.0) "FREE" else "₹${trimAmount(deliveryFee)}",
+                        valueColor = if (deliveryFee <= 0.0) SuccessGreen else TextPrimary
+                    )
+                    if (savings > 0) {
+                        SummaryRow("You save", "-₹${trimAmount(savings)}", SuccessGreen)
+                    }
 
-                    Divider(modifier = Modifier.padding(vertical = 10.dp), color = BorderGray)
+                    Divider(Modifier.padding(vertical = 10.dp), color = BorderGray)
 
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text("Total", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.weight(1f))
                         Text(
-                            text = "₹${"%.2f".format(total)}",
+                            "Total",
+                            modifier = Modifier.weight(1f),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = PrimaryGreen
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "₹${trimAmount(total)}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Teal
                         )
                     }
                 }
             }
 
-            error?.let { err ->
-                Spacer(modifier = Modifier.height(12.dp))
+            if (error != null) {
+                Spacer(Modifier.height(14.dp))
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    color = AccentRed.copy(alpha = 0.1f)
+                    shape = RoundedCornerShape(14.dp),
+                    color = CoralSurface
                 ) {
-                    Text(err, modifier = Modifier.padding(12.dp), color = AccentRed, fontSize = 13.sp)
+                    Text(
+                        text = error,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        color = CoralDark,
+                        fontSize = 13.sp
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
-        Surface(color = Color.White, shadowElevation = 12.dp) {
+        Surface(
+            color = SurfaceWhite,
+            shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
+            shadowElevation = 18.dp
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(16.dp)
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 if (selected == null && addresses.isNotEmpty()) {
                     Text(
                         text = "Select a delivery address to continue",
                         fontSize = 12.sp,
-                        color = AccentRed
+                        color = Coral
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(8.dp))
                 }
-                DugguButton(
-                    text = "Place Order · ₹${"%.2f".format(total)}",
+                Button(
                     onClick = { selected?.let { onPlaceOrder(it.fullAddress) } },
-                    modifier = Modifier.fillMaxWidth(),
-                    isLoading = isLoading,
-                    // An order with no address is not deliverable, so the button stays
-                    // disabled until one is picked.
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Teal,
+                        disabledContainerColor = BorderGray
+                    ),
+                    // An order with no address is not deliverable, so the button
+                    // stays disabled until one is picked.
                     enabled = !isLoading && selected != null && cartItems.isNotEmpty()
-                )
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Place order · ₹${trimAmount(total)}",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun SectionTitle(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+private fun CheckoutHeader(onBack: () -> Unit) {
+    Surface(color = Teal) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+            }
+            Text(
+                text = "Checkout",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = SurfaceWhite,
+        shadowElevation = 2.dp,
+        content = content
+    )
+}
+
+@Composable
+private fun IconTile(icon: ImageVector, tint: Color) {
+    Box(
+        modifier = Modifier
+            .size(38.dp)
+            .clip(RoundedCornerShape(11.dp))
+            .background(tint.copy(alpha = 0.12f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
+    }
+}
+
+@Composable
+private fun SectionTitle(icon: ImageVector, text: String, tint: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
+        Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
+        Spacer(Modifier.width(8.dp))
         Text(text, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
     }
 }
 
 @Composable
 private fun AddressOption(address: Address, selected: Boolean, onSelect: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onSelect() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) PrimaryGreen.copy(alpha = 0.07f) else Color.White
-        ),
-        border = if (selected) androidx.compose.foundation.BorderStroke(1.5.dp, PrimaryGreen) else null
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() },
+        shape = RoundedCornerShape(18.dp),
+        color = if (selected) TealSurface else SurfaceWhite,
+        shadowElevation = if (selected) 0.dp else 2.dp,
+        border = if (selected) BorderStroke(1.5.dp, Teal) else null
     ) {
         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
             Icon(
-                imageVector = if (selected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                imageVector = if (selected) Icons.Default.CheckCircle
+                              else Icons.Default.RadioButtonUnchecked,
                 contentDescription = null,
-                tint = if (selected) PrimaryGreen else TextLight,
+                tint = if (selected) Teal else TextLight,
                 modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(Modifier.width(12.dp))
             Column {
                 Text(address.label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(address.fullAddress, fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp)
             }
         }
@@ -248,9 +351,9 @@ private fun AddressOption(address: Address, selected: Boolean, onSelect: () -> U
 }
 
 @Composable
-private fun SummaryRow(label: String, amount: Double, valueColor: Color = TextPrimary) {
+private fun SummaryRow(label: String, value: String, valueColor: Color = TextPrimary) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
         Text(label, fontSize = 13.sp, color = TextSecondary, modifier = Modifier.weight(1f))
-        Text("₹${"%.2f".format(amount)}", fontSize = 13.sp, color = valueColor)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = valueColor)
     }
 }
