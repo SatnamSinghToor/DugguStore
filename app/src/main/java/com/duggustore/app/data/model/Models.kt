@@ -92,6 +92,10 @@ data class Product(
     val price: Double = 0.0,
     @SerialName("discount_price") val discountPrice: Double? = null,
     @SerialName("image_url") val imageUrl: String? = null,
+    // Added alongside image_url rather than replacing it — every reader that
+    // only knows about a single photo (dashboards, order rows) keeps working
+    // off image_url, which is always kept as the first entry here.
+    @SerialName("image_urls") val imageUrls: List<String> = emptyList(),
     val stock: Int = 0,
     val unit: String = "pcs",
     @SerialName("is_active") val isActive: Boolean = true,
@@ -100,6 +104,9 @@ data class Product(
     fun effectivePrice(): Double = discountPrice ?: price
     fun hasDiscount(): Boolean = discountPrice != null && discountPrice < price
     fun savingsAmount(): Double = if (hasDiscount()) price - discountPrice!! else 0.0
+
+    /** All of the product's photos, falling back to the single legacy field for older rows. */
+    fun images(): List<String> = imageUrls.ifEmpty { listOfNotNull(imageUrl?.takeIf { it.isNotBlank() }) }
 }
 
 @Serializable

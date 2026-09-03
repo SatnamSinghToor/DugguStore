@@ -4,7 +4,9 @@ import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.remote.SupabaseService
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -27,6 +29,7 @@ class ProductRepository {
         put("price", product.price)
         product.discountPrice?.let { put("discount_price", it) }
         product.imageUrl?.let { put("image_url", it) }
+        put("image_urls", JsonArray(product.imageUrls.map { JsonPrimitive(it) }))
         put("stock", product.stock)
         put("unit", product.unit)
         put("is_active", product.isActive)

@@ -6,16 +6,20 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,7 +61,7 @@ fun AddEditProductScreen(
     var discountPrice by remember(product) { mutableStateOf(product?.discountPrice?.toString() ?: "") }
     var stock by remember(product) { mutableStateOf(product?.stock?.toString() ?: "") }
     var unit by remember(product) { mutableStateOf(product?.unit ?: "pcs") }
-    var imageUrl by remember(product) { mutableStateOf(product?.imageUrl ?: "") }
+    var photos by remember(product) { mutableStateOf(product?.images() ?: emptyList()) }
     var categoryId by remember(product) { mutableStateOf(product?.categoryId ?: "") }
     var isActive by remember(product) { mutableStateOf(product?.isActive ?: true) }
     var localError by remember { mutableStateOf<String?>(null) }
@@ -72,29 +76,32 @@ fun AddEditProductScreen(
     val scope = rememberCoroutineScope()
     val productRepo = remember { ProductRepository() }
 
-    val pickImage = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
+    val pickImages = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PRODUCT_PHOTOS)
+    ) { uris: List<Uri> ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
         uploadingImage = true
         scope.launch {
-            val read = withContext(Dispatchers.IO) {
-                runCatching {
-                    val resolver = context.contentResolver
-                    val mimeType = resolver.getType(uri) ?: "image/jpeg"
-                    val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
-                        ?: error("Could not read the selected image")
-                    bytes to mimeType
+            val uploaded = mutableListOf<String>()
+            var failed = false
+            for (uri in uris) {
+                if (photos.size + uploaded.size >= MAX_PRODUCT_PHOTOS) break
+                val read = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val resolver = context.contentResolver
+                        val mimeType = resolver.getType(uri) ?: "image/jpeg"
+                        val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
+                            ?: error("Could not read the selected image")
+                        bytes to mimeType
+                    }
                 }
+                val (bytes, mimeType) = read.getOrElse { failed = true; continue }
+                productRepo.uploadProductImage(sellerId, bytes, mimeType)
+                    .onSuccess { url -> uploaded.add(url) }
+                    .onFailure { failed = true }
             }
-            val (bytes, mimeType) = read.getOrElse {
-                uploadingImage = false
-                localError = "Couldn't read that photo — try another one"
-                return@launch
-            }
-            productRepo.uploadProductImage(sellerId, bytes, mimeType)
-                .onSuccess { url -> imageUrl = url; localError = null }
-                .onFailure { localError = "Upload failed — check your connection and try again" }
+            photos = (photos + uploaded).take(MAX_PRODUCT_PHOTOS)
+            localError = if (failed) "Some photos couldn't be uploaded — try those again" else null
             uploadingImage = false
         }
     }
@@ -126,21 +133,13 @@ fun AddEditProductScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            ImagePreview(
-                imageUrl = imageUrl,
+            ProductPhotosPicker(
+                photos = photos,
                 uploading = uploadingImage,
-                onPickPhoto = {
-                    pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            AuthField(
-                value = imageUrl,
-                onValueChange = { imageUrl = it },
-                label = "Image URL",
-                placeholder = "Or paste a link to a photo instead"
+                onAddPhotos = {
+                    pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onRemovePhoto = { url -> photos = photos.filterNot { it == url } }
             )
 
             Spacer(Modifier.height(16.dp))
@@ -303,7 +302,8 @@ fun AddEditProductScreen(
                                     description = description.trim(),
                                     price = priceValue ?: 0.0,
                                     discountPrice = discountValue,
-                                    imageUrl = imageUrl.trim().takeIf { it.isNotBlank() },
+                                    imageUrl = photos.firstOrNull(),
+                                    imageUrls = photos,
                                     stock = stock.toIntOrNull() ?: 0,
                                     unit = unit.trim().ifBlank { "pcs" },
                                     isActive = isActive
@@ -339,68 +339,98 @@ fun AddEditProductScreen(
     }
 }
 
+/** Up to this many photos per product — enough to show a product from a few angles without turning the form into a gallery manager. */
+private const val MAX_PRODUCT_PHOTOS = 6
+
 /**
- * Shows the image the URL points at, so a wrong link is obvious before
- * saving — and doubles as the button for picking a photo straight off the
- * seller's device, the more realistic path for a small seller who has no
- * existing hosted image link to paste.
+ * A row of the product's photos — each removable, the first one marked as
+ * the cover since it's what every screen that only knows a single image
+ * (dashboards, order rows) falls back to — plus a tile for picking more
+ * straight off the seller's device.
  */
 @Composable
-private fun ImagePreview(imageUrl: String, uploading: Boolean, onPickPhoto: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(160.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(SurfaceMuted)
-            .clickable(enabled = !uploading) { onPickPhoto() },
-        contentAlignment = Alignment.Center
-    ) {
-        if (imageUrl.isBlank()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.Image,
-                    contentDescription = null,
-                    tint = TextLight,
-                    modifier = Modifier.size(40.dp)
-                )
-                Spacer(Modifier.height(6.dp))
-                Text("Tap to add a photo", fontSize = 12.sp, color = TextLight)
+private fun ProductPhotosPicker(
+    photos: List<String>,
+    uploading: Boolean,
+    onAddPhotos: () -> Unit,
+    onRemovePhoto: (String) -> Unit
+) {
+    Column {
+        Text("Photos", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+        Spacer(Modifier.height(8.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(photos, key = { it }) { url ->
+                Box(modifier = Modifier.size(96.dp)) {
+                    AsyncImage(
+                        model = url,
+                        contentDescription = "Product photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SurfaceMuted)
+                    )
+                    if (url == photos.firstOrNull()) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.BottomStart).padding(4.dp),
+                            shape = RoundedCornerShape(6.dp),
+                            color = Teal
+                        ) {
+                            Text(
+                                "Cover",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .clickable { onRemovePhoto(url) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Close, "Remove photo", tint = Color.White, modifier = Modifier.size(13.dp))
+                    }
+                }
             }
-        } else {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Product image",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
 
-        if (uploading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f)),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(10.dp)
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(Teal),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.CameraAlt,
-                    contentDescription = "Change photo",
-                    tint = Color.White,
-                    modifier = Modifier.size(17.dp)
-                )
+            if (photos.size < MAX_PRODUCT_PHOTOS) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SurfaceMuted)
+                            .border(1.dp, BorderGray, RoundedCornerShape(14.dp))
+                            .clickable(enabled = !uploading) { onAddPhotos() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (uploading) {
+                            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Teal, strokeWidth = 2.dp)
+                        } else {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    if (photos.isEmpty()) Icons.Default.Image else Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = TextLight,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    if (photos.isEmpty()) "Add photos" else "Add more",
+                                    fontSize = 11.sp,
+                                    color = TextLight
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

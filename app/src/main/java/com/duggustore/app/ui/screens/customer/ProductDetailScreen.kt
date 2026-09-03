@@ -28,8 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.ui.components.ProductImageCarousel
 import com.duggustore.app.ui.components.QuantityStepperRow
 import com.duggustore.app.ui.components.discountPercent
 import com.duggustore.app.ui.components.trimAmount
@@ -104,6 +104,7 @@ fun ProductDetailScreen(
 
 @Composable
 private fun ProductHero(product: Product) {
+    val images = product.images()
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -111,7 +112,7 @@ private fun ProductHero(product: Product) {
             .background(TealSurface),
         contentAlignment = Alignment.Center
     ) {
-        if (product.imageUrl.isNullOrBlank()) {
+        if (images.isEmpty()) {
             Icon(
                 Icons.Default.Image,
                 contentDescription = null,
@@ -119,11 +120,12 @@ private fun ProductHero(product: Product) {
                 tint = TealLight
             )
         } else {
-            AsyncImage(
-                model = product.imageUrl,
+            ProductImageCarousel(
+                images = images,
                 contentDescription = product.name,
-                modifier = Modifier.fillMaxSize().padding(top = 40.dp, bottom = 40.dp),
-                contentScale = ContentScale.Fit
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+                imageModifier = Modifier.padding(top = 40.dp, bottom = 40.dp)
             )
         }
     }

@@ -1,9 +1,12 @@
 package com.duggustore.app.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,6 +14,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -31,6 +35,7 @@ import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
+import kotlinx.coroutines.delay
 
 /** Wordmark with the two-tone split from the design. */
 @Composable
@@ -273,6 +278,80 @@ fun iconForCategory(name: String): ImageVector = when {
 }
 
 /**
+ * A product's photos, auto-advancing on their own — a shopper scanning a
+ * grid never swipes an individual card by hand, so a second or third photo
+ * would otherwise go unseen. Falls back to a single static image (or the
+ * placeholder icon) when there is nothing to cycle through.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ProductImageCarousel(
+    images: List<String>,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    imageModifier: Modifier = Modifier
+) {
+    if (images.size <= 1) {
+        Box(modifier = modifier) {
+            val url = images.firstOrNull()
+            if (url != null) {
+                AsyncImage(
+                    model = url,
+                    contentDescription = contentDescription,
+                    modifier = imageModifier.fillMaxSize(),
+                    contentScale = contentScale
+                )
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Image, null, tint = TextLight, modifier = Modifier.size(44.dp))
+                }
+            }
+        }
+        return
+    }
+
+    val pagerState = rememberPagerState(pageCount = { images.size })
+
+    LaunchedEffect(pagerState, images) {
+        while (true) {
+            delay(2600L)
+            val next = (pagerState.currentPage + 1) % images.size
+            pagerState.animateScrollToPage(next)
+        }
+    }
+
+    Box(modifier = modifier) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            AsyncImage(
+                model = images[page],
+                contentDescription = contentDescription,
+                modifier = imageModifier.fillMaxSize(),
+                contentScale = contentScale
+            )
+        }
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            repeat(images.size) { index ->
+                Box(
+                    modifier = Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index == pagerState.currentPage) Color.White
+                            else Color.White.copy(alpha = 0.5f)
+                        )
+                )
+            }
+        }
+    }
+}
+
+/**
  * Product card from the reference: heart top-left, discount ribbon top-right,
  * image, name, price, and either an outlined "Add to cart" or a quantity
  * stepper once the item is in the cart.
@@ -304,21 +383,16 @@ fun StoreProductCard(
                     .background(SurfaceWhite)
             ) {
                 val outOfStock = product.stock <= 0
-                if (product.imageUrl.isNullOrBlank()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Image, null, tint = TextLight, modifier = Modifier.size(44.dp))
-                    }
-                } else {
-                    AsyncImage(
-                        model = product.imageUrl,
-                        contentDescription = product.name,
-                        // Faded rather than full colour once it's unavailable, so
-                        // the image itself signals "can't buy this" at a glance
-                        // instead of only the text underneath.
-                        modifier = Modifier.fillMaxSize().padding(10.dp).alpha(if (outOfStock) 0.35f else 1f),
-                        contentScale = ContentScale.Fit
-                    )
-                }
+                ProductImageCarousel(
+                    images = product.images(),
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    // Faded rather than full colour once it's unavailable, so
+                    // the image itself signals "can't buy this" at a glance
+                    // instead of only the text underneath.
+                    imageModifier = Modifier.padding(10.dp).alpha(if (outOfStock) 0.35f else 1f)
+                )
 
                 if (outOfStock) {
                     Surface(
