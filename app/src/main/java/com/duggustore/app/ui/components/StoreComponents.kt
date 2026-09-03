@@ -114,16 +114,28 @@ fun StoreSearchBar(
         color = SurfaceMuted
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Search, null, tint = TextSecondary, modifier = Modifier.size(22.dp))
+            // The lens sits on its own teal tile, so it reads as part of the app
+            // rather than as a stray grey glyph, and balances the mic opposite.
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(Teal),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Spacer(Modifier.width(10.dp))
             Box(modifier = Modifier.weight(1f)) {
-                if (query.isEmpty()) {
-                    Text(placeholder, fontSize = 15.sp, color = TextLight)
-                }
-                BasicSearchField(query, onQueryChange)
+                BasicSearchField(query, onQueryChange, placeholder)
             }
             if (onMicClick != null) {
                 Box(Modifier.width(1.dp).height(22.dp).background(BorderGray))
@@ -141,14 +153,30 @@ fun StoreSearchBar(
 }
 
 @Composable
-private fun BasicSearchField(query: String, onQueryChange: (String) -> Unit) {
+private fun BasicSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String
+) {
     androidx.compose.foundation.text.BasicTextField(
         value = query,
         onValueChange = onQueryChange,
         singleLine = true,
         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, color = TextPrimary),
         cursorBrush = androidx.compose.ui.graphics.SolidColor(Teal),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)
+        modifier = Modifier.fillMaxWidth(),
+        // The placeholder used to be a sibling Text with no padding while the
+        // field carried 14dp of its own, so the hint sat higher than the text
+        // that replaced it. Drawing it inside the decoration puts both on the
+        // same baseline.
+        decorationBox = { innerTextField ->
+            Box(contentAlignment = Alignment.CenterStart) {
+                if (query.isEmpty()) {
+                    Text(placeholder, fontSize = 15.sp, color = TextLight)
+                }
+                innerTextField()
+            }
+        }
     )
 }
 
@@ -440,38 +468,3 @@ fun discountPercent(product: Product): Int {
 fun trimAmount(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value)
 
-/** Rounded promo banner with a headline, sub-line and artwork. */
-@Composable
-fun PromoBanner(
-    title: String,
-    highlight: String,
-    caption: String,
-    imageUrl: String? = null,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth().height(150.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = TealSurface
-    ) {
-        Box {
-            if (!imageUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
-            Column(
-                modifier = Modifier.fillMaxHeight().padding(20.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(title, fontSize = 16.sp, color = TextPrimary)
-                Text(highlight, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                Spacer(Modifier.height(2.dp))
-                Text(caption, fontSize = 12.sp, color = TextSecondary)
-            }
-        }
-    }
-}

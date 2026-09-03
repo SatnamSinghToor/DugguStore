@@ -19,7 +19,10 @@ val CoralDark = Color(0xFFD94F4F)
 val CoralSurface = Color(0xFFFDECEC)
 
 // ── Neutrals ─────────────────────────────────────────────────────────────
-val Background = Color(0xFFF7F8FA)
+// The header and the bottom bar are white, so the page is too — the app reads
+// as one surface instead of white bands top and bottom around a grey middle.
+// Cards separate themselves with their shadow rather than with a tint.
+val Background = Color(0xFFFFFFFF)
 val SurfaceWhite = Color(0xFFFFFFFF)
 val SurfaceMuted = Color(0xFFF1F3F6)
 val TextPrimary = Color(0xFF16202C)
@@ -36,7 +39,8 @@ val DeliveredGreen = Color(0xFF22C55E)
 val StarYellow = Color(0xFFFFB020)
 
 // ── Category tiles ───────────────────────────────────────────────────────
-// Cycled in order for whatever categories the database returns.
+// Cycled in order for whatever categories the database returns, and reused
+// for the offer cards so the two rails read as one family.
 val CategoryColors = listOf(
     Teal,
     Color(0xFF4A90D9),

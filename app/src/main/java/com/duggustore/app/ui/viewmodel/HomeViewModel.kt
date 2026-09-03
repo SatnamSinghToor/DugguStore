@@ -3,8 +3,10 @@ package com.duggustore.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.Category
+import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.repository.CategoryRepository
+import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.ProductRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +15,8 @@ import kotlinx.coroutines.launch
 data class HomeState(
     val isLoading: Boolean = false,
     val categories: List<Category> = emptyList(),
+    /** The store's active coupons, shown on the home carousel. */
+    val offers: List<Coupon> = emptyList(),
     val products: List<Product> = emptyList(),
     val filteredProducts: List<Product> = emptyList(),
     val selectedCategoryId: String? = null,
@@ -23,6 +27,7 @@ data class HomeState(
 class HomeViewModel : ViewModel() {
     private val categoryRepo = CategoryRepository()
     private val productRepo = ProductRepository()
+    private val offerRepo = OfferRepository()
 
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state
@@ -36,6 +41,7 @@ class HomeViewModel : ViewModel() {
             _state.value = _state.value.copy(isLoading = true)
             val categories = categoryRepo.getAllCategories()
             val products = productRepo.getAllProducts()
+            val offers = offerRepo.getOffers()
 
             categories.onSuccess { cats ->
                 _state.value = _state.value.copy(categories = cats)
@@ -46,6 +52,10 @@ class HomeViewModel : ViewModel() {
                     filteredProducts = prods.filter { it.isActive }
                 )
             }
+            // A store with no coupons is a normal state, not an error worth
+            // showing; the carousel simply does not render.
+            offers.onSuccess { _state.value = _state.value.copy(offers = it) }
+
             _state.value = _state.value.copy(isLoading = false)
         }
     }

@@ -350,7 +350,11 @@ fun AppNavGraph(
                         fullAddress = detected,
                         isDefault = true
                     )
-                }
+                },
+                offers = homeState.offers,
+                // The card carries a real coupon code, so tapping it puts the
+                // customer where they can spend it.
+                onOfferClick = { navController.navigate(Screen.CustomerCart.route) }
             )
 
             LaunchedEffect(authState.user) {

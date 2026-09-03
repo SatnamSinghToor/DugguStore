@@ -165,6 +165,19 @@ data class ProfileResponse(val profiles: List<UserProfile> = emptyList())
 data class CategoryResponse(val categories: List<Category> = emptyList())
 
 @Serializable
+data class Coupon(
+    val id: String = "",
+    val code: String = "",
+    val title: String = "",
+    val description: String = "",
+    @SerialName("discount_percent") val discountPercent: Int = 0,
+    @SerialName("max_discount") val maxDiscount: Int = 0,
+    @SerialName("min_order_value") val minOrderValue: Int = 0,
+    @SerialName("expiry_label") val expiryLabel: String = "",
+    @SerialName("is_active") val isActive: Boolean = true
+)
+
+@Serializable
 data class ProductResponse(val products: List<Product> = emptyList())
 
 @Serializable

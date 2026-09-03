@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.Category
+import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.Product
 import androidx.compose.ui.res.stringResource
 import com.duggustore.app.R
@@ -54,7 +55,9 @@ fun HomeScreen(
     onNotificationsClick: () -> Unit = {},
     savedAddresses: List<Address> = emptyList(),
     onSelectAddress: (Address) -> Unit = {},
-    onSaveDetectedAddress: (String) -> Unit = {}
+    onSaveDetectedAddress: (String) -> Unit = {},
+    offers: List<Coupon> = emptyList(),
+    onOfferClick: (Coupon) -> Unit = {}
 ) {
     // Both sheets are owned here so the header can stay a plain row of
     // controls and the sheets sit above the whole screen.
@@ -157,14 +160,14 @@ fun HomeScreen(
                 }
             }
 
-            item {
-                Spacer(Modifier.height(16.dp))
-                PromoBanner(
-                    title = "Happy Weekend",
-                    highlight = "25% OFF",
-                    caption = "*on selected items",
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+            if (offers.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(16.dp))
+                    OfferCarousel(
+                        offers = offers,
+                        onOfferClick = onOfferClick
+                    )
+                }
             }
 
             if (categories.isNotEmpty()) {
