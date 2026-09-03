@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.StoreProductCard
-import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -38,10 +37,9 @@ fun FavoritesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
-            .appPatternOverlay()
+            .background(Color.Transparent)
     ) {
-        Surface(color = Teal) {
+        Surface(color = Teal.copy(alpha = 0.92f)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

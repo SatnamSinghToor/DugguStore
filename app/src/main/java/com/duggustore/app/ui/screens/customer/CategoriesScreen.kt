@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.ui.components.DashboardEmpty
-import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.components.iconForCategory
 import com.duggustore.app.ui.theme.*
 
@@ -42,10 +41,12 @@ fun CategoriesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
-            .appPatternOverlay()
+            .background(Color.Transparent)
     ) {
-        Surface(color = Teal) {
+        // Translucent, not solid: the background pattern is meant to show
+        // through every part of the app, headers included, not just the
+        // plain areas around them.
+        Surface(color = Teal.copy(alpha = 0.92f)) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

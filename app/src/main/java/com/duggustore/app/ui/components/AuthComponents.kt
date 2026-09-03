@@ -44,10 +44,12 @@ fun AuthScaffold(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            // Transparent, not a solid colour: the app shell paints the
+            // background pattern once behind the whole NavHost, and an
+            // opaque fill here would cover it right back up on this screen.
+            .background(Color.Transparent)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .appPatternOverlay()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 22.dp)
             .padding(top = 32.dp, bottom = 24.dp),

@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.CartItem
-import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
 
@@ -53,7 +52,7 @@ fun CheckoutScreen(
     }
     val selected = addresses.firstOrNull { it.id == selectedId }
 
-    Column(modifier = Modifier.fillMaxSize().background(Background).appPatternOverlay()) {
+    Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
         CheckoutHeader(onBack = onBack)
 
         Column(
@@ -216,7 +215,7 @@ fun CheckoutScreen(
         }
 
         Surface(
-            color = SurfaceWhite,
+            color = SurfaceWhite.copy(alpha = 0.92f),
             shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
             shadowElevation = 18.dp
         ) {
@@ -278,7 +277,7 @@ fun CheckoutScreen(
 
 @Composable
 private fun CheckoutHeader(onBack: () -> Unit) {
-    Surface(color = Teal) {
+    Surface(color = Teal.copy(alpha = 0.92f)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

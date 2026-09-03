@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.QuantityStepperRow
-import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.components.discountPercent
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
@@ -57,7 +56,7 @@ fun ProductDetailScreen(
     var quantity by remember(product.id) { mutableStateOf(1) }
     val inStock = product.stock > 0
 
-    Column(modifier = Modifier.fillMaxSize().background(Background).appPatternOverlay()) {
+    Column(modifier = Modifier.fillMaxSize().background(Color.Transparent)) {
         Box(modifier = Modifier.weight(1f)) {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 ProductHero(product = product)
@@ -272,7 +271,7 @@ private fun BuyBar(
     inStock: Boolean,
     onAddToCart: () -> Unit
 ) {
-    Surface(color = SurfaceWhite, shadowElevation = 18.dp) {
+    Surface(color = SurfaceWhite.copy(alpha = 0.92f), shadowElevation = 18.dp) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

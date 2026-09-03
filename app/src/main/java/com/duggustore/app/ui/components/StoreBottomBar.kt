@@ -57,7 +57,11 @@ fun StoreBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = if (centre != null) 22.dp else 0.dp),
-            color = SurfaceWhite,
+            // Translucent rather than solid: the app's background pattern
+            // sits behind this bar (painted once behind the whole app
+            // shell), and an opaque bar here would hide it exactly where
+            // the pattern was asked to keep showing.
+            color = SurfaceWhite.copy(alpha = 0.92f),
             shadowElevation = 16.dp
         ) {
             Row(

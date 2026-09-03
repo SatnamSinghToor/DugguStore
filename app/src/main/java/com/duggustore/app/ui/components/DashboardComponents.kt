@@ -31,7 +31,10 @@ fun DashboardHeader(
     stats: List<Pair<String, String>>,
     onSignOut: () -> Unit
 ) {
-    Surface(color = Teal) {
+    // Translucent, not solid — the app shell paints the background pattern
+    // once behind the whole NavHost, and this header (shared by the
+    // seller/delivery/admin dashboards) sits right on top of it.
+    Surface(color = Teal.copy(alpha = 0.92f)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

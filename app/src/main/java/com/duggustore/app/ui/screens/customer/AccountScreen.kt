@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.R
-import com.duggustore.app.ui.components.appPatternOverlay
 import com.duggustore.app.ui.theme.*
 
 @Composable
@@ -42,8 +41,7 @@ fun AccountScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
-            .appPatternOverlay()
+            .background(Color.Transparent)
             .verticalScroll(rememberScrollState())
     ) {
         AccountHeader(user = user, onBack = onBack)
@@ -109,7 +107,7 @@ private fun AccountHeader(user: UserProfile?, onBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Teal)
+                .background(Teal.copy(alpha = 0.92f))
                 .statusBarsPadding()
                 .padding(bottom = 44.dp)
         ) {
