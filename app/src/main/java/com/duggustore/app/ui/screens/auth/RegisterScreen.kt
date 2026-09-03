@@ -1,25 +1,29 @@
 package com.duggustore.app.ui.screens.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.duggustore.app.ui.components.DugguButton
-import com.duggustore.app.ui.components.DugguTextField
+import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
@@ -37,171 +41,163 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf("customer") }
-    var expandedRoleMenu by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
 
     val roles = listOf(
-        "customer" to "Customer",
-        "seller" to "Seller",
-        "delivery" to "Delivery Partner"
+        "customer" to "Shop",
+        "seller" to "Sell",
+        "delivery" to "Deliver"
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    val shownError = localError ?: error
+
+    AuthScaffold(
+        title = "Create account",
+        subtitle = "Groceries at your door in minutes"
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        if (shownError != null) {
+            AuthErrorBanner(
+                message = shownError,
+                onDismiss = { localError = null; onClearError() }
+            )
+            Spacer(Modifier.height(18.dp))
+        }
+
+        // The view model reports things like "check your inbox" here. The
+        // screen used to accept this and never render it.
+        if (successMessage != null) {
+            AuthInfoBanner(message = successMessage)
+            Spacer(Modifier.height(18.dp))
+        }
+
+        AuthField(
+            value = fullName,
+            onValueChange = { fullName = it; localError = null; onClearError() },
+            label = "Full name",
+            placeholder = "Your name",
+            leadingIcon = Icons.Default.Person
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        AuthField(
+            value = email,
+            onValueChange = { email = it; localError = null; onClearError() },
+            label = "Email",
+            placeholder = "you@example.com",
+            leadingIcon = Icons.Default.Email,
+            keyboardType = KeyboardType.Email
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        AuthField(
+            value = phone,
+            onValueChange = { phone = it; localError = null; onClearError() },
+            label = "Phone number",
+            placeholder = "10-digit number",
+            leadingIcon = Icons.Default.Phone,
+            keyboardType = KeyboardType.Phone
+        )
+
+        Spacer(Modifier.height(18.dp))
 
         Text(
-            text = "Create Account",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
-        Text(
-            text = "Join Duggu Store today",
-            fontSize = 14.sp,
+            text = "I want to",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
             color = TextSecondary
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                (error ?: localError)?.let { err ->
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        color = AccentRed.copy(alpha = 0.1f)
-                    ) {
-                        Text(
-                            text = err,
-                            modifier = Modifier.padding(12.dp),
-                            color = AccentRed,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-
-                DugguTextField(
-                    value = fullName,
-                    onValueChange = { fullName = it; localError = null; onClearError() },
-                    label = "Full Name",
-                    leadingIcon = Icons.Default.Person
-                )
-
-                DugguTextField(
-                    value = email,
-                    onValueChange = { email = it; localError = null; onClearError() },
-                    label = "Email",
-                    leadingIcon = Icons.Default.Email,
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
-                )
-
-                DugguTextField(
-                    value = phone,
-                    onValueChange = { phone = it; localError = null; onClearError() },
-                    label = "Phone Number",
-                    leadingIcon = Icons.Default.Phone,
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
-                )
-
-                ExposedDropdownMenuBox(
-                    expanded = expandedRoleMenu,
-                    onExpandedChange = { expandedRoleMenu = it }
-                ) {
-                    OutlinedTextField(
-                        value = roles.find { it.first == selectedRole }?.second ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("I want to join as") },
-                        leadingIcon = { Icon(Icons.Default.Badge, "Role", tint = TextSecondary) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedRoleMenu) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryGreen,
-                            unfocusedBorderColor = BorderGray
-                        )
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedRoleMenu,
-                        onDismissRequest = { expandedRoleMenu = false }
-                    ) {
-                        roles.forEach { (value, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    selectedRole = value
-                                    expandedRoleMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                DugguTextField(
-                    value = password,
-                    onValueChange = { password = it; localError = null; onClearError() },
-                    label = "Password",
-                    leadingIcon = Icons.Default.Lock,
-                    isPassword = true
-                )
-
-                DugguTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = "Confirm Password",
-                    leadingIcon = Icons.Default.Lock,
-                    isPassword = true
-                )
-
-                DugguButton(
-                    text = "Create Account",
-                    onClick = {
-                        localError = null
-                        when {
-                            fullName.isBlank() -> localError = "Please enter your name"
-                            email.isBlank() -> localError = "Please enter your email"
-                            phone.isBlank() -> localError = "Please enter your phone number"
-                            password.length < 6 -> localError = "Password must be at least 6 characters"
-                            password != confirmPassword -> localError = "Passwords don't match"
-                            else -> onRegister(email, password, fullName, phone, selectedRole)
-                        }
-                    },
-                    isLoading = isLoading
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            roles.forEach { (value, label) ->
+                RoleChip(
+                    label = label,
+                    selected = selectedRole == value,
+                    modifier = Modifier.weight(1f),
+                    onClick = { selectedRole = value }
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Already have an account? ", fontSize = 14.sp, color = TextSecondary)
-            TextButton(onClick = onNavigateToLogin) {
-                Text(
-                    text = "Sign In",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryGreen
-                )
-            }
-        }
+        AuthField(
+            value = password,
+            onValueChange = { password = it; localError = null; onClearError() },
+            label = "Password",
+            placeholder = "At least 6 characters",
+            leadingIcon = Icons.Default.Lock,
+            isPassword = true
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        AuthField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it; localError = null },
+            label = "Confirm password",
+            placeholder = "Repeat the password",
+            leadingIcon = Icons.Default.Lock,
+            isPassword = true
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        AuthPrimaryButton(
+            text = "Create account",
+            onClick = {
+                localError = null
+                onClearSuccess()
+                when {
+                    fullName.isBlank() -> localError = "Please enter your name"
+                    email.isBlank() -> localError = "Please enter your email"
+                    phone.isBlank() -> localError = "Please enter your phone number"
+                    password.length < 6 -> localError = "Password must be at least 6 characters"
+                    password != confirmPassword -> localError = "Passwords don't match"
+                    else -> onRegister(email, password, fullName, phone, selectedRole)
+                }
+            },
+            isLoading = isLoading
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        AuthSwitchRow(
+            question = "Already have an account?",
+            action = "Sign in",
+            onClick = onNavigateToLogin
+        )
+    }
+}
+
+/** Replaces the role dropdown: all three choices are visible at once. */
+@Composable
+private fun RoleChip(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) Teal else SurfaceMuted)
+            .border(
+                width = 1.dp,
+                color = if (selected) Teal else BorderGray,
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable { onClick() }
+            .padding(vertical = 13.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) Color.White else TextSecondary,
+            textAlign = TextAlign.Center
+        )
     }
 }

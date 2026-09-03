@@ -276,8 +276,9 @@ fun AppNavGraph(
                 couponApplied = cartState.couponApplied,
                 couponDiscount = cartState.couponDiscount,
                 isLoading = cartState.isLoading,
-                onIncrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty + 1) },
-                onDecrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty - 1) },
+                // The screen passes the quantity it wants, already adjusted.
+                onIncrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty) },
+                onDecrementQuantity = { itemId, qty -> cartViewModel.updateQuantity(itemId, qty) },
                 onRemoveItem = { cartViewModel.removeItem(it) },
                 onApplyCoupon = { cartViewModel.applyCoupon(it) },
                 onPlaceOrder = { navController.navigate(Screen.CustomerCheckout.route) },
