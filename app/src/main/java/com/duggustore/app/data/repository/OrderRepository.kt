@@ -2,21 +2,46 @@ package com.duggustore.app.data.repository
 
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderItem
+import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.remote.SupabaseService
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
 class OrderRepository {
 
+    private fun token(): String? = SessionManager.getAccessToken()
+
     suspend fun createOrder(order: Order, items: List<OrderItem>): Result<String> {
         return try {
-            val resultStr = SupabaseService.insert("orders", json.encodeToString(Order.serializer(), order))
-            val result = json.decodeFromString(Order.serializer(), resultStr.toString())
+            val token = token()
+            // Writable columns only: serializing Order would also send id="", created_at=""
+            // and the nested `items` list, none of which the orders table accepts.
+            val orderBody = buildJsonObject {
+                put("customer_id", order.customerId)
+                put("seller_id", order.sellerId)
+                order.deliveryId?.let { put("delivery_id", it) }
+                put("status", order.status)
+                put("total_amount", order.totalAmount)
+                put("delivery_fee", order.deliveryFee)
+                put("delivery_address", order.deliveryAddress)
+            }.toString()
+
+            val created = SupabaseService.insert("orders", orderBody, token)
+            val result = json.decodeFromString(Order.serializer(), created.toString())
+            if (result.id.isBlank()) throw Exception("Order was created but no ID was returned.")
 
             items.forEach { item ->
-                val orderItem = item.copy(orderId = result.id)
-                SupabaseService.insert("order_items", json.encodeToString(OrderItem.serializer(), orderItem))
+                val itemBody = buildJsonObject {
+                    put("order_id", result.id)
+                    put("product_id", item.productId)
+                    put("quantity", item.quantity)
+                    put("price_at_purchase", item.priceAtPurchase)
+                }.toString()
+                SupabaseService.insert("order_items", itemBody, token)
             }
 
             Result.success(result.id)
@@ -25,10 +50,13 @@ class OrderRepository {
         }
     }
 
+    private fun decodeOrders(list: List<JsonObject>): List<Order> =
+        list.map { json.decodeFromString(Order.serializer(), it.toString()) }
+            .sortedByDescending { it.createdAt }
+
     suspend fun getCustomerOrders(customerId: String): Result<List<Order>> {
         return try {
-            val list = SupabaseService.select("orders", params = mapOf("customer_id" to customerId))
-            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
+            Result.success(decodeOrders(SupabaseService.select("orders", token(), mapOf("customer_id" to customerId))))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -36,8 +64,7 @@ class OrderRepository {
 
     suspend fun getSellerOrders(sellerId: String): Result<List<Order>> {
         return try {
-            val list = SupabaseService.select("orders", params = mapOf("seller_id" to sellerId))
-            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
+            Result.success(decodeOrders(SupabaseService.select("orders", token(), mapOf("seller_id" to sellerId))))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -45,8 +72,7 @@ class OrderRepository {
 
     suspend fun getDeliveryOrders(deliveryId: String): Result<List<Order>> {
         return try {
-            val list = SupabaseService.select("orders", params = mapOf("delivery_id" to deliveryId))
-            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
+            Result.success(decodeOrders(SupabaseService.select("orders", token(), mapOf("delivery_id" to deliveryId))))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -54,8 +80,7 @@ class OrderRepository {
 
     suspend fun getAllOrders(): Result<List<Order>> {
         return try {
-            val list = SupabaseService.selectAll("orders")
-            Result.success(list.map { json.decodeFromString(Order.serializer(), it.toString()) }.sortedByDescending { it.createdAt })
+            Result.success(decodeOrders(SupabaseService.selectAll("orders", token())))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -63,7 +88,7 @@ class OrderRepository {
 
     suspend fun getOrder(orderId: String): Result<Order?> {
         return try {
-            val list = SupabaseService.select("orders", params = mapOf("id" to orderId))
+            val list = SupabaseService.select("orders", token(), mapOf("id" to orderId))
             val order = list.firstOrNull()?.let { json.decodeFromString(Order.serializer(), it.toString()) }
             Result.success(order)
         } catch (e: Exception) {
@@ -73,7 +98,10 @@ class OrderRepository {
 
     suspend fun updateOrderStatus(orderId: String, status: String): Result<Unit> {
         return try {
-            SupabaseService.update("orders", orderId, """{"status":"$status"}""")
+            // Built as JSON rather than interpolated into a string literal, so a value
+            // containing a quote cannot break out and corrupt the request body.
+            val body = buildJsonObject { put("status", status) }.toString()
+            SupabaseService.update("orders", orderId, body, token())
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -82,7 +110,11 @@ class OrderRepository {
 
     suspend fun assignDelivery(orderId: String, deliveryId: String): Result<Unit> {
         return try {
-            SupabaseService.update("orders", orderId, """{"delivery_id":"$deliveryId","status":"out_for_delivery"}""")
+            val body = buildJsonObject {
+                put("delivery_id", deliveryId)
+                put("status", "out_for_delivery")
+            }.toString()
+            SupabaseService.update("orders", orderId, body, token())
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -91,7 +123,7 @@ class OrderRepository {
 
     suspend fun getOrderItems(orderId: String): Result<List<OrderItem>> {
         return try {
-            val list = SupabaseService.select("order_items", params = mapOf("order_id" to orderId))
+            val list = SupabaseService.select("order_items", token(), mapOf("order_id" to orderId))
             Result.success(list.map { json.decodeFromString(OrderItem.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
