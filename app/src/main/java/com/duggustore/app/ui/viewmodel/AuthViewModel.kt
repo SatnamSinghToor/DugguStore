@@ -196,6 +196,28 @@ class AuthViewModel : ViewModel() {
     /** Called when the activity receives the password-reset deep link. */
     fun onAuthDeepLink(link: AuthDeepLink) {
         when (link) {
+            is AuthDeepLink.SignedIn -> {
+                _state.value = _state.value.copy(isLoading = true, isRestoringSession = false, error = null)
+                viewModelScope.launch {
+                    repository.completeSignInFromLink(link.accessToken, link.refreshToken)
+                        .onSuccess { profile ->
+                            _state.value = _state.value.copy(
+                                isLoading = false,
+                                isLoggedIn = profile != null,
+                                user = profile,
+                                requiresEmailVerification = false,
+                                pendingVerificationEmail = "",
+                                successMessage = "Email verified!"
+                            )
+                        }
+                        .onFailure { e ->
+                            _state.value = _state.value.copy(
+                                isLoading = false,
+                                error = e.message ?: "Could not finish signing in from that link"
+                            )
+                        }
+                }
+            }
             is AuthDeepLink.Recovery -> {
                 repository.beginPasswordRecovery(link.accessToken, link.refreshToken)
                 _state.value = _state.value.copy(

@@ -288,6 +288,44 @@ class AuthRepository {
         )
     }
 
+    /**
+     * Completes sign-in from a confirmation link. The redirect already carries a full
+     * session, so the profile is fetched with it and the user goes straight in.
+     */
+    suspend fun completeSignInFromLink(accessToken: String, refreshToken: String): Result<UserProfile?> {
+        return try {
+            val user = SupabaseService.getUser(accessToken)
+            val userId = extractUserId(user)
+                ?: return Result.failure(Exception("That link did not identify an account."))
+            val email = str(user["email"]).orEmpty()
+
+            SessionManager.saveSession(accessToken, refreshToken, userId, email)
+
+            val metadata = extractUserMetadata(user)
+            val fallback = UserProfile(
+                id = userId,
+                fullName = metadataString(metadata, "full_name", ""),
+                phone = metadataString(metadata, "phone", ""),
+                role = metadataString(metadata, "role", "customer")
+            )
+            Result.success(resolveProfile(userId, accessToken, fallback))
+        } catch (e: Exception) {
+            val code = (e as? SupabaseException)?.errorCode ?: ""
+            val msg = e.message ?: ""
+            Result.failure(
+                Exception(
+                    when {
+                        code == "not_configured" || code == "network_error" -> msg
+                        msg.contains("expired", ignoreCase = true) ->
+                            "That link has expired. Sign in, or request a new email."
+                        msg.isBlank() -> "Could not finish signing in from that link."
+                        else -> msg
+                    }
+                )
+            )
+        }
+    }
+
     /** Sets a new password using the recovery session, then loads the profile. */
     suspend fun updatePassword(newPassword: String): Result<UserProfile?> {
         return try {

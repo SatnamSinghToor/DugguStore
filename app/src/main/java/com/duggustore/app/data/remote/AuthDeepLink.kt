@@ -14,7 +14,12 @@ const val AUTH_REDIRECT_URL = "duggustore://auth-callback"
  * parsed as well — reading only the query would always come up empty.
  */
 sealed interface AuthDeepLink {
+    /** A signup/magic-link confirmation: the user is simply signed in. */
+    data class SignedIn(val accessToken: String, val refreshToken: String) : AuthDeepLink
+
+    /** A password reset: the session only exists so a new password can be set. */
     data class Recovery(val accessToken: String, val refreshToken: String) : AuthDeepLink
+
     data class Failed(val message: String) : AuthDeepLink
 }
 
@@ -36,10 +41,17 @@ object AuthDeepLinkParser {
         val accessToken = params["access_token"]
         val refreshToken = params["refresh_token"].orEmpty()
 
-        return when {
-            accessToken.isNullOrBlank() ->
-                AuthDeepLink.Failed("That link is missing its sign-in token. Request a new email.")
-            else -> AuthDeepLink.Recovery(accessToken, refreshToken)
+        if (accessToken.isNullOrBlank()) {
+            return AuthDeepLink.Failed("That link is missing its sign-in token. Request a new email.")
+        }
+
+        // `type` distinguishes the two links that land here. Treating a signup
+        // confirmation as a recovery would put the user on "set a new password"
+        // when all they did was confirm their address.
+        return if (params["type"].equals("recovery", ignoreCase = true)) {
+            AuthDeepLink.Recovery(accessToken, refreshToken)
+        } else {
+            AuthDeepLink.SignedIn(accessToken, refreshToken)
         }
     }
 
