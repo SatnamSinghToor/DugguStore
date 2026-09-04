@@ -142,6 +142,13 @@ private fun MapPickerDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
+                            // A Dialog is its own window, and how much (if any)
+                            // status-bar inset it reports back can differ from
+                            // the main activity's — leaving the bar's height to
+                            // padding alone let it come out too short on some
+                            // devices, clipping the title against the map below
+                            // instead of leaving room for it.
+                            .heightIn(min = 56.dp)
                             .padding(horizontal = 8.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
