@@ -2,6 +2,7 @@ package com.duggustore.app.ui.navigation
 
 import androidx.compose.animation.*
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.tween
@@ -39,8 +40,11 @@ import com.duggustore.app.R
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Review
 import com.duggustore.app.data.model.UserRole
+import com.duggustore.app.data.model.VerificationStatus
 import com.duggustore.app.data.model.toNotification
+import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.repository.ReviewRepository
+import com.duggustore.app.ui.components.OnboardingStatusScreen
 import com.duggustore.app.ui.screens.auth.ForgotPasswordScreen
 import com.duggustore.app.ui.screens.auth.LoginScreen
 import com.duggustore.app.ui.screens.auth.RegisterScreen
@@ -51,7 +55,9 @@ import com.duggustore.app.ui.screens.customer.*
 import com.duggustore.app.ui.screens.seller.AddEditProductScreen
 import com.duggustore.app.ui.screens.seller.SellerDashboard
 import com.duggustore.app.ui.screens.seller.SellerIssuesScreen
+import com.duggustore.app.ui.screens.seller.SellerOnboardingScreen
 import com.duggustore.app.ui.screens.delivery.DeliveryDashboard
+import com.duggustore.app.ui.screens.delivery.DeliveryOnboardingScreen
 import com.duggustore.app.ui.screens.delivery.RouteMapScreen
 import com.duggustore.app.ui.screens.admin.AdminDashboard
 import com.duggustore.app.ui.viewmodel.*
@@ -109,7 +115,9 @@ fun AppNavGraph(
     sellerViewModel: SellerViewModel = viewModel(),
     deliveryViewModel: DeliveryViewModel = viewModel(),
     adminViewModel: AdminViewModel = viewModel(),
-    addressViewModel: AddressViewModel = viewModel()
+    addressViewModel: AddressViewModel = viewModel(),
+    sellerOnboardingViewModel: SellerOnboardingViewModel = viewModel(),
+    deliveryOnboardingViewModel: DeliveryOnboardingViewModel = viewModel()
 ) {
     val authState by authViewModel.state.collectAsState()
     val homeState by homeViewModel.state.collectAsState()
@@ -120,6 +128,8 @@ fun AppNavGraph(
     val deliveryState by deliveryViewModel.state.collectAsState()
     val adminState by adminViewModel.state.collectAsState()
     val addressState by addressViewModel.state.collectAsState()
+    val sellerOnboardingState by sellerOnboardingViewModel.state.collectAsState()
+    val deliveryOnboardingState by deliveryOnboardingViewModel.state.collectAsState()
 
     // Hold on the splash until the stored session has been checked, otherwise the app
     // shows the login screen for a moment and then jumps to a dashboard.
@@ -625,94 +635,182 @@ fun AppNavGraph(
         }
 
         composable(Screen.SellerDashboard.route) {
-            SellerDashboard(
-                selectedTab = dashboardTab,
-                products = sellerState.products,
-                orders = sellerState.orders,
-                totalRevenue = sellerState.totalRevenue,
-                totalOrders = sellerState.totalOrders,
-                onAddProduct = { navController.navigate(Screen.SellerProductForm.createRoute()) },
-                onEditProduct = { navController.navigate(Screen.SellerProductForm.createRoute(it)) },
-                onDeleteProduct = { sellerViewModel.deleteProduct(it, authState.user?.id ?: "") },
-                onUpdateOrderStatus = { orderId, status ->
-                    sellerViewModel.updateOrderStatus(orderId, status, authState.user?.id ?: "")
-                },
-                orderItemsByOrderId = orderState.orderItemsByOrderId,
-                onExpandOrderItems = { orderViewModel.loadOrderItems(it) },
-                hasStoreLocation = authState.user?.storeLatitude != null,
-                onSaveStoreLocation = { address, lat, lng ->
-                    authViewModel.updateStoreLocation(address, lat, lng)
-                },
-                openIssuesCount = orderState.issuesForReview.count { it.status == "open" },
-                onIssuesClick = { navController.navigate(Screen.SellerIssues.route) },
-                onSignOut = {
-                    authViewModel.signOut()
-                    navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
-                }
-            )
             LaunchedEffect(authState.user) {
-                authState.user?.let { sellerViewModel.loadSellerData(it.id) }
-                orderViewModel.loadIssuesForReview()
+                authState.user?.let { sellerOnboardingViewModel.load(it.id) }
+            }
+
+            val seller = sellerOnboardingState.seller
+            val sellerStatus = seller?.verificationStatus() ?: VerificationStatus.PENDING_VERIFICATION
+            val onOnboardingSignOut: () -> Unit = {
+                authViewModel.signOut()
+                navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
+            }
+
+            when {
+                !sellerOnboardingState.hasLoaded -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                sellerStatus == VerificationStatus.APPROVED -> {
+                    SellerDashboard(
+                        selectedTab = dashboardTab,
+                        products = sellerState.products,
+                        orders = sellerState.orders,
+                        totalRevenue = sellerState.totalRevenue,
+                        totalOrders = sellerState.totalOrders,
+                        onAddProduct = { navController.navigate(Screen.SellerProductForm.createRoute()) },
+                        onEditProduct = { navController.navigate(Screen.SellerProductForm.createRoute(it)) },
+                        onDeleteProduct = { sellerViewModel.deleteProduct(it, authState.user?.id ?: "") },
+                        onUpdateOrderStatus = { orderId, status ->
+                            sellerViewModel.updateOrderStatus(orderId, status, authState.user?.id ?: "")
+                        },
+                        orderItemsByOrderId = orderState.orderItemsByOrderId,
+                        onExpandOrderItems = { orderViewModel.loadOrderItems(it) },
+                        hasStoreLocation = authState.user?.storeLatitude != null,
+                        onSaveStoreLocation = { address, lat, lng ->
+                            authViewModel.updateStoreLocation(address, lat, lng)
+                        },
+                        openIssuesCount = orderState.issuesForReview.count { it.status == "open" },
+                        onIssuesClick = { navController.navigate(Screen.SellerIssues.route) },
+                        onSignOut = onOnboardingSignOut
+                    )
+                    LaunchedEffect(authState.user) {
+                        authState.user?.let { sellerViewModel.loadSellerData(it.id) }
+                        orderViewModel.loadIssuesForReview()
+                    }
+                }
+                sellerStatus == VerificationStatus.UNDER_REVIEW || sellerStatus == VerificationStatus.SUSPENDED -> {
+                    OnboardingStatusScreen(
+                        status = sellerStatus,
+                        rejectionReason = seller?.rejectionReason,
+                        onSignOut = onOnboardingSignOut
+                    )
+                }
+                else -> {
+                    SellerOnboardingScreen(
+                        userId = authState.user?.id ?: "",
+                        prefillEmail = SessionManager.getEmail().orEmpty(),
+                        prefillPhone = authState.user?.phone.orEmpty(),
+                        existing = seller,
+                        documents = sellerOnboardingState.documents,
+                        isSaving = sellerOnboardingState.isSaving,
+                        isSubmitting = sellerOnboardingState.isSubmitting,
+                        uploadingDocType = sellerOnboardingState.uploadingDocType,
+                        error = sellerOnboardingState.error,
+                        onUploadDocument = { docType, bytes, contentType ->
+                            authState.user?.let { sellerOnboardingViewModel.uploadDocument(it.id, docType, bytes, contentType) }
+                        },
+                        onSave = { sellerOnboardingViewModel.save(it) },
+                        onSubmit = { authState.user?.let { sellerOnboardingViewModel.submit(it.id) } },
+                        onClearError = { sellerOnboardingViewModel.clearError() },
+                        onSignOut = onOnboardingSignOut
+                    )
+                }
             }
         }
 
         composable(Screen.DeliveryDashboard.route) {
-            DeliveryDashboard(
-                selectedTab = dashboardTab,
-                availableOrders = deliveryState.availableOrders,
-                activeOrders = deliveryState.activeOrders,
-                completedOrders = deliveryState.completedOrders,
-                totalEarnings = deliveryState.totalEarnings,
-                totalDeliveries = deliveryState.totalDeliveries,
-                onMarkDelivered = { deliveryViewModel.markDelivered(it, authState.user?.id ?: "") },
-                onClaimOrder = { orderId ->
-                    deliveryViewModel.claimOrder(orderId, authState.user?.id ?: "")
-                },
-                claimError = deliveryState.claimError,
-                onDismissClaimError = { deliveryViewModel.clearClaimError() },
-                onNavigateToPickup = { navController.navigate(Screen.RiderRouteMap.createRoute(it.id, "pickup")) },
-                onNavigateToDrop = { navController.navigate(Screen.RiderRouteMap.createRoute(it.id, "drop")) },
-                onSignOut = {
-                    authViewModel.signOut()
-                    navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
-                },
-                sharingLocation = deliveryState.sharingLocation,
-                sharingError = deliveryState.sharingError,
-                onSharingChange = { deliveryViewModel.setSharingLocation(it) },
-                orderItemsByOrderId = orderState.orderItemsByOrderId,
-                onExpandOrderItems = { orderViewModel.loadOrderItems(it) },
-                isOnline = authState.user?.isOnline ?: false,
-                onToggleOnline = { authViewModel.setOnline(it) }
-            )
-
-            // Runs only while the dashboard is on screen and the rider has the
-            // switch on; leaving the screen removes the location listener.
-            RiderLocationPublisher(
-                enabled = deliveryState.sharingLocation,
-                onFix = { location ->
-                    authState.user?.let { user ->
-                        deliveryViewModel.publishLocation(
-                            deliveryId = user.id,
-                            latitude = location.latitude,
-                            longitude = location.longitude
-                        )
-                    }
-                }
-            )
-
             LaunchedEffect(authState.user) {
-                authState.user?.let { deliveryViewModel.loadDeliveryData(it.id) }
+                authState.user?.let { deliveryOnboardingViewModel.load(it.id) }
             }
 
-            // Polled only while the Available tab is actually showing and the
-            // rider is online, same pattern as the customer's rider-position
-            // poll: other riders can claim a pool order at any time, so a
-            // one-time load would go stale.
-            LaunchedEffect(dashboardTab, authState.user?.isOnline) {
-                if (dashboardTab != 0 || authState.user?.isOnline != true) return@LaunchedEffect
-                while (true) {
-                    deliveryViewModel.loadAvailableOrders()
-                    delay(15_000L)
+            val partner = deliveryOnboardingState.partner
+            val partnerStatus = partner?.verificationStatus() ?: VerificationStatus.PENDING_VERIFICATION
+            val onOnboardingSignOut: () -> Unit = {
+                authViewModel.signOut()
+                navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
+            }
+
+            when {
+                !deliveryOnboardingState.hasLoaded -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                partnerStatus == VerificationStatus.APPROVED -> {
+                    DeliveryDashboard(
+                        selectedTab = dashboardTab,
+                        availableOrders = deliveryState.availableOrders,
+                        activeOrders = deliveryState.activeOrders,
+                        completedOrders = deliveryState.completedOrders,
+                        totalEarnings = deliveryState.totalEarnings,
+                        totalDeliveries = deliveryState.totalDeliveries,
+                        onMarkDelivered = { deliveryViewModel.markDelivered(it, authState.user?.id ?: "") },
+                        onClaimOrder = { orderId ->
+                            deliveryViewModel.claimOrder(orderId, authState.user?.id ?: "")
+                        },
+                        claimError = deliveryState.claimError,
+                        onDismissClaimError = { deliveryViewModel.clearClaimError() },
+                        onNavigateToPickup = { navController.navigate(Screen.RiderRouteMap.createRoute(it.id, "pickup")) },
+                        onNavigateToDrop = { navController.navigate(Screen.RiderRouteMap.createRoute(it.id, "drop")) },
+                        onSignOut = onOnboardingSignOut,
+                        sharingLocation = deliveryState.sharingLocation,
+                        sharingError = deliveryState.sharingError,
+                        onSharingChange = { deliveryViewModel.setSharingLocation(it) },
+                        orderItemsByOrderId = orderState.orderItemsByOrderId,
+                        onExpandOrderItems = { orderViewModel.loadOrderItems(it) },
+                        isOnline = authState.user?.isOnline ?: false,
+                        onToggleOnline = { authViewModel.setOnline(it) }
+                    )
+
+                    // Runs only while the dashboard is on screen and the rider has the
+                    // switch on; leaving the screen removes the location listener.
+                    RiderLocationPublisher(
+                        enabled = deliveryState.sharingLocation,
+                        onFix = { location ->
+                            authState.user?.let { user ->
+                                deliveryViewModel.publishLocation(
+                                    deliveryId = user.id,
+                                    latitude = location.latitude,
+                                    longitude = location.longitude
+                                )
+                            }
+                        }
+                    )
+
+                    LaunchedEffect(authState.user) {
+                        authState.user?.let { deliveryViewModel.loadDeliveryData(it.id) }
+                    }
+
+                    // Polled only while the Available tab is actually showing and the
+                    // rider is online, same pattern as the customer's rider-position
+                    // poll: other riders can claim a pool order at any time, so a
+                    // one-time load would go stale.
+                    LaunchedEffect(dashboardTab, authState.user?.isOnline) {
+                        if (dashboardTab != 0 || authState.user?.isOnline != true) return@LaunchedEffect
+                        while (true) {
+                            deliveryViewModel.loadAvailableOrders()
+                            delay(15_000L)
+                        }
+                    }
+                }
+                partnerStatus == VerificationStatus.UNDER_REVIEW || partnerStatus == VerificationStatus.SUSPENDED -> {
+                    OnboardingStatusScreen(
+                        status = partnerStatus,
+                        rejectionReason = partner?.rejectionReason,
+                        onSignOut = onOnboardingSignOut
+                    )
+                }
+                else -> {
+                    DeliveryOnboardingScreen(
+                        userId = authState.user?.id ?: "",
+                        prefillEmail = SessionManager.getEmail().orEmpty(),
+                        prefillPhone = authState.user?.phone.orEmpty(),
+                        existing = partner,
+                        documents = deliveryOnboardingState.documents,
+                        isSaving = deliveryOnboardingState.isSaving,
+                        isSubmitting = deliveryOnboardingState.isSubmitting,
+                        uploadingDocType = deliveryOnboardingState.uploadingDocType,
+                        error = deliveryOnboardingState.error,
+                        onUploadDocument = { docType, bytes, contentType ->
+                            authState.user?.let { deliveryOnboardingViewModel.uploadDocument(it.id, docType, bytes, contentType) }
+                        },
+                        onSave = { deliveryOnboardingViewModel.save(it) },
+                        onSubmit = { authState.user?.let { deliveryOnboardingViewModel.submit(it.id) } },
+                        onClearError = { deliveryOnboardingViewModel.clearError() },
+                        onSignOut = onOnboardingSignOut
+                    )
                 }
             }
         }
