@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.screens.customer
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,12 +12,15 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,6 +32,7 @@ import com.duggustore.app.ui.theme.*
 @Composable
 fun WalletScreen(
     transactions: List<WalletTransaction>,
+    referralCode: String = "",
     onBack: () -> Unit
 ) {
     val balance = transactions.walletBalance()
@@ -66,6 +71,10 @@ fun WalletScreen(
             }
         }
 
+        if (referralCode.isNotBlank()) {
+            ReferralCard(referralCode)
+        }
+
         if (transactions.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -87,6 +96,39 @@ fun WalletScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(transactions, key = { it.id }) { txn -> WalletTransactionRow(txn) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReferralCard(referralCode: String) {
+    val context = LocalContext.current
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = OrangeSurface
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.CardGiftcard, null, tint = OrangeDark, modifier = Modifier.size(26.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Refer & earn ₹50", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text("Your code: $referralCode", fontSize = 13.sp, color = TextSecondary)
+            }
+            IconButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(
+                            Intent.EXTRA_TEXT,
+                            "Use my Duggu Store referral code $referralCode and we both get ₹50 wallet credit!"
+                        )
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Share referral code"))
+                }
+            ) {
+                Icon(Icons.Default.Share, contentDescription = "Share", tint = OrangeDark)
             }
         }
     }

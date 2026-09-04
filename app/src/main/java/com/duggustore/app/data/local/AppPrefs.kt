@@ -16,6 +16,12 @@ object AppPrefs {
     // single-line search field it comes from can never produce a newline.
     private const val RECENT_SEARCH_SEPARATOR = "\n"
     private const val MAX_RECENT_SEARCHES = 8
+    private const val KEY_REORDER_REMINDERS = "reorder_reminders"
+    // "orderId|dueAtEpochMillis" pairs, one per line — there's no server-side
+    // scheduler, so due reminders are just checked against the clock whenever
+    // the orders list is opened rather than firing a background notification.
+    private const val REMINDER_ENTRY_SEPARATOR = "\n"
+    private const val REMINDER_FIELD_SEPARATOR = "|"
 
     private lateinit var prefs: SharedPreferences
 
@@ -65,5 +71,45 @@ object AppPrefs {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
             .remove(KEY_RECENT_SEARCHES)
             .apply()
+    }
+
+    private fun reminderMap(context: Context): Map<String, Long> =
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_REORDER_REMINDERS, null)
+            ?.split(REMINDER_ENTRY_SEPARATOR)
+            ?.mapNotNull { entry ->
+                val parts = entry.split(REMINDER_FIELD_SEPARATOR)
+                val dueAt = parts.getOrNull(1)?.toLongOrNull()
+                if (parts.size == 2 && dueAt != null) parts[0] to dueAt else null
+            }
+            ?.toMap()
+            ?: emptyMap()
+
+    private fun saveReminderMap(context: Context, map: Map<String, Long>) {
+        val serialized = map.entries.joinToString(REMINDER_ENTRY_SEPARATOR) { (orderId, dueAt) ->
+            "$orderId$REMINDER_FIELD_SEPARATOR$dueAt"
+        }
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_REORDER_REMINDERS, serialized)
+            .apply()
+    }
+
+    /** Schedules a "time to reorder?" nudge for [orderId], [days] from now. */
+    fun setReorderReminder(context: Context, orderId: String, days: Int) {
+        val dueAt = System.currentTimeMillis() + days * 24L * 60 * 60 * 1000
+        saveReminderMap(context, reminderMap(context) + (orderId to dueAt))
+    }
+
+    fun hasReorderReminder(context: Context, orderId: String): Boolean =
+        reminderMap(context).containsKey(orderId)
+
+    /** Order ids whose reminder time has passed — surfaced as a nudge next time the orders list opens. */
+    fun dueReorderReminders(context: Context): List<String> {
+        val now = System.currentTimeMillis()
+        return reminderMap(context).filterValues { it <= now }.keys.toList()
+    }
+
+    fun clearReorderReminder(context: Context, orderId: String) {
+        saveReminderMap(context, reminderMap(context) - orderId)
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.ReportProblem
@@ -50,7 +51,8 @@ private val ISSUE_REASONS = listOf("Missing item", "Damaged item", "Wrong item",
 fun OrderListScreen(
     orders: List<Order>,
     onOrderClick: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    dueReminderOrderIds: Set<String> = emptySet()
 ) {
     Column(
         modifier = Modifier
@@ -62,6 +64,31 @@ fun OrderListScreen(
             caption = if (orders.size == 1) "1 order" else "${orders.size} orders",
             onBack = onBack
         )
+
+        val dueOrder = orders.firstOrNull { it.id in dueReminderOrderIds }
+        if (dueOrder != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .clickable { onOrderClick(dueOrder.id) },
+                shape = RoundedCornerShape(14.dp),
+                color = TealSurface
+            ) {
+                Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.NotificationsActive, null, tint = Teal, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = "Running low? Reorder from #${dueOrder.id.takeLast(8).uppercase()}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(Icons.Default.ChevronRight, null, tint = Teal)
+                }
+            }
+        }
 
         if (orders.isEmpty()) {
             Column(
@@ -176,7 +203,9 @@ fun OrderTrackingDetailScreen(
     onSubmitReview: (productId: String, rating: Int, comment: String) -> Unit = { _, _, _ -> },
     onReorder: () -> Unit = {},
     myIssues: List<OrderIssue> = emptyList(),
-    onReportIssue: (reason: String, description: String) -> Unit = { _, _ -> }
+    onReportIssue: (reason: String, description: String) -> Unit = { _, _ -> },
+    hasReorderReminder: Boolean = false,
+    onSetReorderReminder: () -> Unit = {}
 ) {
     val cancelled = order.status == OrderStatus.CANCELLED.value
     var showReportDialog by remember { mutableStateOf(false) }
@@ -305,6 +334,22 @@ fun OrderTrackingDetailScreen(
                         Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("Reorder these items", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                }
+                if (order.status == OrderStatus.DELIVERED.value) {
+                    item {
+                        if (hasReorderReminder) {
+                            IssueStatusNotice(
+                                text = "We'll remind you to reorder this in about a week",
+                                color = Teal
+                            )
+                        } else {
+                            TextButton(onClick = onSetReorderReminder, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(16.dp), tint = Teal)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Remind me to reorder in a week", color = Teal, fontSize = 13.sp)
+                            }
+                        }
                     }
                 }
             }

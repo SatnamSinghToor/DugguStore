@@ -61,10 +61,10 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String, fullName: String, phone: String, role: String) {
+    fun signUp(email: String, password: String, fullName: String, phone: String, role: String, referralCode: String = "") {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            val result = repository.signUp(email, password, fullName, phone, role)
+            val result = repository.signUp(email, password, fullName, phone, role, referralCode)
             result.onSuccess { signUpResult ->
                 if (signUpResult.requiresVerification) {
                     _state.value = _state.value.copy(

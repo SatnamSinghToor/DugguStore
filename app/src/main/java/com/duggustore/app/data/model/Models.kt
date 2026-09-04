@@ -69,6 +69,8 @@ data class UserProfile(
     // Only meaningful for role == "delivery" — whether this rider wants new
     // pool orders to reach them right now.
     @SerialName("is_online") val isOnline: Boolean = false,
+    @SerialName("referral_code") val referralCode: String = "",
+    @SerialName("referred_by") val referredBy: String? = null,
     @SerialName("created_at") val createdAt: String = ""
 ) {
     fun userRole(): UserRole = UserRole.fromString(role)

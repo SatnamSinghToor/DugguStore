@@ -18,7 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.duggustore.app.data.local.AppPrefs
 import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.delay
 import com.duggustore.app.platform.RiderLocationPublisher
@@ -260,8 +262,8 @@ fun AppNavGraph(
                 isLoading = authState.isLoading,
                 error = authState.error,
                 successMessage = authState.successMessage,
-                onRegister = { email, pass, name, phone, role ->
-                    authViewModel.signUp(email, pass, name, phone, role)
+                onRegister = { email, pass, name, phone, role, referralCode ->
+                    authViewModel.signUp(email, pass, name, phone, role, referralCode)
                 },
                 onClearError = { authViewModel.clearError() },
                 onClearSuccess = { authViewModel.clearSuccess() }
@@ -438,12 +440,16 @@ fun AppNavGraph(
         }
 
         composable(Screen.CustomerOrders.route) {
+            val remindersContext = LocalContext.current
             OrderListScreen(
                 orders = orderState.customerOrders,
                 onOrderClick = { orderId ->
                     navController.navigate(Screen.CustomerOrderTracking.createRoute(orderId))
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                dueReminderOrderIds = remember(orderState.customerOrders) {
+                    AppPrefs.dueReorderReminders(remindersContext).toSet()
+                }
             )
 
             LaunchedEffect(Unit) {
@@ -468,6 +474,10 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
             val order = orderState.customerOrders.find { it.id == orderId }
+            val reminderContext = LocalContext.current
+            var hasReorderReminder by remember(orderId) {
+                mutableStateOf(AppPrefs.hasReorderReminder(reminderContext, orderId))
+            }
 
             order?.let {
                 val riderPosition = rememberRiderPosition(
@@ -498,6 +508,11 @@ fun AppNavGraph(
                         authState.user?.let { user ->
                             orderViewModel.reportIssue(orderId, null, user.id, reason, description)
                         }
+                    },
+                    hasReorderReminder = hasReorderReminder,
+                    onSetReorderReminder = {
+                        AppPrefs.setReorderReminder(reminderContext, orderId, days = 7)
+                        hasReorderReminder = true
                     }
                 )
 
@@ -588,6 +603,7 @@ fun AppNavGraph(
         composable(Screen.CustomerWallet.route) {
             WalletScreen(
                 transactions = orderState.walletTransactions,
+                referralCode = authState.user?.referralCode ?: "",
                 onBack = { navController.popBackStack() }
             )
             LaunchedEffect(Unit) {

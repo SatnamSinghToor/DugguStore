@@ -92,13 +92,24 @@ class AuthRepository {
         }
     }
 
-    suspend fun signUp(email: String, password: String, fullName: String, phone: String, role: String): Result<SignUpResult> {
+    suspend fun signUp(
+        email: String,
+        password: String,
+        fullName: String,
+        phone: String,
+        role: String,
+        referralCode: String = ""
+    ): Result<SignUpResult> {
         val cleanEmail = normalizeEmail(email)
         return try {
             val resp = SupabaseService.signUp(cleanEmail, password, buildJsonObject {
                 put("full_name", fullName)
                 put("phone", phone)
                 put("role", role)
+                // Carried in the signup metadata rather than applied here so it
+                // survives the gap when email confirmation is required — it's
+                // read back and applied in verifyEmailCode once a session exists.
+                put("referral_code", referralCode)
             })
 
             val token = extractToken(resp)
@@ -115,6 +126,7 @@ class AuthRepository {
                 ?: return Result.failure(Exception("Signup succeeded but no user ID was returned."))
 
             SessionManager.saveSession(token, extractRefreshToken(resp), userId, cleanEmail)
+            applyReferralIfPresent(userId, token, referralCode)
 
             val profile = resolveProfile(
                 userId,
@@ -124,6 +136,25 @@ class AuthRepository {
             Result.success(SignUpResult(profile = profile))
         } catch (e: Exception) {
             Result.failure(Exception(signUpErrorMessage(e)))
+        }
+    }
+
+    /**
+     * A bad, expired, or already-used code should never block account
+     * creation, so this swallows its own failures rather than surfacing
+     * them — apply_referral() is itself a no-op for an unknown code or a
+     * user who already redeemed one.
+     */
+    private suspend fun applyReferralIfPresent(userId: String, token: String, referralCode: String) {
+        val code = referralCode.trim()
+        if (code.isBlank()) return
+        try {
+            val body = buildJsonObject {
+                put("p_new_user_id", userId)
+                put("p_referral_code", code)
+            }.toString()
+            SupabaseService.rpc("apply_referral", body, token)
+        } catch (_: Exception) {
         }
     }
 
@@ -208,6 +239,7 @@ class AuthRepository {
             SessionManager.saveSession(token, extractRefreshToken(resp), userId, cleanEmail)
 
             val metadata = extractUserMetadata(resp)
+            applyReferralIfPresent(userId, token, metadataString(metadata, "referral_code", ""))
             val fallback = UserProfile(
                 id = userId,
                 fullName = metadataString(metadata, "full_name", ""),

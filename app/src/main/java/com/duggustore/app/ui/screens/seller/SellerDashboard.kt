@@ -146,6 +146,7 @@ fun SellerDashboard(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item { WeeklyRevenueCard(orders = orders) }
+                        item { PayoutSummaryCard(orders = orders) }
                         items(orders, key = { it.id }) { order ->
                             OrderManagementCard(
                                 order = order,
@@ -309,6 +310,60 @@ private fun WeeklyRevenueCard(orders: List<Order>) {
                 }
             }
         }
+    }
+}
+
+/**
+ * A flat platform commission — there's no per-seller rate stored anywhere,
+ * so this is the same illustrative figure quoted to every seller rather
+ * than a real settlement ledger (no payout table exists yet either).
+ */
+private const val PLATFORM_COMMISSION_RATE = 0.10
+
+/** What the seller is owed once the platform's cut and the rider's delivery fee are set aside. */
+@Composable
+private fun PayoutSummaryCard(orders: List<Order>) {
+    val delivered = remember(orders) { orders.filter { it.status == OrderStatus.DELIVERED.value } }
+    val grossSales = delivered.sumOf { it.totalAmount - it.deliveryFee }
+    val commission = grossSales * PLATFORM_COMMISSION_RATE
+    val netPayout = grossSales - commission
+
+    DashboardPanel {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Payout summary", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "From ${delivered.size} delivered order${if (delivered.size == 1) "" else "s"}",
+                fontSize = 11.sp,
+                color = TextLight
+            )
+            Spacer(Modifier.height(12.dp))
+            PayoutRow("Gross sales", grossSales)
+            PayoutRow("Platform fee (${(PLATFORM_COMMISSION_RATE * 100).toInt()}%)", -commission, color = Coral)
+            Divider(Modifier.padding(vertical = 8.dp), color = BorderGray)
+            PayoutRow("You receive", netPayout, bold = true, color = Teal)
+        }
+    }
+}
+
+@Composable
+private fun PayoutRow(label: String, amount: Double, bold: Boolean = false, color: Color = TextPrimary) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            color = if (bold) TextPrimary else TextSecondary,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
+        )
+        Text(
+            text = if (amount < 0) "-₹${trimAmount(-amount)}" else "₹${trimAmount(amount)}",
+            fontSize = if (bold) 16.sp else 13.sp,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
+            color = color
+        )
     }
 }
 

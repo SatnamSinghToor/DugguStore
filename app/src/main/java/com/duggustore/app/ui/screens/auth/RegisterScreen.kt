@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -29,7 +30,7 @@ fun RegisterScreen(
     isLoading: Boolean = false,
     error: String? = null,
     successMessage: String? = null,
-    onRegister: (String, String, String, String, String) -> Unit,
+    onRegister: (String, String, String, String, String, String) -> Unit,
     onClearError: () -> Unit,
     onClearSuccess: () -> Unit
 ) {
@@ -38,6 +39,7 @@ fun RegisterScreen(
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var referralCode by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf("customer") }
     var localError by remember { mutableStateOf<String?>(null) }
 
@@ -149,6 +151,17 @@ fun RegisterScreen(
             isPassword = true
         )
 
+        Spacer(Modifier.height(16.dp))
+
+        AuthField(
+            value = referralCode,
+            onValueChange = { referralCode = it; localError = null; onClearError() },
+            label = "Referral code (optional)",
+            placeholder = "Got a code from a friend?",
+            leadingIcon = Icons.Default.CardGiftcard,
+            leadingIconTint = Violet
+        )
+
         Spacer(Modifier.height(24.dp))
 
         AuthPrimaryButton(
@@ -162,7 +175,7 @@ fun RegisterScreen(
                     phone.isBlank() -> localError = errNoPhone
                     password.length < 6 -> localError = errShortPassword
                     password != confirmPassword -> localError = errPasswordMatch
-                    else -> onRegister(email, password, fullName, phone, selectedRole)
+                    else -> onRegister(email, password, fullName, phone, selectedRole, referralCode)
                 }
             },
             isLoading = isLoading
