@@ -4,6 +4,9 @@ import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.remote.SupabaseService
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.util.Calendar
 
 /**
@@ -47,5 +50,53 @@ class OfferRepository {
         val stable = coupons.sortedBy { it.code }
         val shift = Calendar.getInstance().get(Calendar.DAY_OF_YEAR) % stable.size
         return stable.drop(shift) + stable.take(shift)
+    }
+
+    /** Admin-only in practice — RLS only lets an admin session see inactive coupons too. */
+    suspend fun getAllCoupons(): Result<List<Coupon>> {
+        return try {
+            val rows = SupabaseService.selectAll("coupons", token())
+            Result.success(rows.map { json.decodeFromJsonElement(Coupon.serializer(), it) })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun body(coupon: Coupon): JsonObject = buildJsonObject {
+        put("code", coupon.code)
+        put("title", coupon.title)
+        put("description", coupon.description)
+        put("discount_percent", coupon.discountPercent)
+        put("max_discount", coupon.maxDiscount)
+        put("min_order_value", coupon.minOrderValue)
+        put("expiry_label", coupon.expiryLabel)
+        put("is_active", coupon.isActive)
+    }
+
+    suspend fun createCoupon(coupon: Coupon): Result<Unit> {
+        return try {
+            SupabaseService.insert("coupons", body(coupon).toString(), token())
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateCoupon(coupon: Coupon): Result<Unit> {
+        return try {
+            SupabaseService.update("coupons", coupon.id, body(coupon).toString(), token())
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteCoupon(id: String): Result<Unit> {
+        return try {
+            SupabaseService.delete("coupons", id, token())
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

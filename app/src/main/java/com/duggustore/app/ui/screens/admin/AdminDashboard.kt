@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,14 +26,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.duggustore.app.data.model.Category
+import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.DeliveryPartner
 import com.duggustore.app.data.model.DeliveryPartnerDocument
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.OrderIssue
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Seller
 import com.duggustore.app.data.model.SellerDocument
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.ui.components.*
+import com.duggustore.app.ui.screens.seller.IssuesList
 import com.duggustore.app.ui.theme.*
 
 private val ROLES = listOf("customer", "seller", "delivery", "admin")
@@ -68,6 +73,20 @@ fun AdminDashboard(
     reviewingPartnerId: String?,
     partnerReviewError: String?,
     onClearPartnerReviewError: () -> Unit,
+    issues: List<OrderIssue>,
+    onResolveIssue: (issueId: String, approve: Boolean, refundAmount: Int) -> Unit,
+    categories: List<Category>,
+    coupons: List<Coupon>,
+    isSavingCatalog: Boolean,
+    catalogError: String?,
+    onClearCatalogError: () -> Unit,
+    onToggleProductActive: (Product) -> Unit,
+    onSaveCategory: (Category) -> Unit,
+    onToggleCategoryActive: (Category) -> Unit,
+    onDeleteCategory: (String) -> Unit,
+    onSaveCoupon: (Coupon) -> Unit,
+    onToggleCouponActive: (Coupon) -> Unit,
+    onDeleteCoupon: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
     Column(
@@ -91,8 +110,22 @@ fun AdminDashboard(
             when (selectedTab) {
                 0 -> OverviewTab(orders = orders, products = products)
                 1 -> UsersTab(users = users, onUpdateUserRole = onUpdateUserRole)
-                2 -> OrdersTab(orders = orders)
-                3 -> ProductsTab(products = products)
+                2 -> OrdersTab(orders = orders, issues = issues, onResolveIssue = onResolveIssue)
+                3 -> AdminCatalogScreen(
+                    products = products,
+                    categories = categories,
+                    coupons = coupons,
+                    isSaving = isSavingCatalog,
+                    catalogError = catalogError,
+                    onClearError = onClearCatalogError,
+                    onToggleProductActive = onToggleProductActive,
+                    onSaveCategory = onSaveCategory,
+                    onToggleCategoryActive = onToggleCategoryActive,
+                    onDeleteCategory = onDeleteCategory,
+                    onSaveCoupon = onSaveCoupon,
+                    onToggleCouponActive = onToggleCouponActive,
+                    onDeleteCoupon = onDeleteCoupon
+                )
                 else -> AdminApprovalsScreen(
                     sellers = allSellers,
                     sellerDocuments = sellerDocuments,
@@ -171,38 +204,61 @@ private fun UsersTab(users: List<UserProfile>, onUpdateUserRole: (String, String
 }
 
 @Composable
-private fun OrdersTab(orders: List<Order>) {
-    if (orders.isEmpty()) {
-        DashboardEmpty(
-            icon = Icons.Default.Receipt,
-            title = "No orders",
-            subtitle = "Orders placed in the store will appear here"
-        )
-        return
-    }
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        items(orders, key = { it.id }) { OrderRow(order = it, showDate = true) }
+private fun OrdersTab(
+    orders: List<Order>,
+    issues: List<OrderIssue>,
+    onResolveIssue: (issueId: String, approve: Boolean, refundAmount: Int) -> Unit
+) {
+    var showIssues by rememberSaveable { mutableStateOf(false) }
+    val openIssueCount = issues.count { it.status == "open" }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OrdersTabChip("All orders (${orders.size})", !showIssues) { showIssues = false }
+            OrdersTabChip(
+                if (openIssueCount > 0) "Issues ($openIssueCount)" else "Issues",
+                showIssues
+            ) { showIssues = true }
+        }
+
+        if (!showIssues) {
+            if (orders.isEmpty()) {
+                DashboardEmpty(
+                    icon = Icons.Default.Receipt,
+                    title = "No orders",
+                    subtitle = "Orders placed in the store will appear here"
+                )
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(orders, key = { it.id }) { OrderRow(order = it, showDate = true) }
+                }
+            }
+        } else {
+            IssuesList(issues = issues, onResolve = onResolveIssue, modifier = Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
-private fun ProductsTab(products: List<Product>) {
-    if (products.isEmpty()) {
-        DashboardEmpty(
-            icon = Icons.Default.ShoppingBag,
-            title = "No products",
-            subtitle = "Products added by sellers will appear here"
-        )
-        return
-    }
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+private fun OrdersTabChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) Teal else SurfaceMuted,
+        modifier = Modifier.clickable { onClick() }
     ) {
-        items(products, key = { it.id }) { ProductRow(product = it) }
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) Color.White else TextSecondary
+        )
     }
 }
 

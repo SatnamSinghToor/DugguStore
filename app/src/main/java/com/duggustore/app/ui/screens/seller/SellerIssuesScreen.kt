@@ -30,9 +30,6 @@ fun SellerIssuesScreen(
     onResolve: (issueId: String, approve: Boolean, refundAmount: Int) -> Unit,
     onBack: () -> Unit
 ) {
-    val open = issues.filter { it.status == "open" }
-    val past = issues.filter { it.status != "open" }
-
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         Surface(color = Teal) {
             Row(
@@ -49,45 +46,64 @@ fun SellerIssuesScreen(
             }
         }
 
-        if (issues.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(Icons.Default.ReportProblem, null, tint = TextLight, modifier = Modifier.size(56.dp))
-                Spacer(Modifier.height(12.dp))
-                Text("No issues reported", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                Text(
-                    "Customer complaints on your orders show up here",
-                    fontSize = 13.sp,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 40.dp, vertical = 4.dp)
-                )
+        IssuesList(issues = issues, onResolve = onResolve, modifier = Modifier.weight(1f))
+    }
+}
+
+/**
+ * The open/resolved issue list on its own, with no header — shared by
+ * [SellerIssuesScreen] (which adds its own back-button header) and the
+ * admin dashboard's Orders tab (which sits under the dashboard's header
+ * and a segmented all-orders/issues switch instead).
+ */
+@Composable
+fun IssuesList(
+    issues: List<OrderIssue>,
+    onResolve: (issueId: String, approve: Boolean, refundAmount: Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val open = issues.filter { it.status == "open" }
+    val past = issues.filter { it.status != "open" }
+
+    if (issues.isEmpty()) {
+        Column(
+            modifier = modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(Icons.Default.ReportProblem, null, tint = TextLight, modifier = Modifier.size(56.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("No issues reported", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text(
+                "Customer complaints on orders show up here",
+                fontSize = 13.sp,
+                color = TextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 40.dp, vertical = 4.dp)
+            )
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier,
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (open.isNotEmpty()) {
+                items(open, key = { it.id }) { issue ->
+                    OpenIssueCard(issue = issue, onResolve = onResolve)
+                }
             }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (open.isNotEmpty()) {
-                    items(open, key = { it.id }) { issue ->
-                        OpenIssueCard(issue = issue, onResolve = onResolve)
-                    }
+            if (past.isNotEmpty()) {
+                item {
+                    Text(
+                        "Resolved",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    )
                 }
-                if (past.isNotEmpty()) {
-                    item {
-                        Text(
-                            "Resolved",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                        )
-                    }
-                    items(past, key = { it.id }) { issue -> PastIssueCard(issue) }
-                }
+                items(past, key = { it.id }) { issue -> PastIssueCard(issue) }
             }
         }
     }

@@ -893,6 +893,22 @@ fun AppNavGraph(
                 reviewingPartnerId = deliveryOnboardingState.reviewingId,
                 partnerReviewError = deliveryOnboardingState.reviewError,
                 onClearPartnerReviewError = { deliveryOnboardingViewModel.clearReviewError() },
+                issues = orderState.issuesForReview,
+                onResolveIssue = { issueId, approve, refundAmount ->
+                    orderViewModel.resolveIssue(issueId, approve, refundAmount)
+                },
+                categories = adminState.categories,
+                coupons = adminState.coupons,
+                isSavingCatalog = adminState.isSavingCatalog,
+                catalogError = adminState.catalogError,
+                onClearCatalogError = { adminViewModel.clearCatalogError() },
+                onToggleProductActive = { adminViewModel.toggleProductActive(it) },
+                onSaveCategory = { adminViewModel.saveCategory(it) },
+                onToggleCategoryActive = { adminViewModel.toggleCategoryActive(it) },
+                onDeleteCategory = { adminViewModel.deleteCategory(it) },
+                onSaveCoupon = { adminViewModel.saveCoupon(it) },
+                onToggleCouponActive = { adminViewModel.toggleCouponActive(it) },
+                onDeleteCoupon = { adminViewModel.deleteCoupon(it) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
@@ -902,6 +918,7 @@ fun AppNavGraph(
                 adminViewModel.loadDashboard()
                 sellerOnboardingViewModel.loadAllForReview()
                 deliveryOnboardingViewModel.loadAllForReview()
+                orderViewModel.loadIssuesForReview()
             }
         }
 
