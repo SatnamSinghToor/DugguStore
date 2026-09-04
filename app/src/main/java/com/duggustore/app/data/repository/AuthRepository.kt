@@ -461,6 +461,18 @@ class AuthRepository {
         }
     }
 
+    /** A rider's own switch for whether they want new pool orders reaching them right now. */
+    suspend fun setOnlineStatus(userId: String, online: Boolean): Result<Unit> {
+        return try {
+            val token = SessionManager.getAccessToken()
+            val body = buildJsonObject { put("is_online", online) }.toString()
+            SupabaseService.update("profiles", userId, body, token)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getAllUsers(): Result<List<UserProfile>> {
         return try {
             val token = SessionManager.getAccessToken()

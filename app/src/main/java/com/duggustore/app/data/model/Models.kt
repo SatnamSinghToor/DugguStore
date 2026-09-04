@@ -66,6 +66,9 @@ data class UserProfile(
     @SerialName("store_address") val storeAddress: String? = null,
     @SerialName("store_latitude") val storeLatitude: Double? = null,
     @SerialName("store_longitude") val storeLongitude: Double? = null,
+    // Only meaningful for role == "delivery" — whether this rider wants new
+    // pool orders to reach them right now.
+    @SerialName("is_online") val isOnline: Boolean = false,
     @SerialName("created_at") val createdAt: String = ""
 ) {
     fun userRole(): UserRole = UserRole.fromString(role)

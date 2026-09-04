@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -56,7 +57,9 @@ fun DeliveryDashboard(
     sharingError: String? = null,
     onSharingChange: (Boolean) -> Unit = {},
     orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
-    onExpandOrderItems: (String) -> Unit = {}
+    onExpandOrderItems: (String) -> Unit = {},
+    isOnline: Boolean = false,
+    onToggleOnline: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -74,6 +77,8 @@ fun DeliveryDashboard(
             ),
             onSignOut = onSignOut
         )
+
+        OnlineStatusRow(online = isOnline, onChange = onToggleOnline)
 
         if (activeOrders.isNotEmpty() || sharingLocation) {
             LocationSharingRow(
@@ -102,7 +107,13 @@ fun DeliveryDashboard(
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> {
-                    if (availableOrders.isEmpty()) {
+                    if (!isOnline) {
+                        DashboardEmpty(
+                            icon = Icons.Default.LocationOff,
+                            title = "You're offline",
+                            subtitle = "Turn online above to start seeing orders ready for pickup"
+                        )
+                    } else if (availableOrders.isEmpty()) {
                         DashboardEmpty(
                             icon = Icons.Default.ShoppingBag,
                             title = "No orders waiting",
@@ -451,6 +462,52 @@ private fun InfoLine(
             IconButton(onClick = onCallClick, modifier = Modifier.size(28.dp)) {
                 Icon(Icons.Default.Call, "Call", tint = Teal, modifier = Modifier.size(16.dp))
             }
+        }
+    }
+}
+
+/**
+ * Whether this rider wants new pool orders reaching them at all — separate
+ * from location sharing, which only matters once they're already carrying
+ * one. Persisted on their profile, so it survives closing the app.
+ */
+@Composable
+private fun OnlineStatusRow(online: Boolean, onChange: (Boolean) -> Unit) {
+    Surface(color = if (online) TealSurface else SurfaceMuted) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.PowerSettingsNew,
+                contentDescription = null,
+                tint = if (online) TealDark else TextLight,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (online) "You're online" else "You're offline",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (online) TealDark else TextSecondary
+                )
+                Text(
+                    text = if (online) "New orders can reach you" else "Turn on to start getting orders",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+            Switch(
+                checked = online,
+                onCheckedChange = onChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Teal
+                )
+            )
         }
     }
 }

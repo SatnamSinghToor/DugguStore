@@ -94,10 +94,15 @@ fun SellerDashboard(
                         subtitle = "Add your first product to start selling"
                     )
                 } else {
+                    val lowStock = products.count { it.stock in 1..9 }
+                    val outOfStock = products.count { it.stock <= 0 }
                     LazyColumn(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        if (lowStock > 0 || outOfStock > 0) {
+                            item { LowStockBanner(lowStock = lowStock, outOfStock = outOfStock) }
+                        }
                         items(products, key = { it.id }) { product ->
                             ProductManagementCard(
                                 product = product,
@@ -136,6 +141,7 @@ fun SellerDashboard(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        item { WeeklyRevenueCard(orders = orders) }
                         items(orders, key = { it.id }) { order ->
                             OrderManagementCard(
                                 order = order,
@@ -233,6 +239,96 @@ private fun StockPill(stock: Int) {
             fontWeight = FontWeight.SemiBold,
             color = fg
         )
+    }
+}
+
+@Composable
+private fun LowStockBanner(lowStock: Int, outOfStock: Int) {
+    val message = buildList {
+        if (outOfStock > 0) add(if (outOfStock == 1) "1 product is out of stock" else "$outOfStock products are out of stock")
+        if (lowStock > 0) add(if (lowStock == 1) "1 running low" else "$lowStock running low")
+    }.joinToString(" · ")
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = OrangeSurface
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Inventory, null, tint = OrangeDark, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(message, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = OrangeDark)
+        }
+    }
+}
+
+/**
+ * The last 7 days' revenue as a simple bar per day — enough to see whether
+ * sales are trending up or down without needing a charting library for one
+ * small graph. Cancelled orders don't count as revenue; every other status
+ * already implies the seller was paid or will be.
+ */
+@Composable
+private fun WeeklyRevenueCard(orders: List<Order>) {
+    val days = remember(orders) { lastSevenDaysRevenue(orders) }
+    val maxRevenue = days.maxOf { it.second }.coerceAtLeast(1.0)
+
+    DashboardPanel {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Revenue, last 7 days",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().height(90.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                days.forEach { (label, revenue) ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .width(22.dp)
+                                .height((60 * (revenue / maxRevenue)).dp.coerceAtLeast(3.dp))
+                                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                .background(if (revenue > 0) Teal else BorderGray)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(label, fontSize = 10.sp, color = TextLight)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Oldest to newest, so the bars read left-to-right like a normal chart. */
+private fun lastSevenDaysRevenue(orders: List<Order>): List<Pair<String, Double>> {
+    val dayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    val calendar = java.util.Calendar.getInstance()
+    val today = calendar.get(java.util.Calendar.DAY_OF_YEAR)
+    val year = calendar.get(java.util.Calendar.YEAR)
+
+    val revenueByDate = orders
+        .filter { it.status != OrderStatus.CANCELLED.value }
+        .groupBy { it.createdAt.take(10) }
+        .mapValues { (_, group) -> group.sumOf { it.totalAmount } }
+
+    return (6 downTo 0).map { daysAgo ->
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.YEAR, year)
+            set(java.util.Calendar.DAY_OF_YEAR, today)
+            add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+        }
+        val dateKey = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(cal.time)
+        val weekday = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+        dayLabels[weekday] to (revenueByDate[dateKey] ?: 0.0)
     }
 }
 

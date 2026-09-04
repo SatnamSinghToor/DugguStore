@@ -621,7 +621,9 @@ fun AppNavGraph(
                 sharingError = deliveryState.sharingError,
                 onSharingChange = { deliveryViewModel.setSharingLocation(it) },
                 orderItemsByOrderId = orderState.orderItemsByOrderId,
-                onExpandOrderItems = { orderViewModel.loadOrderItems(it) }
+                onExpandOrderItems = { orderViewModel.loadOrderItems(it) },
+                isOnline = authState.user?.isOnline ?: false,
+                onToggleOnline = { authViewModel.setOnline(it) }
             )
 
             // Runs only while the dashboard is on screen and the rider has the
@@ -643,11 +645,12 @@ fun AppNavGraph(
                 authState.user?.let { deliveryViewModel.loadDeliveryData(it.id) }
             }
 
-            // Polled only while the Available tab is actually showing, same
-            // pattern as the customer's rider-position poll: other riders can
-            // claim a pool order at any time, so a one-time load would go stale.
-            LaunchedEffect(dashboardTab) {
-                if (dashboardTab != 0) return@LaunchedEffect
+            // Polled only while the Available tab is actually showing and the
+            // rider is online, same pattern as the customer's rider-position
+            // poll: other riders can claim a pool order at any time, so a
+            // one-time load would go stale.
+            LaunchedEffect(dashboardTab, authState.user?.isOnline) {
+                if (dashboardTab != 0 || authState.user?.isOnline != true) return@LaunchedEffect
                 while (true) {
                     deliveryViewModel.loadAvailableOrders()
                     delay(15_000L)

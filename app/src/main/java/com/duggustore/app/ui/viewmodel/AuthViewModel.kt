@@ -337,4 +337,18 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+
+    /** A rider going online or offline for new pool orders. */
+    fun setOnline(online: Boolean) {
+        val user = _state.value.user ?: return
+        viewModelScope.launch {
+            val result = repository.setOnlineStatus(user.id, online)
+            result.onSuccess {
+                _state.value = _state.value.copy(user = user.copy(isOnline = online))
+            }
+            result.onFailure {
+                _state.value = _state.value.copy(error = it.message)
+            }
+        }
+    }
 }
