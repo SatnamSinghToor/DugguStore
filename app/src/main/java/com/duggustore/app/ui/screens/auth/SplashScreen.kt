@@ -12,6 +12,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.R
@@ -56,11 +58,22 @@ fun SplashScreen() {
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .width(200.dp)
-                .aspectRatio(980f / 1023f)
+                .aspectRatio(289f / 321f)
                 .scale(scale)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // The logo is just the mark now — the name is set as text rather
+        // than baked into the image, same as AppLogo() on the auth screens.
+        Text(
+            text = stringResource(R.string.app_name),
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = TextPrimary
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = "Groceries delivered fast",

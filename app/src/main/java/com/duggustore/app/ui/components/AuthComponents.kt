@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -93,20 +94,31 @@ fun AuthScaffold(
 }
 
 /**
- * The app's mark — the Duggu Store logo, matching the launcher icon. Sign in
- * and sign up were the two screens with no branding on them at all once the
- * old teal header band was removed.
+ * The app's mark — the Duggu Store logo, matching the launcher icon — with
+ * the name set as real text underneath rather than baked into the image, so
+ * it stays crisp at any size and isn't stuck in whatever language the image
+ * itself was drawn in. Sign in and sign up were the two screens with no
+ * branding on them at all once the old teal header band was removed.
  */
 @Composable
 fun AppLogo(size: Int = 140) {
-    Image(
-        painter = painterResource(R.drawable.app_logo),
-        contentDescription = "Duggu Store",
-        contentScale = ContentScale.Fit,
-        modifier = Modifier
-            .width(size.dp)
-            .aspectRatio(980f / 1023f)
-    )
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Image(
+            painter = painterResource(R.drawable.app_logo),
+            contentDescription = "Duggu Store",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .width(size.dp)
+                .aspectRatio(289f / 321f)
+        )
+        Spacer(Modifier.height((size / 20).dp))
+        Text(
+            text = stringResource(R.string.app_name),
+            color = TextPrimary,
+            fontSize = (size / 5).sp,
+            fontWeight = FontWeight.ExtraBold
+        )
+    }
 }
 
 enum class AuthTab { LOG_IN, SIGN_UP }
