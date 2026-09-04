@@ -126,7 +126,12 @@ private fun OfferCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(188.dp)
+            // Matches StoreProductCard's own height: 130.dp image + the text/
+            // button area below it (name line, price row, spacer, Add to cart
+            // button, bottom padding) — so the offer rail and the product grid
+            // read as the same row height rather than the offers looking like
+            // an odd, shorter strip above taller cards.
+            .height(250.dp)
             .clip(RoundedCornerShape(20.dp))
             // A light wash of the card's colour rather than the colour itself:
             // the reference banner is a pale tint with dark type on it, and a
@@ -139,14 +144,14 @@ private fun OfferCard(
         Box(
             modifier = Modifier
                 .size(150.dp)
-                .offset(x = 250.dp, y = (-50).dp)
+                .offset(x = 250.dp, y = (-66).dp)
                 .clip(CircleShape)
                 .background(color.copy(alpha = 0.16f))
         )
         Box(
             modifier = Modifier
                 .size(110.dp)
-                .offset(x = 285.dp, y = 92.dp)
+                .offset(x = 285.dp, y = 122.dp)
                 .clip(CircleShape)
                 .background(color.copy(alpha = 0.12f))
         )
