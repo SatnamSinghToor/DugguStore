@@ -476,8 +476,11 @@ fun AppNavGraph(
                     onBack = { navController.popBackStack() },
                     tracking = orderState.tracking,
                     riderDistanceMetres = riderPosition.distanceMetres,
-                    riderFixAgeMinutes = riderPosition.ageMinutes
+                    riderFixAgeMinutes = riderPosition.ageMinutes,
+                    items = orderState.orderItemsByOrderId[orderId] ?: emptyList()
                 )
+
+                LaunchedEffect(orderId) { orderViewModel.loadOrderItems(orderId) }
 
                 // Polled only while this screen is on top and the order is
                 // actually on the road; the effect is cancelled when either
@@ -564,6 +567,8 @@ fun AppNavGraph(
                 onUpdateOrderStatus = { orderId, status ->
                     sellerViewModel.updateOrderStatus(orderId, status, authState.user?.id ?: "")
                 },
+                orderItemsByOrderId = orderState.orderItemsByOrderId,
+                onExpandOrderItems = { orderViewModel.loadOrderItems(it) },
                 hasStoreLocation = authState.user?.storeLatitude != null,
                 onSaveStoreLocation = { address, lat, lng ->
                     authViewModel.updateStoreLocation(address, lat, lng)
@@ -600,7 +605,9 @@ fun AppNavGraph(
                 },
                 sharingLocation = deliveryState.sharingLocation,
                 sharingError = deliveryState.sharingError,
-                onSharingChange = { deliveryViewModel.setSharingLocation(it) }
+                onSharingChange = { deliveryViewModel.setSharingLocation(it) },
+                orderItemsByOrderId = orderState.orderItemsByOrderId,
+                onExpandOrderItems = { orderViewModel.loadOrderItems(it) }
             )
 
             // Runs only while the dashboard is on screen and the rider has the

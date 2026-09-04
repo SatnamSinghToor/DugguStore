@@ -49,3 +49,17 @@ fun openNavigation(context: Context, addressText: String, latitude: Double?, lon
         // No navigation app at all on this device — nothing more to do.
     }
 }
+
+/**
+ * Opens the dialer with the number already typed in — ACTION_DIAL rather
+ * than ACTION_CALL, so this needs no CALL_PHONE permission and the person
+ * placing the call still has to tap the call button themselves.
+ */
+fun openDialer(context: Context, phone: String) {
+    if (phone.isBlank()) return
+    try {
+        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")))
+    } catch (e: ActivityNotFoundException) {
+        // No dialer app on this device — nothing more to do.
+    }
+}

@@ -3,6 +3,7 @@ package com.duggustore.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.repository.OrderRepository
 import com.duggustore.app.data.repository.TrackingRepository
@@ -20,7 +21,9 @@ data class OrderState(
     val deliveryOrders: List<Order> = emptyList(),
     val allOrders: List<Order> = emptyList(),
     val selectedOrder: Order? = null,
-    val error: String? = null
+    val error: String? = null,
+    /** Line items for whichever orders have had them fetched — on demand, not with every order list. */
+    val orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap()
 )
 
 class OrderViewModel : ViewModel() {
@@ -137,5 +140,22 @@ class OrderViewModel : ViewModel() {
 
     fun clearTracking() {
         _state.value = _state.value.copy(tracking = null)
+    }
+
+    /**
+     * Fetched per order rather than embedded in every list query — a
+     * seller or customer with dozens of orders would otherwise pull every
+     * line item and product row for all of them on every list refresh, for
+     * detail almost none of those rows are open at once.
+     */
+    fun loadOrderItems(orderId: String) {
+        if (_state.value.orderItemsByOrderId.containsKey(orderId)) return
+        viewModelScope.launch {
+            repository.getOrderItems(orderId).onSuccess { items ->
+                _state.value = _state.value.copy(
+                    orderItemsByOrderId = _state.value.orderItemsByOrderId + (orderId to items)
+                )
+            }
+        }
     }
 }

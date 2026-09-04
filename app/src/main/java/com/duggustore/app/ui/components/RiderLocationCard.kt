@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOn
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.DeliveryTracking
+import com.duggustore.app.platform.openDialer
 import com.duggustore.app.ui.theme.*
 
 /**
@@ -39,6 +41,7 @@ fun RiderLocationCard(
     /** Straight-line metres to the delivery address, when it could be resolved. */
     distanceMetres: Float?,
     ageMinutes: Long?,
+    riderPhone: String? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -86,34 +89,51 @@ fun RiderLocationCard(
                 }
             }
 
-            if (fix != null) {
+            val hasPhone = !riderPhone.isNullOrBlank()
+            if (fix != null || hasPhone) {
                 Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Teal)
-                        .clickable { openInMaps(context, fix) }
-                        .padding(vertical = 11.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "See on map",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (fix != null) {
+                        RiderActionButton(
+                            icon = Icons.Default.LocationOn,
+                            label = "See on map",
+                            modifier = Modifier.weight(1f),
+                            onClick = { openInMaps(context, fix) }
+                        )
+                    }
+                    if (hasPhone) {
+                        RiderActionButton(
+                            icon = Icons.Default.Call,
+                            label = "Call rider",
+                            modifier = Modifier.weight(1f),
+                            onClick = { openDialer(context, riderPhone!!) }
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RiderActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Teal)
+            .clickable(onClick = onClick)
+            .padding(vertical = 11.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
     }
 }
 

@@ -8,8 +8,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Receipt
@@ -25,11 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.platform.LocationState
+import com.duggustore.app.platform.openDialer
 import com.duggustore.app.platform.rememberDeviceLocation
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
@@ -46,6 +52,8 @@ fun SellerDashboard(
     onEditProduct: (String) -> Unit,
     onDeleteProduct: (String) -> Unit,
     onUpdateOrderStatus: (String, OrderStatus) -> Unit,
+    orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
+    onExpandOrderItems: (String) -> Unit = {},
     hasStoreLocation: Boolean = true,
     onSaveStoreLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
     onSignOut: () -> Unit
@@ -131,7 +139,9 @@ fun SellerDashboard(
                         items(orders, key = { it.id }) { order ->
                             OrderManagementCard(
                                 order = order,
-                                onUpdateStatus = { status -> onUpdateOrderStatus(order.id, status) }
+                                items = orderItemsByOrderId[order.id] ?: emptyList(),
+                                onUpdateStatus = { status -> onUpdateOrderStatus(order.id, status) },
+                                onExpandItems = { onExpandOrderItems(order.id) }
                             )
                         }
                     }
@@ -285,8 +295,13 @@ private fun StoreLocationBanner(onSave: (String, Double, Double) -> Unit) {
 @Composable
 fun OrderManagementCard(
     order: Order,
-    onUpdateStatus: (OrderStatus) -> Unit
+    items: List<OrderItem> = emptyList(),
+    onUpdateStatus: (OrderStatus) -> Unit,
+    onExpandItems: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+
     DashboardPanel {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -313,13 +328,76 @@ fun OrderManagementCard(
             )
 
             if (order.deliveryAddress.isNotBlank()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = order.deliveryAddress,
+                        modifier = Modifier.weight(1f),
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val phone = order.customer?.phone
+                    if (!phone.isNullOrBlank()) {
+                        IconButton(onClick = { openDialer(context, phone) }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Call, "Call customer", tint = Teal, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        expanded = !expanded
+                        if (expanded) onExpandItems()
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = order.deliveryAddress,
+                    text = if (expanded) "Hide items" else "View items",
                     fontSize = 12.sp,
-                    color = TextSecondary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    fontWeight = FontWeight.SemiBold,
+                    color = Teal
                 )
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = Teal,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            if (expanded) {
+                Spacer(Modifier.height(6.dp))
+                if (items.isEmpty()) {
+                    Text("Loading items…", fontSize = 12.sp, color = TextLight)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items.forEach { item ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "${item.product?.name ?: "Item"} ×${item.quantity}",
+                                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                    fontSize = 12.sp,
+                                    color = TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "₹${trimAmount(item.priceAtPurchase * item.quantity)}",
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Before this, only a pending order had actions, so an order the

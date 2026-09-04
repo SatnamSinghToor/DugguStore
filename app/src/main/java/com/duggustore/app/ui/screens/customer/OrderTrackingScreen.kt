@@ -24,8 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import com.duggustore.app.data.model.DeliveryTracking
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.ui.components.RiderLocationCard
 import com.duggustore.app.ui.components.StatusBadge
@@ -156,7 +158,8 @@ fun OrderTrackingDetailScreen(
     tracking: DeliveryTracking? = null,
     /** Straight-line metres from the rider to the delivery address. */
     riderDistanceMetres: Float? = null,
-    riderFixAgeMinutes: Long? = null
+    riderFixAgeMinutes: Long? = null,
+    items: List<OrderItem> = emptyList()
 ) {
     val cancelled = order.status == OrderStatus.CANCELLED.value
 
@@ -215,6 +218,51 @@ fun OrderTrackingDetailScreen(
                 }
             }
 
+            if (items.isNotEmpty()) {
+                item {
+                    Panel {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Items in this order",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            items.forEachIndexed { index, item ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = item.product?.name ?: "Item",
+                                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                        fontSize = 13.sp,
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "×${item.quantity}",
+                                        fontSize = 13.sp,
+                                        color = TextSecondary
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        text = "₹${trimAmount(item.priceAtPurchase * item.quantity)}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary
+                                    )
+                                }
+                                if (index != items.lastIndex) Spacer(Modifier.height(8.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
             // Only while it is actually on the road: before that there is no
             // rider, and afterwards where they are stopped being the customer's
             // business.
@@ -223,7 +271,8 @@ fun OrderTrackingDetailScreen(
                     RiderLocationCard(
                         tracking = tracking,
                         distanceMetres = riderDistanceMetres,
-                        ageMinutes = riderFixAgeMinutes
+                        ageMinutes = riderFixAgeMinutes,
+                        riderPhone = order.delivery?.phone
                     )
                 }
             }

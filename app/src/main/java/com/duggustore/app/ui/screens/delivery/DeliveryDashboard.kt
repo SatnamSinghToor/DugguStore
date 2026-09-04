@@ -1,12 +1,16 @@
 package com.duggustore.app.ui.screens.delivery
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
@@ -18,10 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
+import com.duggustore.app.platform.openDialer
 import com.duggustore.app.platform.openNavigation
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
@@ -47,7 +54,9 @@ fun DeliveryDashboard(
     onSignOut: () -> Unit,
     sharingLocation: Boolean = false,
     sharingError: String? = null,
-    onSharingChange: (Boolean) -> Unit = {}
+    onSharingChange: (Boolean) -> Unit = {},
+    orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
+    onExpandOrderItems: (String) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -107,8 +116,10 @@ fun DeliveryDashboard(
                             items(availableOrders, key = { it.id }) { order ->
                                 AvailableOrderCard(
                                     order = order,
+                                    items = orderItemsByOrderId[order.id] ?: emptyList(),
                                     onClaim = { onClaimOrder(order.id) },
-                                    onNavigateToPickup = { onNavigateToPickup(order) }
+                                    onNavigateToPickup = { onNavigateToPickup(order) },
+                                    onExpandItems = { onExpandOrderItems(order.id) }
                                 )
                             }
                         }
@@ -129,9 +140,11 @@ fun DeliveryDashboard(
                             items(activeOrders, key = { it.id }) { order ->
                                 DeliveryOrderCard(
                                     order = order,
+                                    items = orderItemsByOrderId[order.id] ?: emptyList(),
                                     onMarkDelivered = { onMarkDelivered(order.id) },
                                     onNavigateToPickup = { onNavigateToPickup(order) },
-                                    onNavigateToDrop = { onNavigateToDrop(order) }
+                                    onNavigateToDrop = { onNavigateToDrop(order) },
+                                    onExpandItems = { onExpandOrderItems(order.id) }
                                 )
                             }
                         }
@@ -164,11 +177,61 @@ fun DeliveryDashboard(
     }
 }
 
+/** Tap to fetch and reveal the order's line items — collapsed by default so a list of many orders stays scannable. */
+@Composable
+private fun OrderItemsSection(items: List<OrderItem>, onExpandItems: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    expanded = !expanded
+                    if (expanded) onExpandItems()
+                },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (expanded) "Hide items" else "View items",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Teal
+            )
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                tint = Teal,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        if (expanded) {
+            Spacer(Modifier.height(6.dp))
+            if (items.isEmpty()) {
+                Text("Loading items…", fontSize = 12.sp, color = TextLight)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items.forEach { item ->
+                        Text(
+                            text = "${item.product?.name ?: "Item"} ×${item.quantity}",
+                            fontSize = 12.sp,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun AvailableOrderCard(
     order: Order,
+    items: List<OrderItem> = emptyList(),
     onClaim: () -> Unit,
-    onNavigateToPickup: () -> Unit = {}
+    onNavigateToPickup: () -> Unit = {},
+    onExpandItems: () -> Unit = {}
 ) {
     val context = LocalContext.current
     DashboardPanel {
@@ -201,7 +264,9 @@ fun AvailableOrderCard(
                 icon = { Icon(Icons.Default.ShoppingBag, null, tint = Orange, modifier = Modifier.size(16.dp)) },
                 text = order.seller?.storeAddress?.takeIf { it.isNotBlank() }
                     ?: "Pickup address not set by seller",
-                color = TextSecondary
+                color = TextSecondary,
+                onCallClick = order.seller?.phone?.takeIf { it.isNotBlank() }
+                    ?.let { phone -> { openDialer(context, phone) } }
             )
 
             Spacer(Modifier.height(4.dp))
@@ -209,8 +274,13 @@ fun AvailableOrderCard(
             InfoLine(
                 icon = { Icon(Icons.Default.LocationOn, null, tint = Coral, modifier = Modifier.size(16.dp)) },
                 text = order.deliveryAddress.ifBlank { "No address on this order" },
-                color = TextSecondary
+                color = TextSecondary,
+                onCallClick = order.customer?.phone?.takeIf { it.isNotBlank() }
+                    ?.let { phone -> { openDialer(context, phone) } }
             )
+
+            Spacer(Modifier.height(8.dp))
+            OrderItemsSection(items = items, onExpandItems = onExpandItems)
 
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,10 +313,12 @@ fun AvailableOrderCard(
 @Composable
 fun DeliveryOrderCard(
     order: Order,
+    items: List<OrderItem> = emptyList(),
     onMarkDelivered: () -> Unit,
     isCompleted: Boolean = false,
     onNavigateToPickup: () -> Unit = {},
-    onNavigateToDrop: () -> Unit = {}
+    onNavigateToDrop: () -> Unit = {},
+    onExpandItems: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val active = !isCompleted && order.status != OrderStatus.DELIVERED.value
@@ -286,7 +358,9 @@ fun DeliveryOrderCard(
                     icon = { Icon(Icons.Default.ShoppingBag, null, tint = Orange, modifier = Modifier.size(16.dp)) },
                     text = order.seller?.storeAddress?.takeIf { it.isNotBlank() }
                         ?: "Pickup address not set by seller",
-                    color = TextSecondary
+                    color = TextSecondary,
+                    onCallClick = order.seller?.phone?.takeIf { it.isNotBlank() }
+                        ?.let { phone -> { openDialer(context, phone) } }
                 )
                 Spacer(Modifier.height(4.dp))
             }
@@ -294,7 +368,9 @@ fun DeliveryOrderCard(
             InfoLine(
                 icon = { Icon(Icons.Default.LocationOn, null, tint = Coral, modifier = Modifier.size(16.dp)) },
                 text = order.deliveryAddress.ifBlank { "No address on this order" },
-                color = TextSecondary
+                color = TextSecondary,
+                onCallClick = order.customer?.phone?.takeIf { it.isNotBlank() }
+                    ?.let { phone -> { openDialer(context, phone) } }
             )
 
             Spacer(Modifier.height(4.dp))
@@ -306,6 +382,9 @@ fun DeliveryOrderCard(
             )
 
             if (active) {
+                Spacer(Modifier.height(6.dp))
+                OrderItemsSection(items = items, onExpandItems = onExpandItems)
+
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DashboardAction(
@@ -354,12 +433,25 @@ fun DeliveryOrderCard(
 private fun InfoLine(
     icon: @Composable () -> Unit,
     text: String,
-    color: androidx.compose.ui.graphics.Color
+    color: androidx.compose.ui.graphics.Color,
+    onCallClick: (() -> Unit)? = null
 ) {
-    Row(verticalAlignment = Alignment.Top) {
-        Box(modifier = Modifier.padding(top = 2.dp)) { icon() }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.padding(top = 2.dp).align(Alignment.Top)) { icon() }
         Spacer(Modifier.width(6.dp))
-        Text(text = text, fontSize = 12.sp, color = color, maxLines = 2, lineHeight = 17.sp)
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f),
+            fontSize = 12.sp,
+            color = color,
+            maxLines = 2,
+            lineHeight = 17.sp
+        )
+        if (onCallClick != null) {
+            IconButton(onClick = onCallClick, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Default.Call, "Call", tint = Teal, modifier = Modifier.size(16.dp))
+            }
+        }
     }
 }
 

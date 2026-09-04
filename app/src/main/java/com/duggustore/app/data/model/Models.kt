@@ -135,9 +135,14 @@ data class Order(
     @SerialName("delivery_longitude") val deliveryLongitude: Double? = null,
     @SerialName("created_at") val createdAt: String = "",
     val items: List<OrderItem> = emptyList(),
-    // Embedded via a PostgREST select on the seller_id FK; only populated by
-    // the delivery-side order queries that ask for it.
-    val seller: SellerStore? = null
+    // Embedded via a PostgREST select on the matching FK; each is only
+    // populated by the order queries that actually ask for it — the seller's
+    // store for a rider's pickup, the customer's phone for a rider or
+    // seller to call, the rider's phone for a customer to call once one is
+    // assigned.
+    val seller: SellerStore? = null,
+    val customer: ContactInfo? = null,
+    val delivery: ContactInfo? = null
 ) {
     fun orderStatus(): OrderStatus = OrderStatus.fromString(status)
     fun hasDeliveryFix(): Boolean = deliveryLatitude != null && deliveryLongitude != null
@@ -146,12 +151,20 @@ data class Order(
 @Serializable
 data class SellerStore(
     @SerialName("full_name") val fullName: String = "",
+    val phone: String = "",
     @SerialName("store_address") val storeAddress: String? = null,
     @SerialName("store_latitude") val storeLatitude: Double? = null,
     @SerialName("store_longitude") val storeLongitude: Double? = null
 ) {
     fun hasFix(): Boolean = storeLatitude != null && storeLongitude != null
 }
+
+/** A person on the other end of an order worth calling — the customer, or the rider once one has claimed it. */
+@Serializable
+data class ContactInfo(
+    @SerialName("full_name") val fullName: String = "",
+    val phone: String = ""
+)
 
 @Serializable
 data class OrderItem(

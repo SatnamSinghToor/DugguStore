@@ -13,12 +13,21 @@ import kotlinx.serialization.json.put
 private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
 /**
- * Embeds the seller's store location on the order row via the seller_id FK,
- * so the rider's navigate-to-pickup button has somewhere to point without a
- * second round trip per order.
+ * Embeds the seller's store location and the customer's phone on the order
+ * row via their FKs, so a rider's navigate-to-pickup button and call-customer
+ * button both have somewhere to point without a second round trip per order.
  */
 private const val ORDER_WITH_SELLER_SELECT =
-    "*,seller:profiles!seller_id(full_name,store_address,store_latitude,store_longitude)"
+    "*,seller:profiles!seller_id(full_name,phone,store_address,store_latitude,store_longitude)," +
+        "customer:profiles!customer_id(full_name,phone)"
+
+/** Embeds the rider's phone once one has claimed the order, so the customer can call them. */
+private const val ORDER_WITH_DELIVERY_CONTACT_SELECT =
+    "*,delivery:profiles!delivery_id(full_name,phone)"
+
+/** Embeds the customer's phone, so the seller can call about an order without looking it up elsewhere. */
+private const val ORDER_WITH_CUSTOMER_CONTACT_SELECT =
+    "*,customer:profiles!customer_id(full_name,phone)"
 
 class OrderRepository {
 
@@ -67,7 +76,16 @@ class OrderRepository {
 
     suspend fun getCustomerOrders(customerId: String): Result<List<Order>> {
         return try {
-            Result.success(decodeOrders(SupabaseService.select("orders", token(), mapOf("customer_id" to customerId))))
+            Result.success(
+                decodeOrders(
+                    SupabaseService.select(
+                        "orders",
+                        token(),
+                        mapOf("customer_id" to customerId),
+                        select = ORDER_WITH_DELIVERY_CONTACT_SELECT
+                    )
+                )
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -75,7 +93,16 @@ class OrderRepository {
 
     suspend fun getSellerOrders(sellerId: String): Result<List<Order>> {
         return try {
-            Result.success(decodeOrders(SupabaseService.select("orders", token(), mapOf("seller_id" to sellerId))))
+            Result.success(
+                decodeOrders(
+                    SupabaseService.select(
+                        "orders",
+                        token(),
+                        mapOf("seller_id" to sellerId),
+                        select = ORDER_WITH_CUSTOMER_CONTACT_SELECT
+                    )
+                )
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -179,7 +206,12 @@ class OrderRepository {
 
     suspend fun getOrderItems(orderId: String): Result<List<OrderItem>> {
         return try {
-            val list = SupabaseService.select("order_items", token(), mapOf("order_id" to orderId))
+            val list = SupabaseService.select(
+                "order_items",
+                token(),
+                mapOf("order_id" to orderId),
+                select = "*,product:products(*)"
+            )
             Result.success(list.map { json.decodeFromString(OrderItem.serializer(), it.toString()) })
         } catch (e: Exception) {
             Result.failure(e)
