@@ -881,12 +881,18 @@ fun AppNavGraph(
                 loadingSellerDocsFor = sellerOnboardingState.loadingReviewDocsFor,
                 onLoadSellerDocuments = { sellerOnboardingViewModel.loadReviewDocuments(it) },
                 onReviewSeller = { sellerId, approve, reason -> sellerOnboardingViewModel.review(sellerId, approve, reason) },
+                reviewingSellerId = sellerOnboardingState.reviewingId,
+                sellerReviewError = sellerOnboardingState.reviewError,
+                onClearSellerReviewError = { sellerOnboardingViewModel.clearReviewError() },
                 allPartners = deliveryOnboardingState.allPartners,
                 partnerDocuments = deliveryOnboardingState.reviewDocuments,
                 partnerDocumentUrls = deliveryOnboardingState.reviewDocumentUrls,
                 loadingPartnerDocsFor = deliveryOnboardingState.loadingReviewDocsFor,
                 onLoadPartnerDocuments = { deliveryOnboardingViewModel.loadReviewDocuments(it) },
                 onReviewPartner = { partnerId, approve, reason -> deliveryOnboardingViewModel.review(partnerId, approve, reason) },
+                reviewingPartnerId = deliveryOnboardingState.reviewingId,
+                partnerReviewError = deliveryOnboardingState.reviewError,
+                onClearPartnerReviewError = { deliveryOnboardingViewModel.clearReviewError() },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }

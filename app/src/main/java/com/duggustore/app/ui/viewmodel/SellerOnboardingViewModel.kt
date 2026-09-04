@@ -25,7 +25,11 @@ data class SellerOnboardingState(
     val reviewDocuments: Map<String, List<SellerDocument>> = emptyMap(),
     /** Signed, directly-loadable URLs for review documents, keyed by document id. */
     val reviewDocumentUrls: Map<String, String> = emptyMap(),
-    val loadingReviewDocsFor: String? = null
+    val loadingReviewDocsFor: String? = null,
+    /** The seller id currently being approved/rejected — lets the queue show a spinner and block a second tap. */
+    val reviewingId: String? = null,
+    /** Separate from [error]: that one belongs to the signed-in seller's own form, this one to the admin's review action. */
+    val reviewError: String? = null
 )
 
 class SellerOnboardingViewModel : ViewModel() {
@@ -92,10 +96,16 @@ class SellerOnboardingViewModel : ViewModel() {
 
     fun review(sellerId: String, approve: Boolean, rejectionReason: String = "") {
         viewModelScope.launch {
-            repository.reviewSeller(sellerId, approve, rejectionReason).onSuccess {
-                loadAllForReview()
-            }
+            _state.value = _state.value.copy(reviewingId = sellerId, reviewError = null)
+            val result = repository.reviewSeller(sellerId, approve, rejectionReason)
+            result.onSuccess { loadAllForReview() }
+            result.onFailure { _state.value = _state.value.copy(reviewError = it.message ?: "Couldn't update this application") }
+            _state.value = _state.value.copy(reviewingId = null)
         }
+    }
+
+    fun clearReviewError() {
+        _state.value = _state.value.copy(reviewError = null)
     }
 
     /** Fetches one applicant's documents plus a signed URL for each, for the admin queue to display. */

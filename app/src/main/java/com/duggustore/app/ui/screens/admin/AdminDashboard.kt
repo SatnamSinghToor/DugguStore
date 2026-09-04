@@ -56,12 +56,18 @@ fun AdminDashboard(
     loadingSellerDocsFor: String?,
     onLoadSellerDocuments: (String) -> Unit,
     onReviewSeller: (String, Boolean, String) -> Unit,
+    reviewingSellerId: String?,
+    sellerReviewError: String?,
+    onClearSellerReviewError: () -> Unit,
     allPartners: List<DeliveryPartner>,
     partnerDocuments: Map<String, List<DeliveryPartnerDocument>>,
     partnerDocumentUrls: Map<String, String>,
     loadingPartnerDocsFor: String?,
     onLoadPartnerDocuments: (String) -> Unit,
     onReviewPartner: (String, Boolean, String) -> Unit,
+    reviewingPartnerId: String?,
+    partnerReviewError: String?,
+    onClearPartnerReviewError: () -> Unit,
     onSignOut: () -> Unit
 ) {
     Column(
@@ -94,12 +100,18 @@ fun AdminDashboard(
                     loadingSellerDocsFor = loadingSellerDocsFor,
                     onLoadSellerDocuments = onLoadSellerDocuments,
                     onReviewSeller = onReviewSeller,
+                    reviewingSellerId = reviewingSellerId,
+                    sellerReviewError = sellerReviewError,
+                    onClearSellerReviewError = onClearSellerReviewError,
                     partners = allPartners,
                     partnerDocuments = partnerDocuments,
                     partnerDocumentUrls = partnerDocumentUrls,
                     loadingPartnerDocsFor = loadingPartnerDocsFor,
                     onLoadPartnerDocuments = onLoadPartnerDocuments,
-                    onReviewPartner = onReviewPartner
+                    onReviewPartner = onReviewPartner,
+                    reviewingPartnerId = reviewingPartnerId,
+                    partnerReviewError = partnerReviewError,
+                    onClearPartnerReviewError = onClearPartnerReviewError
                 )
             }
         }

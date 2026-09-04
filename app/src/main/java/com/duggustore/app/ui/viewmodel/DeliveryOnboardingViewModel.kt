@@ -23,7 +23,11 @@ data class DeliveryOnboardingState(
     val reviewDocuments: Map<String, List<DeliveryPartnerDocument>> = emptyMap(),
     /** Signed, directly-loadable URLs for review documents, keyed by document id. */
     val reviewDocumentUrls: Map<String, String> = emptyMap(),
-    val loadingReviewDocsFor: String? = null
+    val loadingReviewDocsFor: String? = null,
+    /** The partner id currently being approved/rejected — lets the queue show a spinner and block a second tap. */
+    val reviewingId: String? = null,
+    /** Separate from [error]: that one belongs to the signed-in rider's own form, this one to the admin's review action. */
+    val reviewError: String? = null
 )
 
 class DeliveryOnboardingViewModel : ViewModel() {
@@ -90,10 +94,16 @@ class DeliveryOnboardingViewModel : ViewModel() {
 
     fun review(partnerId: String, approve: Boolean, rejectionReason: String = "") {
         viewModelScope.launch {
-            repository.reviewPartner(partnerId, approve, rejectionReason).onSuccess {
-                loadAllForReview()
-            }
+            _state.value = _state.value.copy(reviewingId = partnerId, reviewError = null)
+            val result = repository.reviewPartner(partnerId, approve, rejectionReason)
+            result.onSuccess { loadAllForReview() }
+            result.onFailure { _state.value = _state.value.copy(reviewError = it.message ?: "Couldn't update this application") }
+            _state.value = _state.value.copy(reviewingId = null)
         }
+    }
+
+    fun clearReviewError() {
+        _state.value = _state.value.copy(reviewError = null)
     }
 
     /** Fetches one applicant's documents plus a signed URL for each, for the admin queue to display. */

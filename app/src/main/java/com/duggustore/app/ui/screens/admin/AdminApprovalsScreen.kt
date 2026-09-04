@@ -47,12 +47,18 @@ fun AdminApprovalsScreen(
     loadingSellerDocsFor: String?,
     onLoadSellerDocuments: (sellerId: String) -> Unit,
     onReviewSeller: (sellerId: String, approve: Boolean, reason: String) -> Unit,
+    reviewingSellerId: String?,
+    sellerReviewError: String?,
+    onClearSellerReviewError: () -> Unit,
     partners: List<DeliveryPartner>,
     partnerDocuments: Map<String, List<DeliveryPartnerDocument>>,
     partnerDocumentUrls: Map<String, String>,
     loadingPartnerDocsFor: String?,
     onLoadPartnerDocuments: (partnerId: String) -> Unit,
-    onReviewPartner: (partnerId: String, approve: Boolean, reason: String) -> Unit
+    onReviewPartner: (partnerId: String, approve: Boolean, reason: String) -> Unit,
+    reviewingPartnerId: String?,
+    partnerReviewError: String?,
+    onClearPartnerReviewError: () -> Unit
 ) {
     var tab by rememberSaveable { mutableStateOf(0) }
     val pendingSellers = remember(sellers) { sellers.filter { it.verificationStatus() == VerificationStatus.UNDER_REVIEW } }
@@ -65,6 +71,32 @@ fun AdminApprovalsScreen(
         ) {
             ApprovalTabChip("Sellers (${pendingSellers.size})", tab == 0) { tab = 0 }
             ApprovalTabChip("Delivery (${pendingPartners.size})", tab == 1) { tab = 1 }
+        }
+
+        val reviewError = if (tab == 0) sellerReviewError else partnerReviewError
+        if (reviewError != null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = CoralSurface
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(reviewError, modifier = Modifier.weight(1f), color = CoralDark, fontSize = 13.sp)
+                    Text(
+                        "Dismiss",
+                        color = CoralDark,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .clickable { if (tab == 0) onClearSellerReviewError() else onClearPartnerReviewError() }
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
         }
 
         if (tab == 0) {
@@ -85,6 +117,7 @@ fun AdminApprovalsScreen(
                             documents = sellerDocuments[seller.id].orEmpty(),
                             documentUrls = sellerDocumentUrls,
                             isLoadingDocs = loadingSellerDocsFor == seller.id,
+                            isReviewing = reviewingSellerId == seller.id,
                             onExpand = { onLoadSellerDocuments(seller.id) },
                             onApprove = { onReviewSeller(seller.id, true, "") },
                             onReject = { reason -> onReviewSeller(seller.id, false, reason) }
@@ -110,6 +143,7 @@ fun AdminApprovalsScreen(
                             documents = partnerDocuments[partner.id].orEmpty(),
                             documentUrls = partnerDocumentUrls,
                             isLoadingDocs = loadingPartnerDocsFor == partner.id,
+                            isReviewing = reviewingPartnerId == partner.id,
                             onExpand = { onLoadPartnerDocuments(partner.id) },
                             onApprove = { onReviewPartner(partner.id, true, "") },
                             onReject = { reason -> onReviewPartner(partner.id, false, reason) }
@@ -127,6 +161,7 @@ private fun SellerApplicationCard(
     documents: List<SellerDocument>,
     documentUrls: Map<String, String>,
     isLoadingDocs: Boolean,
+    isReviewing: Boolean,
     onExpand: () -> Unit,
     onApprove: () -> Unit,
     onReject: (String) -> Unit
@@ -174,6 +209,7 @@ private fun SellerApplicationCard(
 
                 Spacer(Modifier.height(14.dp))
                 ApprovalActions(
+                    isBusy = isReviewing,
                     onApprove = onApprove,
                     onReject = { showRejectDialog = true }
                 )
@@ -195,6 +231,7 @@ private fun DeliveryApplicationCard(
     documents: List<DeliveryPartnerDocument>,
     documentUrls: Map<String, String>,
     isLoadingDocs: Boolean,
+    isReviewing: Boolean,
     onExpand: () -> Unit,
     onApprove: () -> Unit,
     onReject: (String) -> Unit
@@ -250,6 +287,7 @@ private fun DeliveryApplicationCard(
 
                 Spacer(Modifier.height(14.dp))
                 ApprovalActions(
+                    isBusy = isReviewing,
                     onApprove = onApprove,
                     onReject = { showRejectDialog = true }
                 )
@@ -318,10 +356,11 @@ private fun ReviewDocumentRow(label: String, url: String?) {
 }
 
 @Composable
-private fun ApprovalActions(onApprove: () -> Unit, onReject: () -> Unit) {
+private fun ApprovalActions(isBusy: Boolean, onApprove: () -> Unit, onReject: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(
             onClick = onReject,
+            enabled = !isBusy,
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = CoralDark)
@@ -330,11 +369,16 @@ private fun ApprovalActions(onApprove: () -> Unit, onReject: () -> Unit) {
         }
         Button(
             onClick = onApprove,
+            enabled = !isBusy,
             modifier = Modifier.weight(1f),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
         ) {
-            Text("Approve", color = Color.White)
+            if (isBusy) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+            } else {
+                Text("Approve", color = Color.White)
+            }
         }
     }
 }
