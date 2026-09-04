@@ -105,7 +105,7 @@ fun AppLogo(size: Int = 140) {
         contentScale = ContentScale.Fit,
         modifier = Modifier
             .width(size.dp)
-            .aspectRatio(985f / 1034f)
+            .aspectRatio(980f / 1023f)
     )
 }
 
