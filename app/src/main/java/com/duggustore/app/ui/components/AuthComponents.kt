@@ -1,6 +1,5 @@
 package com.duggustore.app.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,11 +31,9 @@ import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 /**
- * Shared frame for the auth screens: a centred title over a bordered card
- * holding the form, rather than the earlier full-width teal band — that band
- * pushed the whole form down a screen's worth before any field was visible.
- * This stays compact and leans on the app's own palette (teal border/accent
- * on a plain white ground) instead of a flat colour block.
+ * Shared frame for the auth screens: logo, centred title, then the form
+ * sitting directly on the page background — no card behind the fields,
+ * which just doubled up on the outlined fields' own borders.
  */
 @Composable
 fun AuthScaffold(
@@ -75,19 +72,10 @@ fun AuthScaffold(
 
         Spacer(Modifier.height(22.dp))
 
-        Surface(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = SurfaceMuted,
-            border = BorderStroke(1.dp, BorderGray)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 18.dp)
-                    .padding(top = 20.dp, bottom = 20.dp),
-                content = content
-            )
-        }
+            content = content
+        )
 
         Spacer(Modifier.height(20.dp))
         footer()
