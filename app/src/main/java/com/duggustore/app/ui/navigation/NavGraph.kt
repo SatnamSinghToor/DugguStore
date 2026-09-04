@@ -51,6 +51,7 @@ import com.duggustore.app.ui.screens.auth.RegisterScreen
 import com.duggustore.app.ui.screens.auth.ResetPasswordScreen
 import com.duggustore.app.ui.screens.auth.SplashScreen
 import com.duggustore.app.ui.screens.auth.VerifyEmailScreen
+import com.duggustore.app.ui.screens.auth.WelcomeScreen
 import com.duggustore.app.ui.screens.customer.*
 import com.duggustore.app.ui.screens.seller.AddEditProductScreen
 import com.duggustore.app.ui.screens.seller.SellerDashboard
@@ -64,6 +65,7 @@ import com.duggustore.app.ui.viewmodel.*
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
+    object Welcome : Screen("welcome")
     object Login : Screen("login")
     object ForgotPassword : Screen("forgot_password")
     object Register : Screen("register")
@@ -152,8 +154,15 @@ fun AppNavGraph(
         return
     }
 
+    // Only the very first launch opens on the intro slides; after that a
+    // signed-out app goes straight to the login form.
+    val context = LocalContext.current
+    val hasSeenWelcome = remember { AppPrefs.hasSeenWelcome(context) }
+
     val startDestination = remember(authState.isLoggedIn, authState.user) {
-        if (!authState.isLoggedIn) Screen.Login.route
+        if (!authState.isLoggedIn) {
+            if (hasSeenWelcome) Screen.Login.route else Screen.Welcome.route
+        }
         else {
             when (authState.user?.userRole()) {
                 UserRole.SELLER -> Screen.SellerDashboard.route
@@ -178,24 +187,23 @@ fun AppNavGraph(
         }
     }
 
-    // Navigate to role-based dashboard after successful login/signup
+    // Navigate to role-based dashboard after successful login/signup.
+    // popUpTo(0) rather than popUpTo(Login): signing up from the welcome
+    // slides never puts a login screen on the stack, and popping to a route
+    // that isn't there would leave the sign-up form sitting behind the
+    // dashboard for the back button to find.
     var hasNavigatedToDashboard by remember { mutableStateOf(false) }
     LaunchedEffect(authState.isLoggedIn, authState.user) {
         if (authState.isLoggedIn && authState.user != null && !hasNavigatedToDashboard) {
             hasNavigatedToDashboard = true
-            when (authState.user?.userRole()) {
-                UserRole.SELLER -> navController.navigate(Screen.SellerDashboard.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }
-                UserRole.DELIVERY -> navController.navigate(Screen.DeliveryDashboard.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }
-                UserRole.ADMIN -> navController.navigate(Screen.AdminDashboard.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }
-                else -> navController.navigate(Screen.CustomerHome.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }
+            val destination = when (authState.user?.userRole()) {
+                UserRole.SELLER -> Screen.SellerDashboard.route
+                UserRole.DELIVERY -> Screen.DeliveryDashboard.route
+                UserRole.ADMIN -> Screen.AdminDashboard.route
+                else -> Screen.CustomerHome.route
+            }
+            navController.navigate(destination) {
+                popUpTo(0) { inclusive = true }
             }
         }
         if (!authState.isLoggedIn) {
@@ -243,6 +251,21 @@ fun AppNavGraph(
         popEnterTransition = { fadeIn(tween(300)) },
         popExitTransition = { fadeOut(tween(300)) }
     ) {
+        composable(Screen.Welcome.route) {
+            // Marked seen on the way out of the slides, whichever exit is
+            // taken, so they never reappear on a later launch.
+            val leave: (String) -> Unit = { route ->
+                AppPrefs.setWelcomeSeen(context)
+                navController.navigate(route) {
+                    popUpTo(Screen.Welcome.route) { inclusive = true }
+                }
+            }
+            WelcomeScreen(
+                onFinish = { leave(Screen.Register.route) },
+                onLogIn = { leave(Screen.Login.route) }
+            )
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) },
@@ -263,7 +286,18 @@ fun AppNavGraph(
                 // already handled by the hasNavigatedToDashboard effect above,
                 // which watches authState.isLoggedIn/user app-wide — a second,
                 // screen-local success callback here never actually ran.
-                onNavigateToLogin = { navController.popBackStack() },
+                //
+                // Pops back to an existing login screen, and only navigates to
+                // one when there isn't a login underneath — coming here from the
+                // welcome slides, sign-up is the bottom of the stack, so a plain
+                // popBackStack() would empty it.
+                onNavigateToLogin = {
+                    if (!navController.popBackStack(Screen.Login.route, false)) {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Register.route) { inclusive = true }
+                        }
+                    }
+                },
                 isLoading = authState.isLoading,
                 error = authState.error,
                 successMessage = authState.successMessage,

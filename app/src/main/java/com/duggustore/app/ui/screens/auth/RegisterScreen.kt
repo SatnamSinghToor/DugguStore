@@ -25,9 +25,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,9 +47,11 @@ private const val STEP_REFERRAL = 5
 private const val STEP_COUNT = 6
 
 /**
- * One question per screen with a slim progress bar and Back/Next, the way
- * Facebook's own sign-up guides you through — rather than one long form
- * that dumps every field on the person at once.
+ * One question per screen, with a progress bar, a "Step 3 of 6" count and a
+ * back arrow that always goes somewhere — the way Facebook's sign-up guides
+ * you through, rather than one long form that dumps every field on the
+ * person at once. Each step says why it's asking, and validates as you type
+ * instead of failing at the end.
  */
 @Composable
 fun RegisterScreen(
@@ -70,10 +75,21 @@ fun RegisterScreen(
     var selectedRole by rememberSaveable { mutableStateOf("customer") }
     var localError by remember { mutableStateOf<String?>(null) }
 
+    val focusManager = LocalFocusManager.current
+
     val roles = listOf(
-        Triple("customer", stringResource(R.string.auth_role_shop), Icons.Default.ShoppingBag),
-        Triple("seller", stringResource(R.string.auth_role_sell), Icons.Default.Storefront),
-        Triple("delivery", stringResource(R.string.auth_role_deliver), Icons.Default.LocalShipping)
+        RoleChoice(
+            "customer", stringResource(R.string.auth_role_shop),
+            "Order groceries and essentials for delivery.", Icons.Default.ShoppingBag, Teal
+        ),
+        RoleChoice(
+            "seller", stringResource(R.string.auth_role_sell),
+            "List your store's products and take orders.", Icons.Default.Storefront, Orange
+        ),
+        RoleChoice(
+            "delivery", stringResource(R.string.auth_role_deliver),
+            "Pick up orders nearby and earn per delivery.", Icons.Default.LocalShipping, Violet
+        )
     )
 
     val shownError = localError ?: error
@@ -82,28 +98,45 @@ fun RegisterScreen(
     // composable scope and cannot call stringResource.
     val errNoName = stringResource(R.string.auth_err_name)
     val errNoEmail = stringResource(R.string.auth_err_email)
+    val errBadEmail = stringResource(R.string.auth_err_email_invalid)
     val errNoPhone = stringResource(R.string.auth_err_phone)
     val errShortPassword = stringResource(R.string.auth_err_password_short)
     val errPasswordMatch = stringResource(R.string.auth_err_password_match)
 
-    fun goNext() {
-        localError = when (step) {
-            STEP_NAME -> if (fullName.isBlank()) errNoName else null
-            STEP_EMAIL -> if (email.isBlank() || !email.contains("@")) errNoEmail else null
-            STEP_PHONE -> if (phone.isBlank()) errNoPhone else null
-            STEP_PASSWORD -> when {
-                password.length < 6 -> errShortPassword
-                password != confirmPassword -> errPasswordMatch
-                else -> null
-            }
+    val passwordLongEnough = password.length >= 6
+    val passwordsMatch = password.isNotBlank() && password == confirmPassword
+
+    // What the current step needs before Next means anything. Keeping this in
+    // one place is what lets the button below both disable itself and explain
+    // the problem, instead of silently doing nothing when tapped.
+    val stepProblem: String? = when (step) {
+        STEP_NAME -> if (fullName.isBlank()) errNoName else null
+        STEP_EMAIL -> when {
+            email.isBlank() -> errNoEmail
+            !email.contains("@") || !email.contains(".") -> errBadEmail
             else -> null
         }
-        if (localError != null) return
+        STEP_PHONE -> if (phone.filter { it.isDigit() }.length < 10) errNoPhone else null
+        STEP_PASSWORD -> when {
+            !passwordLongEnough -> errShortPassword
+            !passwordsMatch -> errPasswordMatch
+            else -> null
+        }
+        else -> null
+    }
+
+    fun goNext() {
+        if (stepProblem != null) {
+            localError = stepProblem
+            return
+        }
+        localError = null
         onClearError()
+        focusManager.clearFocus()
 
         if (step == STEP_REFERRAL) {
             onClearSuccess()
-            onRegister(email, password, fullName, phone, selectedRole, referralCode)
+            onRegister(email.trim(), password, fullName.trim(), phone.trim(), selectedRole, referralCode.trim())
         } else {
             movingForward = true
             step++
@@ -113,8 +146,13 @@ fun RegisterScreen(
     fun goBack() {
         localError = null
         onClearError()
-        movingForward = false
-        step--
+        focusManager.clearFocus()
+        if (step == STEP_NAME) {
+            onNavigateToLogin()
+        } else {
+            movingForward = false
+            step--
+        }
     }
 
     Column(
@@ -130,16 +168,17 @@ fun RegisterScreen(
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (step > STEP_NAME) {
-                IconButton(onClick = ::goBack) {
-                    Icon(Icons.Default.ArrowBack, "Back", tint = TextPrimary)
-                }
-            } else {
-                Spacer(Modifier.width(48.dp))
+            IconButton(onClick = ::goBack) {
+                Icon(Icons.Default.ArrowBack, stringResource(R.string.auth_back), tint = TextPrimary)
             }
-            Spacer(Modifier.width(4.dp))
             StepProgressBar(current = step, total = STEP_COUNT, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(52.dp))
+            Text(
+                text = stringResource(R.string.auth_step_of, step + 1, STEP_COUNT),
+                modifier = Modifier.padding(horizontal = 12.dp),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
         }
 
         Column(
@@ -148,13 +187,7 @@ fun RegisterScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
         ) {
-            if (step == STEP_NAME) {
-                Spacer(Modifier.height(4.dp))
-                AppLogo(size = 84)
-                Spacer(Modifier.height(20.dp))
-            } else {
-                Spacer(Modifier.height(20.dp))
-            }
+            Spacer(Modifier.height(16.dp))
 
             AnimatedContent(
                 targetState = step,
@@ -169,29 +202,120 @@ fun RegisterScreen(
             ) { s ->
                 Column {
                     when (s) {
-                        STEP_NAME -> StepName(fullName) { fullName = it; localError = null; onClearError() }
-                        STEP_EMAIL -> StepEmail(email) { email = it; localError = null; onClearError() }
-                        STEP_PHONE -> StepPhone(phone) { phone = it; localError = null; onClearError() }
-                        STEP_ROLE -> StepRole(roles, selectedRole) { selectedRole = it }
-                        STEP_PASSWORD -> StepPassword(
-                            password = password,
-                            confirmPassword = confirmPassword,
-                            onPasswordChange = { password = it; localError = null; onClearError() },
-                            onConfirmChange = { confirmPassword = it; localError = null }
-                        )
-                        else -> StepReferral(referralCode) { referralCode = it; localError = null; onClearError() }
+                        STEP_NAME -> {
+                            StepHeading("What's your name?", "This is the name sellers and riders will see on your orders.")
+                            AuthField(
+                                value = fullName,
+                                onValueChange = { fullName = it; localError = null; onClearError() },
+                                label = stringResource(R.string.auth_full_name),
+                                placeholder = stringResource(R.string.auth_full_name_hint),
+                                leadingIcon = Icons.Default.Person,
+                                leadingIconTint = Teal,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { goNext() }
+                            )
+                        }
+                        STEP_EMAIL -> {
+                            StepHeading("What's your email?", "You'll sign in with this, and we'll send order updates here.")
+                            AuthField(
+                                value = email,
+                                onValueChange = { email = it; localError = null; onClearError() },
+                                label = stringResource(R.string.auth_email),
+                                placeholder = stringResource(R.string.auth_email_hint),
+                                leadingIcon = Icons.Default.Email,
+                                leadingIconTint = Orange,
+                                keyboardType = KeyboardType.Email,
+                                helper = if (email.isNotBlank() && stepProblem == errBadEmail) errBadEmail else null,
+                                isError = email.isNotBlank() && stepProblem == errBadEmail,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { goNext() }
+                            )
+                        }
+                        STEP_PHONE -> {
+                            StepHeading("Your phone number", "A rider or the store calls this number if they can't find you.")
+                            AuthField(
+                                value = phone,
+                                onValueChange = { input ->
+                                    phone = input.filter { it.isDigit() }.take(10)
+                                    localError = null
+                                    onClearError()
+                                },
+                                label = stringResource(R.string.auth_phone),
+                                placeholder = stringResource(R.string.auth_phone_hint),
+                                leadingIcon = Icons.Default.Phone,
+                                leadingIconTint = Coral,
+                                keyboardType = KeyboardType.Phone,
+                                helper = if (phone.length < 10) "${phone.length} of 10 digits" else null,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { goNext() }
+                            )
+                        }
+                        STEP_ROLE -> {
+                            StepHeading("How will you use Duggu Store?", "Pick the one that fits — sellers and riders get a short verification after this.")
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                roles.forEach { choice ->
+                                    RoleCard(
+                                        choice = choice,
+                                        selected = choice.value == selectedRole,
+                                        onClick = { selectedRole = choice.value }
+                                    )
+                                }
+                            }
+                        }
+                        STEP_PASSWORD -> {
+                            StepHeading("Create a password", "You'll use this with your email every time you sign in.")
+                            AuthField(
+                                value = password,
+                                onValueChange = { password = it; localError = null; onClearError() },
+                                label = stringResource(R.string.auth_password),
+                                placeholder = stringResource(R.string.auth_password_min_hint),
+                                leadingIcon = Icons.Default.Lock,
+                                leadingIconTint = Teal,
+                                isPassword = true,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            AuthField(
+                                value = confirmPassword,
+                                onValueChange = { confirmPassword = it; localError = null },
+                                label = stringResource(R.string.auth_confirm_password),
+                                placeholder = stringResource(R.string.auth_confirm_password_hint),
+                                leadingIcon = Icons.Default.Lock,
+                                leadingIconTint = Orange,
+                                isPassword = true,
+                                imeAction = ImeAction.Done,
+                                onImeAction = { goNext() }
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            AuthRequirementRow("At least 6 characters", passwordLongEnough)
+                            AuthRequirementRow("Both passwords match", passwordsMatch)
+                        }
+                        else -> {
+                            StepHeading("Got a referral code?", "Optional. If a friend shared their code, you both get wallet credit.")
+                            AuthField(
+                                value = referralCode,
+                                onValueChange = { referralCode = it.uppercase(); localError = null; onClearError() },
+                                label = "Referral code",
+                                placeholder = "Leave empty if you don't have one",
+                                leadingIcon = Icons.Default.CardGiftcard,
+                                leadingIconTint = Violet,
+                                imeAction = ImeAction.Done,
+                                onImeAction = { goNext() }
+                            )
+                            Spacer(Modifier.height(18.dp))
+                            SummaryCard(
+                                name = fullName,
+                                email = email,
+                                phone = phone,
+                                role = roles.firstOrNull { it.value == selectedRole }?.label.orEmpty()
+                            )
+                        }
                     }
                 }
             }
 
-            if (step == STEP_NAME) {
-                Spacer(Modifier.height(24.dp))
-                AuthTabSwitcher(
-                    selected = AuthTab.SIGN_UP,
-                    onSelect = { tab -> if (tab == AuthTab.LOG_IN) onNavigateToLogin() }
-                )
-            }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
         Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
@@ -204,13 +328,31 @@ fun RegisterScreen(
                 Spacer(Modifier.height(12.dp))
             }
             AuthPrimaryButton(
-                text = if (step == STEP_REFERRAL) stringResource(R.string.auth_create_title) else "Next",
+                text = if (step == STEP_REFERRAL) stringResource(R.string.auth_create_title)
+                       else stringResource(R.string.auth_next),
                 onClick = ::goNext,
-                isLoading = isLoading && step == STEP_REFERRAL
+                isLoading = isLoading && step == STEP_REFERRAL,
+                enabled = stepProblem == null
             )
+            if (step == STEP_NAME) {
+                Spacer(Modifier.height(12.dp))
+                AuthSwitchRow(
+                    question = stringResource(R.string.auth_have_account),
+                    action = stringResource(R.string.auth_sign_in),
+                    onClick = onNavigateToLogin
+                )
+            }
         }
     }
 }
+
+private data class RoleChoice(
+    val value: String,
+    val label: String,
+    val blurb: String,
+    val icon: ImageVector,
+    val accent: androidx.compose.ui.graphics.Color
+)
 
 @Composable
 private fun StepProgressBar(current: Int, total: Int, modifier: Modifier = Modifier) {
@@ -231,137 +373,75 @@ private fun StepProgressBar(current: Int, total: Int, modifier: Modifier = Modif
 private fun StepHeading(title: String, subtitle: String) {
     Text(title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
     Spacer(Modifier.height(6.dp))
-    Text(subtitle, fontSize = 14.sp, color = TextSecondary)
-    Spacer(Modifier.height(24.dp))
+    Text(subtitle, fontSize = 14.sp, color = TextSecondary, lineHeight = 20.sp)
+    Spacer(Modifier.height(22.dp))
 }
 
 @Composable
-private fun StepName(value: String, onValueChange: (String) -> Unit) {
-    StepHeading("What's your name?", "This is how you'll appear on Duggu Store.")
-    AuthField(
-        value = value,
-        onValueChange = onValueChange,
-        label = stringResource(R.string.auth_full_name),
-        placeholder = stringResource(R.string.auth_full_name_hint),
-        leadingIcon = Icons.Default.Person,
-        leadingIconTint = Teal
-    )
-}
-
-@Composable
-private fun StepEmail(value: String, onValueChange: (String) -> Unit) {
-    StepHeading("What's your email?", "We'll use this to sign you in.")
-    AuthField(
-        value = value,
-        onValueChange = onValueChange,
-        label = stringResource(R.string.auth_email),
-        placeholder = stringResource(R.string.auth_email_hint),
-        leadingIcon = Icons.Default.Email,
-        leadingIconTint = Orange,
-        keyboardType = KeyboardType.Email
-    )
-}
-
-@Composable
-private fun StepPhone(value: String, onValueChange: (String) -> Unit) {
-    StepHeading("Your phone number?", "So a rider or seller can reach you about an order.")
-    AuthField(
-        value = value,
-        onValueChange = onValueChange,
-        label = stringResource(R.string.auth_phone),
-        placeholder = stringResource(R.string.auth_phone_hint),
-        leadingIcon = Icons.Default.Phone,
-        leadingIconTint = Coral,
-        keyboardType = KeyboardType.Phone
-    )
-}
-
-@Composable
-private fun StepRole(
-    roles: List<Triple<String, String, ImageVector>>,
-    selected: String,
-    onSelect: (String) -> Unit
-) {
-    StepHeading("What brings you here?", "You can change this later from your account.")
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        roles.forEach { (value, label, icon) ->
-            RoleCard(icon = icon, label = label, selected = value == selected, onClick = { onSelect(value) })
-        }
-    }
-}
-
-@Composable
-private fun RoleCard(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+private fun RoleCard(choice: RoleChoice, selected: Boolean, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        color = if (selected) TealSurface else SurfaceWhite,
-        border = BorderStroke(1.5.dp, if (selected) Teal else BorderGray)
+        color = if (selected) choice.accent.copy(alpha = 0.08f) else SurfaceWhite,
+        border = BorderStroke(1.5.dp, if (selected) choice.accent else BorderGray)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background((if (selected) Teal else TextLight).copy(alpha = 0.12f)),
+                    .background(choice.accent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = if (selected) Teal else TextSecondary, modifier = Modifier.size(22.dp))
+                Icon(choice.icon, null, tint = choice.accent, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(14.dp))
-            Text(
-                label,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
-                modifier = Modifier.weight(1f)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(choice.label, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(choice.blurb, fontSize = 12.sp, color = TextSecondary, lineHeight = 17.sp)
+            }
+            RadioButton(
+                selected = selected,
+                onClick = onClick,
+                colors = RadioButtonDefaults.colors(selectedColor = choice.accent)
             )
-            RadioButton(selected = selected, onClick = onClick, colors = RadioButtonDefaults.colors(selectedColor = Teal))
+        }
+    }
+}
+
+/** Last-step recap, so nobody submits a typo they made four screens ago without seeing it. */
+@Composable
+private fun SummaryCard(name: String, email: String, phone: String, role: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = SurfaceMuted
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Your details", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Spacer(Modifier.height(10.dp))
+            SummaryRow("Name", name)
+            SummaryRow("Email", email)
+            SummaryRow("Phone", phone)
+            SummaryRow("Joining as", role)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Something wrong? Tap back to fix it.",
+                fontSize = 11.sp,
+                color = TextLight
+            )
         }
     }
 }
 
 @Composable
-private fun StepPassword(
-    password: String,
-    confirmPassword: String,
-    onPasswordChange: (String) -> Unit,
-    onConfirmChange: (String) -> Unit
-) {
-    StepHeading("Create a password", "At least 6 characters — keep it somewhere safe.")
-    AuthField(
-        value = password,
-        onValueChange = onPasswordChange,
-        label = stringResource(R.string.auth_password),
-        placeholder = stringResource(R.string.auth_password_min_hint),
-        leadingIcon = Icons.Default.Lock,
-        leadingIconTint = Teal,
-        isPassword = true
-    )
-    Spacer(Modifier.height(16.dp))
-    AuthField(
-        value = confirmPassword,
-        onValueChange = onConfirmChange,
-        label = stringResource(R.string.auth_confirm_password),
-        placeholder = stringResource(R.string.auth_confirm_password_hint),
-        leadingIcon = Icons.Default.Lock,
-        leadingIconTint = Orange,
-        isPassword = true
-    )
-}
-
-@Composable
-private fun StepReferral(value: String, onValueChange: (String) -> Unit) {
-    StepHeading("Got a referral code?", "Optional — enter one if a friend shared it with you, or just create your account.")
-    AuthField(
-        value = value,
-        onValueChange = onValueChange,
-        label = "Referral code (optional)",
-        placeholder = "Got a code from a friend?",
-        leadingIcon = Icons.Default.CardGiftcard,
-        leadingIconTint = Violet
-    )
+private fun SummaryRow(label: String, value: String) {
+    if (value.isBlank()) return
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(label, fontSize = 12.sp, color = TextSecondary, modifier = Modifier.width(90.dp))
+        Text(value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary, modifier = Modifier.weight(1f))
+    }
 }

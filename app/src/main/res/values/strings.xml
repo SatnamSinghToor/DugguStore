@@ -88,6 +88,11 @@
     <string name="auth_err_phone">Please enter your phone number</string>
     <string name="auth_err_password_short">Password must be at least 6 characters</string>
     <string name="auth_err_password_match">Passwords don\'t match</string>
+    <string name="auth_err_email_invalid">That doesn\'t look like an email address</string>
+    <string name="auth_err_phone_invalid">Enter a 10-digit phone number</string>
+    <string name="auth_step_of">Step %1$d of %2$d</string>
+    <string name="auth_next">Next</string>
+    <string name="auth_back">Back</string>
 
     <!-- Account -->
     <string name="account_my_orders">My orders</string>

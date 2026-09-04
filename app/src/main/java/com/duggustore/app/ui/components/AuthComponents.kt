@@ -7,12 +7,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -164,6 +174,10 @@ private fun AuthTabSegment(
  * The leading icon takes its own tint rather than a fixed one: a whole form
  * of teal icons on a teal-bordered field reads as one flat colour rather
  * than as distinct fields.
+ *
+ * A password field carries its own show/hide toggle, and [helper] puts the
+ * reason a value is wrong directly under the field it belongs to rather than
+ * only in a banner at the top of the form.
  */
 @Composable
 fun AuthField(
@@ -175,34 +189,92 @@ fun AuthField(
     leadingIconTint: Color = Teal,
     placeholder: String = "",
     keyboardType: KeyboardType = KeyboardType.Text,
-    isPassword: Boolean = false
+    isPassword: Boolean = false,
+    helper: String? = null,
+    isError: Boolean = false,
+    imeAction: ImeAction = ImeAction.Default,
+    onImeAction: () -> Unit = {}
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
-        label = { Text(label, fontSize = 13.sp) },
-        placeholder = if (placeholder.isBlank()) null else {
-            { Text(placeholder, color = TextLight, fontSize = 14.sp) }
-        },
-        leadingIcon = leadingIcon?.let {
-            { Icon(it, contentDescription = null, tint = leadingIconTint, modifier = Modifier.size(20.dp)) }
-        },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation =
-            if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-        singleLine = true,
-        shape = RoundedCornerShape(14.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = SurfaceWhite,
-            unfocusedContainerColor = SurfaceWhite,
-            focusedBorderColor = Teal,
-            unfocusedBorderColor = BorderGray,
-            focusedLabelColor = Teal,
-            unfocusedLabelColor = TextSecondary,
-            cursorColor = Teal
+    var revealed by remember { mutableStateOf(false) }
+    val hideCharacters = isPassword && !revealed
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(label, fontSize = 13.sp) },
+            placeholder = if (placeholder.isBlank()) null else {
+                { Text(placeholder, color = TextLight, fontSize = 14.sp) }
+            },
+            leadingIcon = leadingIcon?.let {
+                { Icon(it, contentDescription = null, tint = leadingIconTint, modifier = Modifier.size(20.dp)) }
+            },
+            trailingIcon = if (!isPassword) null else {
+                {
+                    Icon(
+                        imageVector = if (revealed) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (revealed) "Hide password" else "Show password",
+                        tint = TextSecondary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { revealed = !revealed }
+                    )
+                }
+            },
+            isError = isError,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions = KeyboardActions(
+                onNext = { onImeAction() },
+                onDone = { onImeAction() },
+                onGo = { onImeAction() }
+            ),
+            visualTransformation =
+                if (hideCharacters) PasswordVisualTransformation() else VisualTransformation.None,
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = SurfaceWhite,
+                unfocusedContainerColor = SurfaceWhite,
+                focusedBorderColor = Teal,
+                unfocusedBorderColor = BorderGray,
+                errorBorderColor = Coral,
+                focusedLabelColor = Teal,
+                unfocusedLabelColor = TextSecondary,
+                cursorColor = Teal
+            )
         )
-    )
+        if (helper != null) {
+            Text(
+                text = helper,
+                modifier = Modifier.padding(start = 14.dp, top = 5.dp),
+                fontSize = 12.sp,
+                color = if (isError) CoralDark else TextSecondary
+            )
+        }
+    }
+}
+
+/** A requirement the person can watch turn green as they type, rather than a rule they only meet by trial and error. */
+@Composable
+fun AuthRequirementRow(text: String, met: Boolean) {
+    Row(
+        modifier = Modifier.padding(top = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (met) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+            contentDescription = null,
+            tint = if (met) SuccessGreen else TextLight,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(Modifier.width(7.dp))
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = if (met) SuccessGreen else TextSecondary
+        )
+    }
 }
 
 /** Full-width teal action button used at the bottom of each auth form. */

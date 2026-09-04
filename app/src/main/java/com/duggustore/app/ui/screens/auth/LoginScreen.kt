@@ -9,8 +9,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +32,19 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    // Only complain about a field once it has been typed in and left alone —
+    // marking an untouched field red the moment the screen opens is noise.
+    var emailTouched by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    val emailLooksWrong = emailTouched && email.isNotBlank() && !email.contains("@")
+    val canSubmit = email.isNotBlank() && password.isNotBlank() && !emailLooksWrong
+
+    fun submit() {
+        if (!canSubmit) return
+        focusManager.clearFocus()
+        onLogin(email.trim(), password)
+    }
 
     AuthScaffold(
         title = stringResource(R.string.auth_welcome_back),
@@ -54,12 +70,16 @@ fun LoginScreen(
 
         AuthField(
             value = email,
-            onValueChange = { email = it; onClearError() },
+            onValueChange = { email = it; emailTouched = true; onClearError() },
             label = stringResource(R.string.auth_email),
             placeholder = stringResource(R.string.auth_email_hint),
             leadingIcon = Icons.Default.Email,
             leadingIconTint = Orange,
-            keyboardType = KeyboardType.Email
+            keyboardType = KeyboardType.Email,
+            helper = if (emailLooksWrong) stringResource(R.string.auth_err_email_invalid) else null,
+            isError = emailLooksWrong,
+            imeAction = ImeAction.Next,
+            onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
         )
 
         Spacer(Modifier.height(16.dp))
@@ -71,7 +91,9 @@ fun LoginScreen(
             placeholder = stringResource(R.string.auth_password_hint),
             leadingIcon = Icons.Default.Lock,
             leadingIconTint = Violet,
-            isPassword = true
+            isPassword = true,
+            imeAction = ImeAction.Done,
+            onImeAction = { submit() }
         )
 
         Spacer(Modifier.height(10.dp))
@@ -90,10 +112,10 @@ fun LoginScreen(
 
         AuthPrimaryButton(
             text = stringResource(R.string.auth_sign_in),
-            onClick = { onLogin(email, password) },
+            onClick = { submit() },
             isLoading = isLoading,
             // Nothing to send until both fields carry something.
-            enabled = email.isNotBlank() && password.isNotBlank()
+            enabled = canSubmit
         )
     }
 }

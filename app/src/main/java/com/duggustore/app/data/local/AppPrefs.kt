@@ -16,6 +16,7 @@ object AppPrefs {
     // single-line search field it comes from can never produce a newline.
     private const val RECENT_SEARCH_SEPARATOR = "\n"
     private const val MAX_RECENT_SEARCHES = 8
+    private const val KEY_WELCOME_SEEN = "welcome_seen"
     private const val KEY_REORDER_REMINDERS = "reorder_reminders"
     // "orderId|dueAtEpochMillis" pairs, one per line — there's no server-side
     // scheduler, so due reminders are just checked against the clock whenever
@@ -46,6 +47,21 @@ object AppPrefs {
             if (tag == null) remove(KEY_LANGUAGE) else putString(KEY_LANGUAGE, tag)
             apply()
         }
+    }
+
+    /**
+     * Whether the intro slides have been through once. Kept here rather than
+     * with the session so signing out doesn't replay them at someone who has
+     * already used the app.
+     */
+    fun hasSeenWelcome(context: Context): Boolean =
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_WELCOME_SEEN, false)
+
+    fun setWelcomeSeen(context: Context) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_WELCOME_SEEN, true)
+            .apply()
     }
 
     /** Most recent search first, capped at [MAX_RECENT_SEARCHES]. */
