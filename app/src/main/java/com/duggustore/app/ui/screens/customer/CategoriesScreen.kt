@@ -28,27 +28,31 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Category
+import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.DashboardEmpty
+import com.duggustore.app.ui.components.StoreProductCard
 import com.duggustore.app.ui.components.iconForCategory
 import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 /**
- * The categories tab, laid out the way Blinkit's own category browser
- * is: a narrow icon rail on the left for the aisles, a scrolling grid
- * of that aisle's categories on the right. The two stay in sync both
- * ways — tapping a rail item scrolls the grid to it, and scrolling the
- * grid moves the rail's highlight — rather than the rail being a static
- * jump-menu.
- *
- * There's no parent/subcategory column in the schema, so "aisle" here
- * is the same name-based grouping the old flat list used; it just now
- * doubles as the rail's sections instead of being plain section headers.
+ * The categories tab: a narrow icon rail on the left, one per real category,
+ * and the matching products for whichever one is selected on the right —
+ * not another layer of category tiles to tap through. The two stay in sync
+ * both ways, the same as the aisle rail this replaced: tapping a rail item
+ * scrolls the grid to it, and scrolling the grid moves the rail's highlight.
  */
 @Composable
 fun CategoriesScreen(
     categories: List<Category>,
-    onCategoryClick: (Category) -> Unit
+    products: List<Product>,
+    cartQuantities: Map<String, Int> = emptyMap(),
+    favoriteIds: Set<String> = emptySet(),
+    onAddToCart: (Product) -> Unit = {},
+    onIncrease: (Product) -> Unit = {},
+    onDecrease: (Product) -> Unit = {},
+    onToggleFavorite: (Product) -> Unit = {},
+    onProductClick: (Product) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -70,7 +74,7 @@ fun CategoriesScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Everything the store carries, aisle by aisle",
+                    text = "Everything the store carries, category by category",
                     color = Color.White.copy(alpha = 0.85f),
                     fontSize = 13.sp
                 )
@@ -86,33 +90,33 @@ fun CategoriesScreen(
             return@Column
         }
 
-        // The colour index is taken over the whole list rather than per aisle,
-        // so a category keeps the same colour it has on the home rail.
         val colourOf = remember(categories) {
             categories.withIndex().associate { (index, category) ->
                 category.id to CategoryColors[index.mod(CategoryColors.size)]
             }
         }
 
-        val aisles = remember(categories) { aislesFor(categories) }
-        val gridItems = remember(aisles) { buildGridItems(aisles) }
+        val productsByCategory = remember(products) {
+            products.filter { it.isActive }.groupBy { it.categoryId }
+        }
+        val gridItems = remember(categories, productsByCategory) {
+            buildGridItems(categories, productsByCategory)
+        }
         val headerItemIndex = remember(gridItems) {
             gridItems.withIndex()
                 .filter { it.value is GridItem.Header }
-                .associate { (index, item) -> (item as GridItem.Header).aisleIndex to index }
+                .associate { (index, item) -> (item as GridItem.Header).categoryIndex to index }
         }
 
         val rightListState = rememberLazyListState()
         val leftListState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
 
-        // Whichever aisle owns the item currently at the top of the grid —
-        // recomputed as a derivedStateOf so scrolling doesn't recompose the
-        // whole screen on every pixel, only when the answer actually changes.
-        val selectedAisleIndex by remember {
+        // Whichever category owns the item currently at the top of the grid.
+        val selectedCategoryIndex by remember {
             derivedStateOf {
                 val topIndex = rightListState.firstVisibleItemIndex.coerceIn(0, gridItems.lastIndex.coerceAtLeast(0))
-                gridItems.getOrNull(topIndex)?.aisleIndex ?: 0
+                gridItems.getOrNull(topIndex)?.categoryIndex ?: 0
             }
         }
 
@@ -124,13 +128,13 @@ fun CategoriesScreen(
                     .background(SurfaceMuted),
                 state = leftListState
             ) {
-                itemsIndexed(aisles, key = { _, aisle -> aisle.title }) { index, aisle ->
-                    AisleRailTile(
-                        title = aisle.title,
-                        icon = iconForCategory(aisle.categories.firstOrNull()?.name.orEmpty()),
-                        selected = index == selectedAisleIndex,
+                itemsIndexed(categories, key = { _, category -> category.id }) { index, category ->
+                    CategoryRailTile(
+                        title = category.name,
+                        icon = iconForCategory(category.name),
+                        selected = index == selectedCategoryIndex,
                         onClick = {
-                            val target = headerItemIndex[index] ?: return@AisleRailTile
+                            val target = headerItemIndex[index] ?: return@CategoryRailTile
                             coroutineScope.launch { rightListState.animateScrollToItem(target) }
                         }
                     )
@@ -152,18 +156,30 @@ fun CategoriesScreen(
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
-                        is GridItem.Row -> Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        is GridItem.Empty -> Text(
+                            text = "Nothing here yet",
+                            modifier = Modifier.padding(bottom = 12.dp),
+                            fontSize = 13.sp,
+                            color = TextLight
+                        )
+                        is GridItem.ProductRow -> Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            item.categories.forEach { category ->
-                                CategoryGridTile(
-                                    category = category,
-                                    color = colourOf[category.id] ?: Teal,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onCategoryClick(category) }
+                            item.products.forEach { product ->
+                                StoreProductCard(
+                                    product = product,
+                                    quantityInCart = cartQuantities[product.id] ?: 0,
+                                    isFavorite = favoriteIds.contains(product.id),
+                                    onAdd = { onAddToCart(product) },
+                                    onIncrease = { onIncrease(product) },
+                                    onDecrease = { onDecrease(product) },
+                                    onToggleFavorite = { onToggleFavorite(product) },
+                                    onClick = { onProductClick(product) },
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
-                            repeat(GRID_COLUMNS - item.categories.size) { Spacer(Modifier.weight(1f)) }
+                            if (item.products.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
@@ -171,68 +187,43 @@ fun CategoriesScreen(
         }
 
         // Keeps the rail's own highlighted item scrolled into view as the
-        // grid moves past long aisles — otherwise the highlight could land
-        // on a rail item currently scrolled off-screen.
-        LaunchedEffect(selectedAisleIndex) {
-            leftListState.animateScrollToItem(selectedAisleIndex.coerceIn(0, aisles.lastIndex))
+        // grid moves past long categories.
+        LaunchedEffect(selectedCategoryIndex) {
+            leftListState.animateScrollToItem(selectedCategoryIndex.coerceIn(0, categories.lastIndex))
         }
     }
 }
 
-private const val GRID_COLUMNS = 3
+private const val PRODUCT_ROW_COLUMNS = 2
 
-/** One titled group and the categories inside it. */
-private data class Aisle(val title: String, val categories: List<Category>)
-
-/** A flattened row of the right-hand grid — either an aisle's title or one row of its tiles. */
-private sealed class GridItem(val aisleIndex: Int, val key: String) {
-    class Header(aisleIndex: Int, val title: String) : GridItem(aisleIndex, "header_$aisleIndex")
-    class Row(aisleIndex: Int, rowIndex: Int, val categories: List<Category>) :
-        GridItem(aisleIndex, "row_${aisleIndex}_$rowIndex")
+/** A flattened row of the right-hand list — a category's title, one row of its products, or "nothing here". */
+private sealed class GridItem(val categoryIndex: Int, val key: String) {
+    class Header(categoryIndex: Int, val title: String) : GridItem(categoryIndex, "header_$categoryIndex")
+    class Empty(categoryIndex: Int) : GridItem(categoryIndex, "empty_$categoryIndex")
+    class ProductRow(categoryIndex: Int, rowIndex: Int, val products: List<Product>) :
+        GridItem(categoryIndex, "row_${categoryIndex}_$rowIndex")
 }
 
-private fun buildGridItems(aisles: List<Aisle>): List<GridItem> = buildList {
-    aisles.forEachIndexed { aisleIndex, aisle ->
-        add(GridItem.Header(aisleIndex, aisle.title))
-        aisle.categories.chunked(GRID_COLUMNS).forEachIndexed { rowIndex, row ->
-            add(GridItem.Row(aisleIndex, rowIndex, row))
+private fun buildGridItems(
+    categories: List<Category>,
+    productsByCategory: Map<String, List<Product>>
+): List<GridItem> = buildList {
+    categories.forEachIndexed { categoryIndex, category ->
+        add(GridItem.Header(categoryIndex, category.name))
+        val items = productsByCategory[category.id].orEmpty()
+        if (items.isEmpty()) {
+            add(GridItem.Empty(categoryIndex))
+        } else {
+            items.chunked(PRODUCT_ROW_COLUMNS).forEachIndexed { rowIndex, row ->
+                add(GridItem.ProductRow(categoryIndex, rowIndex, row))
+            }
         }
     }
-}
-
-/**
- * Sorts the store's categories into aisles by name.
- *
- * The categories table is flat — there is no parent column to group on — so the
- * grouping is derived from the name. Anything the mapping does not recognise
- * falls into "More", which means a category added later still appears rather
- * than vanishing from this screen.
- */
-private fun aislesFor(categories: List<Category>): List<Aisle> {
-    fun matching(vararg keys: String) = categories.filter { category ->
-        keys.any { category.name.contains(it, ignoreCase = true) }
-    }
-
-    val kitchen = matching("veg", "fruit", "dairy", "milk", "bread", "baker", "groc", "meat", "egg")
-    val snacks = matching("snack", "choc", "drink", "cold", "frozen", "ice", "sweet", "biscuit")
-    val personal = matching("shampoo", "beauty", "baby", "care", "hygiene", "soap")
-    val household = matching("clean", "home", "household", "kitchenware", "util")
-
-    val placed = (kitchen + snacks + personal + household).map { it.id }.toSet()
-    val rest = categories.filter { it.id !in placed }
-
-    return listOf(
-        Aisle("Grocery & Kitchen", kitchen),
-        Aisle("Snacks & Drinks", snacks),
-        Aisle("Beauty & Personal Care", personal),
-        Aisle("Household Essentials", household),
-        Aisle("More", rest)
-    ).filter { it.categories.isNotEmpty() }
 }
 
 /** Left rail tile — its background merges into the grid's when selected, the way Blinkit's does. */
 @Composable
-private fun AisleRailTile(
+private fun CategoryRailTile(
     title: String,
     icon: ImageVector,
     selected: Boolean,
@@ -281,57 +272,5 @@ private fun AisleRailTile(
                 overflow = TextOverflow.Ellipsis
             )
         }
-    }
-}
-
-/** The right pane's card — bigger and more "product tile" than the old flat grid cell. */
-@Composable
-private fun CategoryGridTile(
-    category: Category,
-    color: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = modifier.padding(horizontal = 5.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clickable { onClick() },
-            shape = RoundedCornerShape(18.dp),
-            color = SurfaceWhite,
-            shadowElevation = 2.dp
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize(0.62f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(color.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = iconForCategory(category.name),
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = category.name,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary,
-            textAlign = TextAlign.Center,
-            lineHeight = 14.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }

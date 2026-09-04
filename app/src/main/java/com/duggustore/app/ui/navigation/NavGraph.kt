@@ -305,12 +305,20 @@ fun AppNavGraph(
         composable(Screen.CustomerCategories.route) {
             CategoriesScreen(
                 categories = homeState.categories,
-                onCategoryClick = { category ->
-                    homeViewModel.selectCategory(category.id)
-                    navController.navigate(Screen.CustomerHome.route) {
-                        popUpTo(Screen.CustomerHome.route) { inclusive = true }
+                products = homeState.products,
+                cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
+                favoriteIds = favState.favorites.map { it.productId }.toSet(),
+                onAddToCart = { cartViewModel.addToCart(it) },
+                onIncrease = { cartViewModel.addToCart(it) },
+                onDecrease = { product ->
+                    cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
+                        cartViewModel.updateQuantity(item.id, item.quantity - 1)
                     }
-                }
+                },
+                onToggleFavorite = { product ->
+                    authState.user?.let { favoriteViewModel.toggleFavorite(it.id, product.id) }
+                },
+                onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) }
             )
         }
 
