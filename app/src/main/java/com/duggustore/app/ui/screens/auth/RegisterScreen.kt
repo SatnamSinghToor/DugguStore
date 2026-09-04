@@ -70,6 +70,12 @@ fun RegisterScreen(
             )
         }
     ) {
+        AuthTabSwitcher(
+            selected = AuthTab.SIGN_UP,
+            onSelect = { tab -> if (tab == AuthTab.LOG_IN) onNavigateToLogin() }
+        )
+        Spacer(Modifier.height(18.dp))
+
         if (shownError != null) {
             AuthErrorBanner(
                 message = shownError,

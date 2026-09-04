@@ -107,8 +107,66 @@ fun AppLogo(size: Int = 140) {
         contentScale = ContentScale.Fit,
         modifier = Modifier
             .width(size.dp)
-            .aspectRatio(1880f / 1920f)
+            .aspectRatio(753f / 786f)
     )
+}
+
+enum class AuthTab { LOG_IN, SIGN_UP }
+
+/**
+ * Pill switcher at the top of the login/signup forms — tapping the side
+ * you're not on navigates there. The active side's fill colour follows
+ * which tab it is (orange for Log In, teal for Sign Up) rather than a
+ * single accent, matching the two screens' own button colours.
+ */
+@Composable
+fun AuthTabSwitcher(selected: AuthTab, onSelect: (AuthTab) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        color = SurfaceMuted
+    ) {
+        Row(modifier = Modifier.padding(4.dp)) {
+            AuthTabSegment(
+                text = "Log In",
+                selected = selected == AuthTab.LOG_IN,
+                activeColor = Orange,
+                modifier = Modifier.weight(1f),
+                onClick = { onSelect(AuthTab.LOG_IN) }
+            )
+            AuthTabSegment(
+                text = "Sign Up",
+                selected = selected == AuthTab.SIGN_UP,
+                activeColor = Teal,
+                modifier = Modifier.weight(1f),
+                onClick = { onSelect(AuthTab.SIGN_UP) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AuthTabSegment(
+    text: String,
+    selected: Boolean,
+    activeColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(22.dp),
+        color = if (selected) activeColor else Color.Transparent
+    ) {
+        Box(modifier = Modifier.padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (selected) Color.White else TextSecondary
+            )
+        }
+    }
 }
 
 /**

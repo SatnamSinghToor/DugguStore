@@ -41,6 +41,12 @@ fun LoginScreen(
             )
         }
     ) {
+        AuthTabSwitcher(
+            selected = AuthTab.LOG_IN,
+            onSelect = { tab -> if (tab == AuthTab.SIGN_UP) onNavigateToRegister() }
+        )
+        Spacer(Modifier.height(18.dp))
+
         if (error != null) {
             AuthErrorBanner(message = error, onDismiss = onClearError)
             Spacer(Modifier.height(18.dp))
