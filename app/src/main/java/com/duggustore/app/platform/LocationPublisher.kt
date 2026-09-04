@@ -86,6 +86,9 @@ fun RiderLocationPublisher(
         // lambda raises AbstractMethodError on older devices.
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) = currentOnFix(location)
+            // Still required for the same pre-API-30 ABI reason as above,
+            // even though the platform interface deprecated it.
+            @Suppress("OVERRIDE_DEPRECATION")
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
             override fun onProviderEnabled(provider: String) = Unit
             override fun onProviderDisabled(provider: String) = Unit

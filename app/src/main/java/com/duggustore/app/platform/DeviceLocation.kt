@@ -145,7 +145,14 @@ private suspend fun currentLocation(context: Context): Location? {
     }
 }
 
-/** Geocoding blocks, so it never runs on the main thread. */
+/**
+ * Geocoding blocks, so it never runs on the main thread — which is also why
+ * the synchronous Geocoder.getFromLocation() is fine to keep here rather
+ * than migrating to the API 33+ listener-based overload: the thing that
+ * overload exists to avoid (blocking the caller) is already handled by
+ * running this on Dispatchers.IO.
+ */
+@Suppress("DEPRECATION")
 private suspend fun describe(context: Context, location: Location): String? =
     withContext(Dispatchers.IO) {
         if (!Geocoder.isPresent()) return@withContext null

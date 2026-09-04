@@ -248,16 +248,10 @@ fun AppNavGraph(
 
         composable(Screen.Register.route) {
             RegisterScreen(
-                onRegisterSuccess = {
-                    authState.user?.let { user ->
-                        when (user.userRole()) {
-                            UserRole.SELLER -> navController.navigate(Screen.SellerDashboard.route)
-                            UserRole.DELIVERY -> navController.navigate(Screen.DeliveryDashboard.route)
-                            UserRole.ADMIN -> navController.navigate(Screen.AdminDashboard.route)
-                            else -> navController.navigate(Screen.CustomerHome.route)
-                        }
-                    }
-                },
+                // Navigation to the right dashboard after a successful signup is
+                // already handled by the hasNavigatedToDashboard effect above,
+                // which watches authState.isLoggedIn/user app-wide — a second,
+                // screen-local success callback here never actually ran.
                 onNavigateToLogin = { navController.popBackStack() },
                 isLoading = authState.isLoading,
                 error = authState.error,
@@ -740,7 +734,7 @@ fun AppNavGraph(
                 } else {
                     RouteMapScreen(
                         title = "Navigate to pickup",
-                        destinationLabel = order.seller?.storeAddress?.ifBlank { "Store" } ?: "Store",
+                        destinationLabel = order.seller.storeAddress?.ifBlank { "Store" } ?: "Store",
                         destinationLat = lat,
                         destinationLng = lng,
                         onBack = { navController.popBackStack() }

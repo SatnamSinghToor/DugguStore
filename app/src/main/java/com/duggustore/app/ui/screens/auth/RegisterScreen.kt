@@ -25,7 +25,6 @@ import com.duggustore.app.ui.theme.*
 
 @Composable
 fun RegisterScreen(
-    onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
     isLoading: Boolean = false,
     error: String? = null,

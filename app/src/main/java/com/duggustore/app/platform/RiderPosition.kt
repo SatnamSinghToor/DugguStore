@@ -61,6 +61,13 @@ fun rememberRiderPosition(
     }
 }
 
+/**
+ * The synchronous Geocoder.getFromLocationName() is deprecated in favour of
+ * a listener-based overload added in API 33, but that overload exists only
+ * to avoid blocking the caller — already handled here by running on
+ * Dispatchers.IO, so there's nothing left for the async version to fix.
+ */
+@Suppress("DEPRECATION")
 private suspend fun geocode(
     context: android.content.Context,
     address: String
