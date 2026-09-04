@@ -185,7 +185,13 @@ fun HomeScreen(
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
 
-            if (offers.isNotEmpty()) {
+            // Search takes over the whole page — the carousel and the
+            // categories row are browsing aids, and showing them above a
+            // set of search results made it look like the results were
+            // mixed in with the categories instead of being their own list.
+            val isSearching = searchQuery.isNotBlank()
+
+            if (offers.isNotEmpty() && !isSearching) {
                 item {
                     Spacer(Modifier.height(10.dp))
                     OfferCarousel(
@@ -195,7 +201,7 @@ fun HomeScreen(
                 }
             }
 
-            if (categories.isNotEmpty()) {
+            if (categories.isNotEmpty() && !isSearching) {
                 item {
                     Spacer(Modifier.height(22.dp))
                     RowHeader("Categories", Modifier.padding(horizontal = 20.dp))
