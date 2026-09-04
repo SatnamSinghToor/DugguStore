@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,6 +31,7 @@ import com.duggustore.app.data.model.DeliveryTracking
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
+import com.duggustore.app.data.model.Review
 import com.duggustore.app.ui.components.RiderLocationCard
 import com.duggustore.app.ui.components.StatusBadge
 import com.duggustore.app.ui.components.trimAmount
@@ -159,7 +162,9 @@ fun OrderTrackingDetailScreen(
     /** Straight-line metres from the rider to the delivery address. */
     riderDistanceMetres: Float? = null,
     riderFixAgeMinutes: Long? = null,
-    items: List<OrderItem> = emptyList()
+    items: List<OrderItem> = emptyList(),
+    myReviews: Map<String, Review> = emptyMap(),
+    onSubmitReview: (productId: String, rating: Int, comment: String) -> Unit = { _, _, _ -> }
 ) {
     val cancelled = order.status == OrderStatus.CANCELLED.value
 
@@ -256,6 +261,22 @@ fun OrderTrackingDetailScreen(
                                         color = TextPrimary
                                     )
                                 }
+                                if (order.status == OrderStatus.DELIVERED.value) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        val myRating = myReviews[item.productId]?.rating ?: 0
+                                        Text(
+                                            text = if (myRating > 0) "Your rating" else "Rate this item",
+                                            fontSize = 11.sp,
+                                            color = TextLight
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        ItemRatingStars(
+                                            rating = myRating,
+                                            onRate = { stars -> onSubmitReview(item.productId, stars, "") }
+                                        )
+                                    }
+                                }
                                 if (index != items.lastIndex) Spacer(Modifier.height(8.dp))
                             }
                         }
@@ -332,6 +353,23 @@ fun OrderTrackingDetailScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/** Tap a star to rate — submits immediately rather than waiting on a separate confirm step. */
+@Composable
+private fun ItemRatingStars(rating: Int, onRate: (Int) -> Unit) {
+    Row {
+        for (star in 1..5) {
+            Icon(
+                imageVector = if (star <= rating) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = "Rate $star star${if (star == 1) "" else "s"}",
+                tint = Orange,
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable { onRate(star) }
+            )
         }
     }
 }

@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
+import com.duggustore.app.data.model.Review
 import com.duggustore.app.data.repository.OrderRepository
+import com.duggustore.app.data.repository.ReviewRepository
 import com.duggustore.app.data.repository.TrackingRepository
 import com.duggustore.app.data.model.DeliveryTracking
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,12 +25,15 @@ data class OrderState(
     val selectedOrder: Order? = null,
     val error: String? = null,
     /** Line items for whichever orders have had them fetched — on demand, not with every order list. */
-    val orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap()
+    val orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
+    /** This customer's own reviews on a delivered order, keyed by product id, so "rate this item" shows what's already rated. */
+    val myReviewsByOrderId: Map<String, Map<String, Review>> = emptyMap()
 )
 
 class OrderViewModel : ViewModel() {
     private val repository = OrderRepository()
     private val trackingRepo = TrackingRepository()
+    private val reviewRepo = ReviewRepository()
 
     private val _state = MutableStateFlow(OrderState())
     val state: StateFlow<OrderState> = _state
@@ -154,6 +159,38 @@ class OrderViewModel : ViewModel() {
             repository.getOrderItems(orderId).onSuccess { items ->
                 _state.value = _state.value.copy(
                     orderItemsByOrderId = _state.value.orderItemsByOrderId + (orderId to items)
+                )
+            }
+        }
+    }
+
+    /** Only worth calling once an order is delivered — nothing can be rated before that. */
+    fun loadMyReviews(userId: String, orderId: String) {
+        if (_state.value.myReviewsByOrderId.containsKey(orderId)) return
+        viewModelScope.launch {
+            reviewRepo.getMyReviewsForOrder(userId, orderId).onSuccess { reviews ->
+                _state.value = _state.value.copy(
+                    myReviewsByOrderId = _state.value.myReviewsByOrderId +
+                        (orderId to reviews.associateBy { it.productId })
+                )
+            }
+        }
+    }
+
+    /** Upserts, so rating the same item on the same order again just updates it. */
+    fun submitReview(userId: String, orderId: String, productId: String, rating: Int, comment: String) {
+        viewModelScope.launch {
+            reviewRepo.submitReview(userId, orderId, productId, rating, comment).onSuccess {
+                val forOrder = _state.value.myReviewsByOrderId[orderId].orEmpty() +
+                    (productId to Review(
+                        userId = userId,
+                        orderId = orderId,
+                        productId = productId,
+                        rating = rating,
+                        comment = comment
+                    ))
+                _state.value = _state.value.copy(
+                    myReviewsByOrderId = _state.value.myReviewsByOrderId + (orderId to forOrder)
                 )
             }
         }

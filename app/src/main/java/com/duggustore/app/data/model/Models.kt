@@ -177,6 +177,17 @@ data class OrderItem(
 )
 
 @Serializable
+data class Review(
+    val id: String = "",
+    @SerialName("user_id") val userId: String = "",
+    @SerialName("order_id") val orderId: String = "",
+    @SerialName("product_id") val productId: String = "",
+    val rating: Int = 0,
+    val comment: String = "",
+    @SerialName("created_at") val createdAt: String = ""
+)
+
+@Serializable
 data class DeliveryTracking(
     val id: String = "",
     @SerialName("order_id") val orderId: String = "",

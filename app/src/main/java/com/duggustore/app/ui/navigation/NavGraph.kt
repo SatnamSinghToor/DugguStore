@@ -35,8 +35,10 @@ import androidx.navigation.navArgument
 import androidx.compose.ui.res.stringResource
 import com.duggustore.app.R
 import com.duggustore.app.data.model.OrderStatus
+import com.duggustore.app.data.model.Review
 import com.duggustore.app.data.model.UserRole
 import com.duggustore.app.data.model.toNotification
+import com.duggustore.app.data.repository.ReviewRepository
 import com.duggustore.app.ui.screens.auth.ForgotPasswordScreen
 import com.duggustore.app.ui.screens.auth.LoginScreen
 import com.duggustore.app.ui.screens.auth.RegisterScreen
@@ -477,10 +479,22 @@ fun AppNavGraph(
                     tracking = orderState.tracking,
                     riderDistanceMetres = riderPosition.distanceMetres,
                     riderFixAgeMinutes = riderPosition.ageMinutes,
-                    items = orderState.orderItemsByOrderId[orderId] ?: emptyList()
+                    items = orderState.orderItemsByOrderId[orderId] ?: emptyList(),
+                    myReviews = orderState.myReviewsByOrderId[orderId] ?: emptyMap(),
+                    onSubmitReview = { productId, rating, comment ->
+                        authState.user?.let { user ->
+                            orderViewModel.submitReview(user.id, orderId, productId, rating, comment)
+                        }
+                    }
                 )
 
                 LaunchedEffect(orderId) { orderViewModel.loadOrderItems(orderId) }
+
+                LaunchedEffect(orderId, it.status) {
+                    if (it.status == OrderStatus.DELIVERED.value) {
+                        authState.user?.let { user -> orderViewModel.loadMyReviews(user.id, orderId) }
+                    }
+                }
 
                 // Polled only while this screen is on top and the order is
                 // actually on the road; the effect is cancelled when either
@@ -738,9 +752,13 @@ fun AppNavGraph(
             val product = homeState.products.firstOrNull { it.id == productId }
                 ?: favState.favoriteProducts.firstOrNull { it.id == productId }
 
+            val reviewRepo = remember { ReviewRepository() }
+            var productReviews by remember(productId) { mutableStateOf<List<Review>>(emptyList()) }
+
             ProductDetailScreen(
                 product = product,
                 isFavorite = favState.favorites.any { it.productId == productId },
+                reviews = productReviews,
                 onAddToCart = { p, qty ->
                     repeat(qty) { cartViewModel.addToCart(p) }
                     navController.popBackStack()
@@ -750,6 +768,10 @@ fun AppNavGraph(
                 },
                 onBack = { navController.popBackStack() }
             )
+
+            LaunchedEffect(productId) {
+                reviewRepo.getReviewsForProduct(productId).onSuccess { productReviews = it }
+            }
 
             LaunchedEffect(authState.user) {
                 authState.user?.let { favoriteViewModel.loadFavorites(it.id) }

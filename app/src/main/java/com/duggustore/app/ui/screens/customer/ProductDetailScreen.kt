@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.model.Review
 import com.duggustore.app.ui.components.ProductImageCarousel
 import com.duggustore.app.ui.components.QuantityStepperRow
 import com.duggustore.app.ui.components.discountPercent
@@ -39,6 +42,7 @@ import com.duggustore.app.ui.theme.*
 fun ProductDetailScreen(
     product: Product?,
     isFavorite: Boolean,
+    reviews: List<Review> = emptyList(),
     onAddToCart: (Product, Int) -> Unit,
     onToggleFavorite: (Product) -> Unit,
     onBack: () -> Unit
@@ -64,6 +68,7 @@ fun ProductDetailScreen(
                     product = product,
                     inStock = inStock,
                     quantity = quantity,
+                    reviews = reviews,
                     onDecrease = { if (quantity > 1) quantity-- },
                     onIncrease = { if (quantity < product.stock) quantity++ }
                 )
@@ -136,6 +141,7 @@ private fun ProductSheet(
     product: Product,
     inStock: Boolean,
     quantity: Int,
+    reviews: List<Review>,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit
 ) {
@@ -169,7 +175,13 @@ private fun ProductSheet(
             }
 
             Spacer(Modifier.height(4.dp))
-            Text(text = "Per ${product.unit}", fontSize = 13.sp, color = TextSecondary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Per ${product.unit}", fontSize = 13.sp, color = TextSecondary)
+                if (reviews.isNotEmpty()) {
+                    Spacer(Modifier.width(10.dp))
+                    RatingSummary(reviews = reviews)
+                }
+            }
 
             Spacer(Modifier.height(14.dp))
 
@@ -243,7 +255,70 @@ private fun ProductSheet(
                 )
             }
 
+            if (reviews.isNotEmpty()) {
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = "Ratings & reviews",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Spacer(Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    reviews.forEach { review -> ReviewRow(review) }
+                }
+            }
+
             Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+/** Average rating and how many reviews it's from — next to the unit label, so it reads at a glance without its own row. */
+@Composable
+private fun RatingSummary(reviews: List<Review>) {
+    val average = reviews.sumOf { it.rating } / reviews.size.toDouble()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Star, null, tint = Orange, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = "%.1f".format(average),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = if (reviews.size == 1) "(1 review)" else "(${reviews.size} reviews)",
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+    }
+}
+
+@Composable
+private fun ReviewRow(review: Review) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            repeat(5) { i ->
+                Icon(
+                    imageVector = if (i < review.rating) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = null,
+                    tint = Orange,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text("Verified buyer", fontSize = 11.sp, color = TextLight)
+        }
+        if (review.comment.isNotBlank()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = review.comment,
+                fontSize = 13.sp,
+                color = TextSecondary,
+                lineHeight = 18.sp
+            )
         }
     }
 }
