@@ -29,10 +29,7 @@ data class SellerOnboardingState(
     /** The seller id currently being approved/rejected — lets the queue show a spinner and block a second tap. */
     val reviewingId: String? = null,
     /** Separate from [error]: that one belongs to the signed-in seller's own form, this one to the admin's review action. */
-    val reviewError: String? = null,
-    /** The user id currently being blocked/unblocked/deleted/purged/promoted, so the Users tab can show a spinner and block a second tap. */
-    val managingId: String? = null,
-    val manageError: String? = null
+    val reviewError: String? = null
 )
 
 class SellerOnboardingViewModel : ViewModel() {
@@ -109,51 +106,6 @@ class SellerOnboardingViewModel : ViewModel() {
 
     fun clearReviewError() {
         _state.value = _state.value.copy(reviewError = null)
-    }
-
-    /** Suspends a seller — they stop selling immediately and their products are hidden — until an admin unblocks them. */
-    fun blockSeller(sellerId: String) = setStatus(sellerId, "SUSPENDED")
-
-    /** Restores a blocked seller to APPROVED. Their products stay hidden until they (or an admin) turn each back on. */
-    fun unblockSeller(sellerId: String) = setStatus(sellerId, "APPROVED")
-
-    /** Soft-removes a seller: REJECTED status, products hidden, but the account and its history stay intact. */
-    fun deleteSeller(sellerId: String) = setStatus(sellerId, "REJECTED")
-
-    private fun setStatus(sellerId: String, status: String) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(managingId = sellerId, manageError = null)
-            val result = repository.setSellerStatus(sellerId, status)
-            result.onSuccess { loadAllForReview() }
-            result.onFailure { _state.value = _state.value.copy(manageError = it.message ?: "Couldn't update this seller") }
-            _state.value = _state.value.copy(managingId = null)
-        }
-    }
-
-    /** Irreversible: wipes the seller's entire account, products, and order history. */
-    fun purgeSeller(sellerId: String) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(managingId = sellerId, manageError = null)
-            val result = repository.purgeSeller(sellerId)
-            result.onSuccess { loadAllForReview() }
-            result.onFailure { _state.value = _state.value.copy(manageError = it.message ?: "Couldn't remove this seller") }
-            _state.value = _state.value.copy(managingId = null)
-        }
-    }
-
-    /** Instantly turns an existing account into an approved seller, no document review needed. */
-    fun promoteToSeller(userId: String) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(managingId = userId, manageError = null)
-            val result = repository.promoteToSeller(userId)
-            result.onSuccess { loadAllForReview() }
-            result.onFailure { _state.value = _state.value.copy(manageError = it.message ?: "Couldn't add this seller") }
-            _state.value = _state.value.copy(managingId = null)
-        }
-    }
-
-    fun clearManageError() {
-        _state.value = _state.value.copy(manageError = null)
     }
 
     /** Fetches one applicant's documents plus a signed URL for each, for the admin queue to display. */

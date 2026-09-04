@@ -9,13 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
@@ -41,7 +36,6 @@ import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Seller
 import com.duggustore.app.data.model.SellerDocument
 import com.duggustore.app.data.model.UserProfile
-import com.duggustore.app.data.model.VerificationStatus
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.screens.seller.IssuesList
 import com.duggustore.app.ui.theme.*
@@ -70,14 +64,6 @@ fun AdminDashboard(
     reviewingSellerId: String?,
     sellerReviewError: String?,
     onClearSellerReviewError: () -> Unit,
-    onBlockSeller: (String) -> Unit,
-    onUnblockSeller: (String) -> Unit,
-    onDeleteSeller: (String) -> Unit,
-    onPurgeSeller: (String) -> Unit,
-    onPromoteToSeller: (String) -> Unit,
-    managingSellerId: String?,
-    sellerManageError: String?,
-    onClearSellerManageError: () -> Unit,
     allPartners: List<DeliveryPartner>,
     partnerDocuments: Map<String, List<DeliveryPartnerDocument>>,
     partnerDocumentUrls: Map<String, String>,
@@ -123,19 +109,7 @@ fun AdminDashboard(
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> OverviewTab(orders = orders, products = products)
-                1 -> UsersTab(
-                    users = users,
-                    sellers = allSellers,
-                    onUpdateUserRole = onUpdateUserRole,
-                    onPromoteToSeller = onPromoteToSeller,
-                    onBlockSeller = onBlockSeller,
-                    onUnblockSeller = onUnblockSeller,
-                    onDeleteSeller = onDeleteSeller,
-                    onPurgeSeller = onPurgeSeller,
-                    managingSellerId = managingSellerId,
-                    sellerManageError = sellerManageError,
-                    onClearSellerManageError = onClearSellerManageError
-                )
+                1 -> UsersTab(users = users, onUpdateUserRole = onUpdateUserRole)
                 2 -> OrdersTab(orders = orders, issues = issues, onResolveIssue = onResolveIssue)
                 3 -> AdminCatalogScreen(
                     products = products,
@@ -207,19 +181,7 @@ private fun OverviewTab(orders: List<Order>, products: List<Product>) {
 }
 
 @Composable
-private fun UsersTab(
-    users: List<UserProfile>,
-    sellers: List<Seller>,
-    onUpdateUserRole: (String, String) -> Unit,
-    onPromoteToSeller: (String) -> Unit,
-    onBlockSeller: (String) -> Unit,
-    onUnblockSeller: (String) -> Unit,
-    onDeleteSeller: (String) -> Unit,
-    onPurgeSeller: (String) -> Unit,
-    managingSellerId: String?,
-    sellerManageError: String?,
-    onClearSellerManageError: () -> Unit
-) {
+private fun UsersTab(users: List<UserProfile>, onUpdateUserRole: (String, String) -> Unit) {
     if (users.isEmpty()) {
         DashboardEmpty(
             icon = Icons.Default.Person,
@@ -228,48 +190,15 @@ private fun UsersTab(
         )
         return
     }
-    val sellerById = remember(sellers) { sellers.associateBy { it.id } }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (sellerManageError != null) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(14.dp),
-                color = CoralSurface
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(sellerManageError, modifier = Modifier.weight(1f), color = CoralDark, fontSize = 13.sp)
-                    Text(
-                        "Dismiss",
-                        color = CoralDark,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp).clickable { onClearSellerManageError() }
-                    )
-                }
-            }
-        }
-        LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(users, key = { it.id }) { user ->
-                UserManagementCard(
-                    user = user,
-                    seller = sellerById[user.id],
-                    isManagingSeller = managingSellerId == user.id,
-                    onUpdateRole = { role ->
-                        if (role == "seller") onPromoteToSeller(user.id) else onUpdateUserRole(user.id, role)
-                    },
-                    onBlockSeller = { onBlockSeller(user.id) },
-                    onUnblockSeller = { onUnblockSeller(user.id) },
-                    onDeleteSeller = { onDeleteSeller(user.id) },
-                    onPurgeSeller = { onPurgeSeller(user.id) }
-                )
-            }
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(users, key = { it.id }) { user ->
+            UserManagementCard(
+                user = user,
+                onUpdateRole = { role -> onUpdateUserRole(user.id, role) }
+            )
         }
     }
 }
@@ -436,269 +365,96 @@ private fun ProductRow(product: Product) {
 }
 
 @Composable
-fun UserManagementCard(
-    user: UserProfile,
-    onUpdateRole: (String) -> Unit,
-    seller: Seller? = null,
-    isManagingSeller: Boolean = false,
-    onBlockSeller: () -> Unit = {},
-    onUnblockSeller: () -> Unit = {},
-    onDeleteSeller: () -> Unit = {},
-    onPurgeSeller: () -> Unit = {}
-) {
+fun UserManagementCard(user: UserProfile, onUpdateRole: (String) -> Unit) {
     var showRoleMenu by remember { mutableStateOf(false) }
-    var showSellerMenu by remember { mutableStateOf(false) }
-    var confirmAction by remember { mutableStateOf<SellerConfirmAction?>(null) }
     val (bg, fg) = roleColors(user.role)
 
     DashboardPanel {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(TealSurface),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = user.fullName.trim().firstOrNull()?.uppercase() ?: "U",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Teal
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = user.fullName.takeIf { it.isNotBlank() } ?: "Unnamed",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = user.phone.takeIf { it.isNotBlank() } ?: "No phone on file",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+
+            Box {
+                Row(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(TealSurface),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(bg)
+                        .clickable { showRoleMenu = true }
+                        .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = user.fullName.trim().firstOrNull()?.uppercase() ?: "U",
-                        fontSize = 18.sp,
+                        text = user.role.uppercase(),
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Teal
+                        color = fg
+                    )
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = "Change role",
+                        tint = fg,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
-                Spacer(Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = user.fullName.takeIf { it.isNotBlank() } ?: "Unnamed",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = user.phone.takeIf { it.isNotBlank() } ?: "No phone on file",
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
-                }
-
-                Box {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bg)
-                            .clickable { showRoleMenu = true }
-                            .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = user.role.uppercase(),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = fg
-                        )
-                        Icon(
-                            Icons.Default.ArrowDropDown,
-                            contentDescription = "Change role",
-                            tint = fg,
-                            modifier = Modifier.size(18.dp)
+                DropdownMenu(
+                    expanded = showRoleMenu,
+                    onDismissRequest = { showRoleMenu = false }
+                ) {
+                    ROLES.forEach { role ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = role.replaceFirstChar { it.uppercase() },
+                                    fontWeight = if (role == user.role) FontWeight.Bold
+                                                 else FontWeight.Normal,
+                                    color = if (role == user.role) Teal else TextPrimary
+                                )
+                            },
+                            onClick = {
+                                showRoleMenu = false
+                                // Re-sending the role the user already has is a
+                                // write for nothing.
+                                if (role != user.role) onUpdateRole(role)
+                            }
                         )
                     }
-
-                    DropdownMenu(
-                        expanded = showRoleMenu,
-                        onDismissRequest = { showRoleMenu = false }
-                    ) {
-                        ROLES.forEach { role ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = role.replaceFirstChar { it.uppercase() },
-                                        fontWeight = if (role == user.role) FontWeight.Bold
-                                                     else FontWeight.Normal,
-                                        color = if (role == user.role) Teal else TextPrimary
-                                    )
-                                },
-                                onClick = {
-                                    showRoleMenu = false
-                                    // Re-sending the role the user already has is a
-                                    // write for nothing.
-                                    if (role != user.role) onUpdateRole(role)
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // Only sellers carry the block/delete/remove actions — a customer or
-                // rider has nothing in the sellers table to act on.
-                if (user.role == "seller") {
-                    Box {
-                        if (isManagingSeller) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.padding(start = 4.dp).size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = Teal
-                            )
-                        } else {
-                            IconButton(onClick = { showSellerMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Manage seller", tint = TextSecondary)
-                            }
-                        }
-                        DropdownMenu(expanded = showSellerMenu, onDismissRequest = { showSellerMenu = false }) {
-                            val status = seller?.verificationStatus()
-                            if (status == VerificationStatus.SUSPENDED) {
-                                DropdownMenuItem(
-                                    text = { Text("Unblock seller") },
-                                    leadingIcon = { Icon(Icons.Default.LockOpen, null, tint = SuccessGreen) },
-                                    onClick = { showSellerMenu = false; onUnblockSeller() }
-                                )
-                            } else {
-                                DropdownMenuItem(
-                                    text = { Text("Block seller") },
-                                    leadingIcon = { Icon(Icons.Default.Block, null, tint = CoralDark) },
-                                    onClick = { showSellerMenu = false; confirmAction = SellerConfirmAction.BLOCK }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text("Delete seller") },
-                                leadingIcon = { Icon(Icons.Default.PersonRemove, null, tint = CoralDark) },
-                                onClick = { showSellerMenu = false; confirmAction = SellerConfirmAction.DELETE }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Remove completely", color = CoralDark, fontWeight = FontWeight.Bold) },
-                                leadingIcon = { Icon(Icons.Default.DeleteForever, null, tint = CoralDark) },
-                                onClick = { showSellerMenu = false; confirmAction = SellerConfirmAction.PURGE }
-                            )
-                        }
-                    }
                 }
             }
-
-            if (user.role == "seller" && seller != null) {
-                Spacer(Modifier.height(8.dp))
-                SellerStatusBadge(seller.verificationStatus())
-            }
         }
-    }
-
-    confirmAction?.let { action ->
-        SellerActionConfirmDialog(
-            action = action,
-            sellerName = seller?.businessName?.takeIf { it.isNotBlank() } ?: user.fullName.takeIf { it.isNotBlank() } ?: "this seller",
-            onDismiss = { confirmAction = null },
-            onConfirm = {
-                confirmAction = null
-                when (action) {
-                    SellerConfirmAction.BLOCK -> onBlockSeller()
-                    SellerConfirmAction.DELETE -> onDeleteSeller()
-                    SellerConfirmAction.PURGE -> onPurgeSeller()
-                }
-            }
-        )
-    }
-}
-
-private enum class SellerConfirmAction { BLOCK, DELETE, PURGE }
-
-@Composable
-private fun SellerStatusBadge(status: VerificationStatus) {
-    val (bg, fg, label) = when (status) {
-        VerificationStatus.SUSPENDED -> Triple(CoralSurface, CoralDark, "Blocked")
-        VerificationStatus.REJECTED -> Triple(SurfaceMuted, TextLight, "Removed")
-        VerificationStatus.APPROVED -> Triple(TealSurface, TealDark, "Active")
-        VerificationStatus.UNDER_REVIEW -> Triple(OrangeSurface, OrangeDark, "Under review")
-        VerificationStatus.PENDING_VERIFICATION -> Triple(SurfaceMuted, TextLight, "Not submitted")
-    }
-    Surface(shape = RoundedCornerShape(7.dp), color = bg) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            color = fg
-        )
-    }
-}
-
-/**
- * Block and delete are reversible (an admin can flip them back), so a light confirm
- * is enough. "Remove completely" is not — it wipes the account, products and order
- * history for good — so it asks the admin to type the business name back before the
- * confirm button lights up, the same friction a real "delete my account" flow uses.
- */
-@Composable
-private fun SellerActionConfirmDialog(
-    action: SellerConfirmAction,
-    sellerName: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    val title: String
-    val body: String
-    val confirmLabel: String
-    when (action) {
-        SellerConfirmAction.BLOCK -> {
-            title = "Block $sellerName?"
-            body = "They won't be able to sell and their products are hidden from customers until an admin unblocks them."
-            confirmLabel = "Block"
-        }
-        SellerConfirmAction.DELETE -> {
-            title = "Delete $sellerName?"
-            body = "Their products are hidden and they lose seller access. Their account and order history stay on file, and this can be undone by an admin later."
-            confirmLabel = "Delete"
-        }
-        SellerConfirmAction.PURGE -> {
-            title = "Remove $sellerName completely?"
-            body = "This permanently deletes their account, every product, and their entire order history. This cannot be undone."
-            confirmLabel = "Remove permanently"
-        }
-    }
-
-    if (action == SellerConfirmAction.PURGE) {
-        var typed by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text(title) },
-            text = {
-                Column {
-                    Text(body, fontSize = 13.sp, color = TextSecondary)
-                    Spacer(Modifier.height(12.dp))
-                    Text("Type \"$sellerName\" to confirm", fontSize = 12.sp, color = TextLight)
-                    Spacer(Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = typed,
-                        onValueChange = { typed = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = onConfirm, enabled = typed == sellerName) {
-                    Text(confirmLabel, color = CoralDark, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } }
-        )
-    } else {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text(title) },
-            text = { Text(body, fontSize = 13.sp, color = TextSecondary) },
-            confirmButton = {
-                TextButton(onClick = onConfirm) {
-                    Text(confirmLabel, color = CoralDark, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } }
-        )
     }
 }
 
