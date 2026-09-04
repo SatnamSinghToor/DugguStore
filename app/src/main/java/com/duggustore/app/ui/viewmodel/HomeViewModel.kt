@@ -82,14 +82,17 @@ class HomeViewModel : ViewModel() {
         val state = _state.value
         var filtered = state.products
 
-        if (state.selectedCategoryId != null) {
-            filtered = filtered.filter { it.categoryId == state.selectedCategoryId }
-        }
+        // A search looks across the whole catalogue, not just the category
+        // tile that happened to be selected before typing — the category
+        // row is hidden while searching, so narrowing by it here silently
+        // hid matches from every other category instead of showing them.
         if (state.searchQuery.isNotEmpty()) {
             filtered = filtered.filter {
                 it.name.contains(state.searchQuery, ignoreCase = true) ||
                 it.description.contains(state.searchQuery, ignoreCase = true)
             }
+        } else if (state.selectedCategoryId != null) {
+            filtered = filtered.filter { it.categoryId == state.selectedCategoryId }
         }
         _state.value = _state.value.copy(filteredProducts = filtered)
     }
