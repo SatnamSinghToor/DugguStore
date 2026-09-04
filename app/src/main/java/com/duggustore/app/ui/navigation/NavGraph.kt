@@ -705,6 +705,9 @@ fun AppNavGraph(
                         onSave = { sellerOnboardingViewModel.save(it) },
                         onSubmit = { authState.user?.let { sellerOnboardingViewModel.submit(it.id) } },
                         onClearError = { sellerOnboardingViewModel.clearError() },
+                        onLocationPicked = { address, lat, lng ->
+                            authViewModel.updateStoreLocation(address, lat, lng)
+                        },
                         onSignOut = onOnboardingSignOut
                     )
                 }

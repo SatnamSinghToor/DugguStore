@@ -27,6 +27,7 @@ import com.duggustore.app.data.model.Seller
 import com.duggustore.app.data.model.SellerDocument
 import com.duggustore.app.data.model.docTypeLabel
 import com.duggustore.app.ui.components.DocumentUploadRow
+import com.duggustore.app.ui.components.LocationPickerField
 import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,6 +55,7 @@ fun SellerOnboardingScreen(
     onSave: (Seller) -> Unit,
     onSubmit: () -> Unit,
     onClearError: () -> Unit,
+    onLocationPicked: (address: String, lat: Double, lng: Double) -> Unit,
     onSignOut: () -> Unit
 ) {
     var businessName by remember(existing) { mutableStateOf(existing?.businessName.orEmpty()) }
@@ -144,7 +146,15 @@ fun SellerOnboardingScreen(
             Spacer(Modifier.height(10.dp))
             OnboardingField(phone, { phone = it }, "Phone number", keyboardType = KeyboardType.Phone)
             Spacer(Modifier.height(10.dp))
-            OnboardingField(businessAddress, { businessAddress = it }, "Business / pickup address")
+            LocationPickerField(
+                address = businessAddress,
+                onAddressChange = { businessAddress = it },
+                onLocationPicked = { pickedAddress, lat, lng ->
+                    businessAddress = pickedAddress
+                    onLocationPicked(pickedAddress, lat, lng)
+                },
+                label = "Business / pickup address"
+            )
 
             Spacer(Modifier.height(22.dp))
             SectionLabel("Step 2 · Tax & bank details")

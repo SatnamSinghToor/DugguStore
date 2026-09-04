@@ -97,7 +97,7 @@ private fun hasLocationPermission(context: Context): Boolean =
 private suspend fun resolveLocation(context: Context): LocationState {
     val location = currentLocation(context)
         ?: return LocationState.Unavailable(R.string.location_turn_on)
-    val address = describe(context, location)
+    val address = reverseGeocodeAddress(context, location.latitude, location.longitude)
     val label = if (address.isNullOrBlank()) {
         // Still a real fix, just no street name for it.
         "%.4f, %.4f".format(location.latitude, location.longitude)
@@ -151,14 +151,17 @@ private suspend fun currentLocation(context: Context): Location? {
  * than migrating to the API 33+ listener-based overload: the thing that
  * overload exists to avoid (blocking the caller) is already handled by
  * running this on Dispatchers.IO.
+ *
+ * Public so the map location picker can reverse-geocode an arbitrary point
+ * the user panned to, not just a device GPS fix.
  */
 @Suppress("DEPRECATION")
-private suspend fun describe(context: Context, location: Location): String? =
+suspend fun reverseGeocodeAddress(context: Context, latitude: Double, longitude: Double): String? =
     withContext(Dispatchers.IO) {
         if (!Geocoder.isPresent()) return@withContext null
         try {
             val entry = Geocoder(context)
-                .getFromLocation(location.latitude, location.longitude, 1)
+                .getFromLocation(latitude, longitude, 1)
                 ?.firstOrNull()
                 ?: return@withContext null
 
