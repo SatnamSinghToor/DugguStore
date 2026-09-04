@@ -1,21 +1,20 @@
 package com.duggustore.app.ui.screens.auth
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 /**
@@ -47,40 +46,26 @@ fun SplashScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(PrimaryGreen),
+            .background(Background),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
+        Image(
+            painter = painterResource(R.drawable.app_logo),
+            contentDescription = "Duggu Store",
+            contentScale = ContentScale.Fit,
             modifier = Modifier
-                .size(128.dp)
+                .width(200.dp)
+                .aspectRatio(1880f / 1920f)
                 .scale(scale)
-                .background(Color.White.copy(alpha = glow * 0.3f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.ShoppingBasket,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = Color.White
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Duggu Store",
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = "Groceries delivered fast",
             fontSize = 14.sp,
-            color = Color.White.copy(alpha = 0.85f),
+            color = TextSecondary,
             modifier = Modifier.alpha(glow + 0.4f)
         )
 
@@ -88,7 +73,7 @@ fun SplashScreen() {
 
         CircularProgressIndicator(
             modifier = Modifier.size(28.dp),
-            color = Color.White,
+            color = Teal,
             strokeWidth = 2.5.dp
         )
     }

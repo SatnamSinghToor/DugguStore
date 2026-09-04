@@ -1,6 +1,7 @@
 package com.duggustore.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -25,6 +28,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
 /**
@@ -91,26 +95,20 @@ fun AuthScaffold(
 }
 
 /**
- * The app's mark: a rounded orange tile with a bold white "D", matching the
- * launcher icon. Sign in and sign up were the two screens with no branding
- * on them at all once the old teal header band was removed.
+ * The app's mark — the Duggu Store logo, matching the launcher icon. Sign in
+ * and sign up were the two screens with no branding on them at all once the
+ * old teal header band was removed.
  */
 @Composable
-fun AppLogo(size: Int = 64) {
-    Box(
+fun AppLogo(size: Int = 140) {
+    Image(
+        painter = painterResource(R.drawable.app_logo),
+        contentDescription = "Duggu Store",
+        contentScale = ContentScale.Fit,
         modifier = Modifier
-            .size(size.dp)
-            .clip(RoundedCornerShape((size * 0.28).dp))
-            .background(Orange),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "D",
-            color = Color.White,
-            fontSize = (size * 0.52).sp,
-            fontWeight = FontWeight.ExtraBold
-        )
-    }
+            .width(size.dp)
+            .aspectRatio(1880f / 1920f)
+    )
 }
 
 /**
