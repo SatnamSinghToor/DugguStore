@@ -7,9 +7,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.compose.rememberNavController
 import com.duggustore.app.data.remote.AuthDeepLinkParser
 import com.duggustore.app.platform.withAppLanguage
@@ -37,7 +43,26 @@ class MainActivity : ComponentActivity() {
         handleAuthDeepLink(intent)
         setContent {
             DugguStoreTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                // enableEdgeToEdge() stops the window resizing itself for the
+                // keyboard, so adjustResize in the manifest no longer moves
+                // anything on its own: the IME inset is handed to Compose and
+                // has to be consumed here, or whatever sits at the bottom of a
+                // screen ends up underneath the keyboard.
+                //
+                // While the keyboard is up it covers the navigation bar too, so
+                // the navigation-bar inset is consumed at the same time —
+                // otherwise the screens that pad for it themselves would add
+                // that height a second time and float above the keyboard.
+                val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .imePadding()
+                        .then(
+                            if (imeVisible) Modifier.consumeWindowInsets(WindowInsets.navigationBars)
+                            else Modifier
+                        )
+                ) {
                     val navController = rememberNavController()
                     AppNavGraph(navController = navController, authViewModel = authViewModel)
                 }

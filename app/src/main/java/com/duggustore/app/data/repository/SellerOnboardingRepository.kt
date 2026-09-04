@@ -127,4 +127,40 @@ class SellerOnboardingRepository {
             Result.failure(e)
         }
     }
+
+    /** Blocks (SUSPENDED), unblocks (APPROVED), or soft-deletes (REJECTED) a seller. Any of the three also hides their products when moving to SUSPENDED/REJECTED. */
+    suspend fun setSellerStatus(sellerId: String, status: String): Result<Unit> {
+        return try {
+            val body = buildJsonObject {
+                put("p_seller_id", sellerId)
+                put("p_status", status)
+            }.toString()
+            SupabaseService.rpc("admin_set_seller_status", body, token())
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Irreversible: wipes the seller's entire account — profile, seller record, documents, products, and order history. */
+    suspend fun purgeSeller(sellerId: String): Result<Unit> {
+        return try {
+            val body = buildJsonObject { put("p_seller_id", sellerId) }.toString()
+            SupabaseService.rpc("admin_purge_seller", body, token())
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Turns an existing account into an approved seller instantly, skipping document review. */
+    suspend fun promoteToSeller(userId: String): Result<Unit> {
+        return try {
+            val body = buildJsonObject { put("p_user_id", userId) }.toString()
+            SupabaseService.rpc("admin_promote_to_seller", body, token())
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
