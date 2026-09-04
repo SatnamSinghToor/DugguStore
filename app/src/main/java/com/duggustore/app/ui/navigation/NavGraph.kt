@@ -233,7 +233,17 @@ fun AppNavGraph(
     // the user actually is.
     val role = authState.user?.userRole() ?: UserRole.CUSTOMER
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    val showBar = BottomNav.showsBar(currentRoute, role)
+    // SellerDashboard and DeliveryDashboard are each one route that branches
+    // internally between the onboarding form and the real dashboard — the
+    // route name alone can't tell those apart, so an unapproved seller or
+    // rider would otherwise still get the Products/Orders tab bar while
+    // looking at their KYC form.
+    val isOnboardingGateOpen = when (role) {
+        UserRole.SELLER -> sellerOnboardingState.seller?.verificationStatus() == VerificationStatus.APPROVED
+        UserRole.DELIVERY -> deliveryOnboardingState.partner?.verificationStatus() == VerificationStatus.APPROVED
+        else -> true
+    }
+    val showBar = BottomNav.showsBar(currentRoute, role) && isOnboardingGateOpen
     // The three dashboards are one screen each with tabs inside them, so the bar
     // drives that index instead of navigating.
     var dashboardTab by rememberSaveable { mutableStateOf(0) }
