@@ -79,7 +79,7 @@
     <string name="auth_confirm_password">Confirm password</string>
     <string name="auth_confirm_password_hint">Repeat the password</string>
     <string name="auth_i_want_to">I want to</string>
-    <string name="auth_role_shop">Shop</string>
+    <string name="auth_role_shop">Buy</string>
     <string name="auth_role_sell">Sell</string>
     <string name="auth_role_deliver">Deliver</string>
     <string name="auth_have_account">Already have an account?</string>
