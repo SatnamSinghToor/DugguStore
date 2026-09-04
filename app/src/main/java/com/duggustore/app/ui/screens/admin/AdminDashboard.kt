@@ -25,8 +25,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.duggustore.app.data.model.DeliveryPartner
+import com.duggustore.app.data.model.DeliveryPartnerDocument
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.model.Seller
+import com.duggustore.app.data.model.SellerDocument
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
@@ -45,6 +49,19 @@ fun AdminDashboard(
     totalRevenue: Double,
     totalDeliveries: Int,
     onUpdateUserRole: (String, String) -> Unit,
+    /** Unfiltered — [AdminApprovalsScreen] narrows to the ones actually awaiting a decision. */
+    allSellers: List<Seller>,
+    sellerDocuments: Map<String, List<SellerDocument>>,
+    sellerDocumentUrls: Map<String, String>,
+    loadingSellerDocsFor: String?,
+    onLoadSellerDocuments: (String) -> Unit,
+    onReviewSeller: (String, Boolean, String) -> Unit,
+    allPartners: List<DeliveryPartner>,
+    partnerDocuments: Map<String, List<DeliveryPartnerDocument>>,
+    partnerDocumentUrls: Map<String, String>,
+    loadingPartnerDocsFor: String?,
+    onLoadPartnerDocuments: (String) -> Unit,
+    onReviewPartner: (String, Boolean, String) -> Unit,
     onSignOut: () -> Unit
 ) {
     Column(
@@ -69,7 +86,21 @@ fun AdminDashboard(
                 0 -> OverviewTab(orders = orders, products = products)
                 1 -> UsersTab(users = users, onUpdateUserRole = onUpdateUserRole)
                 2 -> OrdersTab(orders = orders)
-                else -> ProductsTab(products = products)
+                3 -> ProductsTab(products = products)
+                else -> AdminApprovalsScreen(
+                    sellers = allSellers,
+                    sellerDocuments = sellerDocuments,
+                    sellerDocumentUrls = sellerDocumentUrls,
+                    loadingSellerDocsFor = loadingSellerDocsFor,
+                    onLoadSellerDocuments = onLoadSellerDocuments,
+                    onReviewSeller = onReviewSeller,
+                    partners = allPartners,
+                    partnerDocuments = partnerDocuments,
+                    partnerDocumentUrls = partnerDocumentUrls,
+                    loadingPartnerDocsFor = loadingPartnerDocsFor,
+                    onLoadPartnerDocuments = onLoadPartnerDocuments,
+                    onReviewPartner = onReviewPartner
+                )
             }
         }
     }

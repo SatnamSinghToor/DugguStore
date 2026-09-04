@@ -18,7 +18,12 @@ data class DeliveryOnboardingState(
     val uploadingDocType: String? = null,
     val error: String? = null,
     val allPartners: List<DeliveryPartner> = emptyList(),
-    val isLoadingAll: Boolean = false
+    val isLoadingAll: Boolean = false,
+    /** An admin's view of an applicant's documents, keyed by partner id — separate from [documents] (the signed-in rider's own), since an admin browsing the queue must not clobber that. */
+    val reviewDocuments: Map<String, List<DeliveryPartnerDocument>> = emptyMap(),
+    /** Signed, directly-loadable URLs for review documents, keyed by document id. */
+    val reviewDocumentUrls: Map<String, String> = emptyMap(),
+    val loadingReviewDocsFor: String? = null
 )
 
 class DeliveryOnboardingViewModel : ViewModel() {
@@ -88,6 +93,22 @@ class DeliveryOnboardingViewModel : ViewModel() {
             repository.reviewPartner(partnerId, approve, rejectionReason).onSuccess {
                 loadAllForReview()
             }
+        }
+    }
+
+    /** Fetches one applicant's documents plus a signed URL for each, for the admin queue to display. */
+    fun loadReviewDocuments(partnerId: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(loadingReviewDocsFor = partnerId)
+            val docs = repository.getDocuments(partnerId).getOrElse { emptyList() }
+            val urls = docs.mapNotNull { doc ->
+                repository.documentUrl(doc.fileUrl).getOrNull()?.let { doc.id to it }
+            }.toMap()
+            _state.value = _state.value.copy(
+                reviewDocuments = _state.value.reviewDocuments + (partnerId to docs),
+                reviewDocumentUrls = _state.value.reviewDocumentUrls + urls,
+                loadingReviewDocsFor = null
+            )
         }
     }
 

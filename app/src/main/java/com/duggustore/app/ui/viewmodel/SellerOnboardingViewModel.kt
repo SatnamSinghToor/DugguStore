@@ -20,7 +20,12 @@ data class SellerOnboardingState(
     val error: String? = null,
     /** Set once so the review queue can be refreshed by whoever's watching it. */
     val allSellers: List<Seller> = emptyList(),
-    val isLoadingAll: Boolean = false
+    val isLoadingAll: Boolean = false,
+    /** An admin's view of an applicant's documents, keyed by seller id — separate from [documents] (the signed-in seller's own), since an admin browsing the queue must not clobber that. */
+    val reviewDocuments: Map<String, List<SellerDocument>> = emptyMap(),
+    /** Signed, directly-loadable URLs for review documents, keyed by document id. */
+    val reviewDocumentUrls: Map<String, String> = emptyMap(),
+    val loadingReviewDocsFor: String? = null
 )
 
 class SellerOnboardingViewModel : ViewModel() {
@@ -90,6 +95,22 @@ class SellerOnboardingViewModel : ViewModel() {
             repository.reviewSeller(sellerId, approve, rejectionReason).onSuccess {
                 loadAllForReview()
             }
+        }
+    }
+
+    /** Fetches one applicant's documents plus a signed URL for each, for the admin queue to display. */
+    fun loadReviewDocuments(sellerId: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(loadingReviewDocsFor = sellerId)
+            val docs = repository.getDocuments(sellerId).getOrElse { emptyList() }
+            val urls = docs.mapNotNull { doc ->
+                repository.documentUrl(doc.fileUrl).getOrNull()?.let { doc.id to it }
+            }.toMap()
+            _state.value = _state.value.copy(
+                reviewDocuments = _state.value.reviewDocuments + (sellerId to docs),
+                reviewDocumentUrls = _state.value.reviewDocumentUrls + urls,
+                loadingReviewDocsFor = null
+            )
         }
     }
 

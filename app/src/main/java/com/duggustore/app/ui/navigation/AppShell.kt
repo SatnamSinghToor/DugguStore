@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -45,7 +46,8 @@ object BottomNav {
             BottomNavItem("0", stringResource(R.string.nav_overview), Icons.Outlined.GridView),
             BottomNavItem("1", stringResource(R.string.nav_users), Icons.Outlined.Person),
             BottomNavItem("2", stringResource(R.string.nav_orders), Icons.Default.Receipt),
-            BottomNavItem("3", stringResource(R.string.nav_products), Icons.Default.Inventory)
+            BottomNavItem("3", stringResource(R.string.nav_products), Icons.Default.Inventory),
+            BottomNavItem("4", stringResource(R.string.nav_approvals), Icons.Default.VerifiedUser)
         )
     }
 

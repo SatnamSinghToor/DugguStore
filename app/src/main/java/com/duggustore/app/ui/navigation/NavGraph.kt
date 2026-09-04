@@ -874,6 +874,18 @@ fun AppNavGraph(
                 totalRevenue = adminState.totalRevenue,
                 totalDeliveries = adminState.totalDeliveries,
                 onUpdateUserRole = { userId, role -> adminViewModel.updateUserRole(userId, role) },
+                allSellers = sellerOnboardingState.allSellers,
+                sellerDocuments = sellerOnboardingState.reviewDocuments,
+                sellerDocumentUrls = sellerOnboardingState.reviewDocumentUrls,
+                loadingSellerDocsFor = sellerOnboardingState.loadingReviewDocsFor,
+                onLoadSellerDocuments = { sellerOnboardingViewModel.loadReviewDocuments(it) },
+                onReviewSeller = { sellerId, approve, reason -> sellerOnboardingViewModel.review(sellerId, approve, reason) },
+                allPartners = deliveryOnboardingState.allPartners,
+                partnerDocuments = deliveryOnboardingState.reviewDocuments,
+                partnerDocumentUrls = deliveryOnboardingState.reviewDocumentUrls,
+                loadingPartnerDocsFor = deliveryOnboardingState.loadingReviewDocsFor,
+                onLoadPartnerDocuments = { deliveryOnboardingViewModel.loadReviewDocuments(it) },
+                onReviewPartner = { partnerId, approve, reason -> deliveryOnboardingViewModel.review(partnerId, approve, reason) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
@@ -881,6 +893,8 @@ fun AppNavGraph(
             )
             LaunchedEffect(Unit) {
                 adminViewModel.loadDashboard()
+                sellerOnboardingViewModel.loadAllForReview()
+                deliveryOnboardingViewModel.loadAllForReview()
             }
         }
 

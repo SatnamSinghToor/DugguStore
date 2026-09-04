@@ -14,6 +14,7 @@
     <string name="nav_completed">Completed</string>
     <string name="nav_overview">Overview</string>
     <string name="nav_users">Users</string>
+    <string name="nav_approvals">Approvals</string>
     <string name="nav_cart">Cart</string>
 
     <!-- Home -->
