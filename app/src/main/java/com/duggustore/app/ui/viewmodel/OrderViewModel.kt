@@ -3,12 +3,17 @@ package com.duggustore.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.OrderIssue
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Review
+import com.duggustore.app.data.model.WalletTransaction
+import com.duggustore.app.data.repository.OrderIssueRepository
 import com.duggustore.app.data.repository.OrderRepository
 import com.duggustore.app.data.repository.ReviewRepository
 import com.duggustore.app.data.repository.TrackingRepository
+import com.duggustore.app.data.repository.WalletRepository
+import com.duggustore.app.data.repository.walletBalance
 import com.duggustore.app.data.model.DeliveryTracking
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,13 +32,22 @@ data class OrderState(
     /** Line items for whichever orders have had them fetched — on demand, not with every order list. */
     val orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
     /** This customer's own reviews on a delivered order, keyed by product id, so "rate this item" shows what's already rated. */
-    val myReviewsByOrderId: Map<String, Map<String, Review>> = emptyMap()
-)
+    val myReviewsByOrderId: Map<String, Map<String, Review>> = emptyMap(),
+    val walletTransactions: List<WalletTransaction> = emptyList(),
+    /** This customer's own issue reports, keyed by order id, so "report a problem" can show it was already sent. */
+    val myIssuesByOrderId: Map<String, List<OrderIssue>> = emptyMap(),
+    /** Open issues on a seller's (or, for an admin, every) order, for the resolve screen. */
+    val issuesForReview: List<OrderIssue> = emptyList()
+) {
+    val walletBalance: Int get() = walletTransactions.walletBalance()
+}
 
 class OrderViewModel : ViewModel() {
     private val repository = OrderRepository()
     private val trackingRepo = TrackingRepository()
     private val reviewRepo = ReviewRepository()
+    private val walletRepo = WalletRepository()
+    private val issueRepo = OrderIssueRepository()
 
     private val _state = MutableStateFlow(OrderState())
     val state: StateFlow<OrderState> = _state
@@ -192,6 +206,50 @@ class OrderViewModel : ViewModel() {
                 _state.value = _state.value.copy(
                     myReviewsByOrderId = _state.value.myReviewsByOrderId + (orderId to forOrder)
                 )
+            }
+        }
+    }
+
+    fun loadWallet(userId: String) {
+        viewModelScope.launch {
+            walletRepo.getTransactions(userId).onSuccess { txns ->
+                _state.value = _state.value.copy(walletTransactions = txns)
+            }
+        }
+    }
+
+    fun loadMyIssues(userId: String, orderId: String) {
+        if (_state.value.myIssuesByOrderId.containsKey(orderId)) return
+        viewModelScope.launch {
+            issueRepo.getMyIssues(userId).onSuccess { issues ->
+                _state.value = _state.value.copy(
+                    myIssuesByOrderId = issues.groupBy { it.orderId }
+                )
+            }
+        }
+    }
+
+    fun reportIssue(orderId: String, productId: String?, userId: String, reason: String, description: String) {
+        viewModelScope.launch {
+            issueRepo.reportIssue(orderId, productId, userId, reason, description).onSuccess {
+                _state.value = _state.value.copy(myIssuesByOrderId = emptyMap())
+                loadMyIssues(userId, orderId)
+            }
+        }
+    }
+
+    fun loadIssuesForReview() {
+        viewModelScope.launch {
+            issueRepo.getIssuesForReview().onSuccess { issues ->
+                _state.value = _state.value.copy(issuesForReview = issues)
+            }
+        }
+    }
+
+    fun resolveIssue(issueId: String, approve: Boolean, refundAmount: Int) {
+        viewModelScope.launch {
+            issueRepo.resolveIssue(issueId, approve, refundAmount).onSuccess {
+                loadIssuesForReview()
             }
         }
     }

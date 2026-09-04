@@ -48,6 +48,7 @@ import com.duggustore.app.ui.screens.auth.VerifyEmailScreen
 import com.duggustore.app.ui.screens.customer.*
 import com.duggustore.app.ui.screens.seller.AddEditProductScreen
 import com.duggustore.app.ui.screens.seller.SellerDashboard
+import com.duggustore.app.ui.screens.seller.SellerIssuesScreen
 import com.duggustore.app.ui.screens.delivery.DeliveryDashboard
 import com.duggustore.app.ui.screens.delivery.RouteMapScreen
 import com.duggustore.app.ui.screens.admin.AdminDashboard
@@ -73,6 +74,8 @@ sealed class Screen(val route: String) {
     object CustomerAccount : Screen("customer_account")
     object CustomerAddresses : Screen("customer_addresses")
     object CustomerCheckout : Screen("customer_checkout")
+    object CustomerWallet : Screen("customer_wallet")
+    object SellerIssues : Screen("seller_issues")
     object ProductDetail : Screen("product_detail/{productId}") {
         fun createRoute(productId: String) = "product_detail/$productId"
     }
@@ -485,6 +488,16 @@ fun AppNavGraph(
                         authState.user?.let { user ->
                             orderViewModel.submitReview(user.id, orderId, productId, rating, comment)
                         }
+                    },
+                    onReorder = {
+                        cartViewModel.reorderItems(orderState.orderItemsByOrderId[orderId] ?: emptyList())
+                        navController.navigate(Screen.CustomerCart.route)
+                    },
+                    myIssues = orderState.myIssuesByOrderId[orderId] ?: emptyList(),
+                    onReportIssue = { reason, description ->
+                        authState.user?.let { user ->
+                            orderViewModel.reportIssue(orderId, null, user.id, reason, description)
+                        }
                     }
                 )
 
@@ -492,7 +505,10 @@ fun AppNavGraph(
 
                 LaunchedEffect(orderId, it.status) {
                     if (it.status == OrderStatus.DELIVERED.value) {
-                        authState.user?.let { user -> orderViewModel.loadMyReviews(user.id, orderId) }
+                        authState.user?.let { user ->
+                            orderViewModel.loadMyReviews(user.id, orderId)
+                            orderViewModel.loadMyIssues(user.id, orderId)
+                        }
                     }
                 }
 
@@ -558,6 +574,7 @@ fun AppNavGraph(
                 onOrdersClick = { navController.navigate(Screen.CustomerOrders.route) },
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
                 onAddressesClick = { navController.navigate(Screen.CustomerAddresses.route) },
+                onWalletClick = { navController.navigate(Screen.CustomerWallet.route) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) {
@@ -566,6 +583,27 @@ fun AppNavGraph(
                 },
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Screen.CustomerWallet.route) {
+            WalletScreen(
+                transactions = orderState.walletTransactions,
+                onBack = { navController.popBackStack() }
+            )
+            LaunchedEffect(Unit) {
+                authState.user?.let { orderViewModel.loadWallet(it.id) }
+            }
+        }
+
+        composable(Screen.SellerIssues.route) {
+            SellerIssuesScreen(
+                issues = orderState.issuesForReview,
+                onResolve = { issueId, approve, refundAmount ->
+                    orderViewModel.resolveIssue(issueId, approve, refundAmount)
+                },
+                onBack = { navController.popBackStack() }
+            )
+            LaunchedEffect(Unit) { orderViewModel.loadIssuesForReview() }
         }
 
         composable(Screen.SellerDashboard.route) {
@@ -587,6 +625,8 @@ fun AppNavGraph(
                 onSaveStoreLocation = { address, lat, lng ->
                     authViewModel.updateStoreLocation(address, lat, lng)
                 },
+                openIssuesCount = orderState.issuesForReview.count { it.status == "open" },
+                onIssuesClick = { navController.navigate(Screen.SellerIssues.route) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }
@@ -594,6 +634,7 @@ fun AppNavGraph(
             )
             LaunchedEffect(authState.user) {
                 authState.user?.let { sellerViewModel.loadSellerData(it.id) }
+                orderViewModel.loadIssuesForReview()
             }
         }
 
@@ -808,8 +849,11 @@ fun AppNavGraph(
                 minOrderValue = CartState.MIN_ORDER_VALUE,
                 isLoading = cartState.isLoading,
                 error = cartState.error,
+                walletBalance = cartState.walletBalance,
                 onManageAddresses = { navController.navigate(Screen.CustomerAddresses.route) },
-                onPlaceOrder = { address, lat, lng -> cartViewModel.placeOrder(address, lat, lng) },
+                onPlaceOrder = { address, lat, lng, walletAmount ->
+                    cartViewModel.placeOrder(address, lat, lng, walletAmount)
+                },
                 onBack = { navController.popBackStack() }
             )
 

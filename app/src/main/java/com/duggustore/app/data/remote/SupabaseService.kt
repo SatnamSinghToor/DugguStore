@@ -367,6 +367,21 @@ object SupabaseService {
         return "$BASE_URL/storage/v1/object/public/$bucket/$encodedPath"
     }
 
+    /**
+     * Calls a Postgres function via PostgREST's /rpc/ endpoint. Used for
+     * SECURITY DEFINER functions that enforce their own authorization
+     * server-side (e.g. resolving a refund) rather than a plain RLS-scoped
+     * table write.
+     */
+    suspend fun rpc(fn: String, body: String = "{}", token: String? = null): String {
+        val request = Request.Builder()
+            .url("$BASE_URL/rest/v1/rpc/$fn")
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        return executeRequest(request)
+    }
+
     suspend fun deleteWhere(table: String, column: String, value: String, token: String? = null) {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table?$column=eq.${encode(value)}")

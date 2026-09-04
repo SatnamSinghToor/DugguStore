@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.duggustore.app.data.model.CartItem
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.ui.components.DeliveryEtaBanner
 import com.duggustore.app.ui.components.QuantityStepperRow
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.R
@@ -58,6 +59,12 @@ fun CartScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             CartHeader(itemCount = cartItems.size, onBack = onBack)
+
+            if (cartItems.isNotEmpty()) {
+                DeliveryEtaBanner(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)
+                )
+            }
 
             if (cartItems.isEmpty()) {
                 EmptyCart()

@@ -94,6 +94,8 @@
     <string name="account_favourites_sub">Products you saved</string>
     <string name="account_addresses">Addresses</string>
     <string name="account_addresses_sub">Where your orders are delivered</string>
+    <string name="account_wallet">My wallet</string>
+    <string name="account_wallet_sub">Cashback and refund balance</string>
     <string name="account_sign_out">Sign out</string>
     <string name="account_sign_out_sub">Log out of this device</string>
     <string name="account_user">User</string>

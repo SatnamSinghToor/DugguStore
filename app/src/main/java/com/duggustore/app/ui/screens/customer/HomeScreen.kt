@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.SearchOff
@@ -18,9 +19,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.data.local.AppPrefs
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Coupon
@@ -32,6 +35,7 @@ import com.duggustore.app.platform.rememberDeviceLocation
 import com.duggustore.app.platform.rememberVoiceSearchController
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
+import kotlinx.coroutines.delay
 
 @Composable
 fun HomeScreen(
@@ -65,6 +69,17 @@ fun HomeScreen(
     var showLocationSheet by remember { mutableStateOf(false) }
     val detected = rememberDeviceLocation()
     val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
+
+    val context = LocalContext.current
+    var recentSearches by remember { mutableStateOf(AppPrefs.recentSearches(context)) }
+    // Saved once typing pauses rather than on every keystroke, so the list
+    // doesn't fill up with "k", "ku", "kur" for a single search.
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isBlank()) return@LaunchedEffect
+        delay(1000)
+        AppPrefs.addRecentSearch(context, searchQuery)
+        recentSearches = AppPrefs.recentSearches(context)
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -161,6 +176,18 @@ fun HomeScreen(
                     // leaves the mic out rather than showing a dead button.
                     onMicClick = voice?.let { { it.open() } }
                 )
+
+                if (searchQuery.isBlank() && recentSearches.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    RecentSearchesRow(
+                        terms = recentSearches,
+                        onTermClick = onSearchQueryChange,
+                        onClear = {
+                            AppPrefs.clearRecentSearches(context)
+                            recentSearches = emptyList()
+                        }
+                    )
+                }
             }
 
             if (isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
@@ -315,6 +342,49 @@ fun HomeScreen(
         )
 
         voice?.let { VoiceSearchSheet(controller = it) }
+    }
+}
+
+@Composable
+private fun RecentSearchesRow(
+    terms: List<String>,
+    onTermClick: (String) -> Unit,
+    onClear: () -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Recent searches", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+            Text(
+                text = "Clear",
+                fontSize = 12.sp,
+                color = Teal,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable { onClear() }
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(terms) { term ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = SurfaceMuted,
+                    onClick = { onTermClick(term) }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.History, null, tint = TextLight, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(term, fontSize = 13.sp, color = TextPrimary)
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -48,6 +48,8 @@ class OrderRepository {
                 put("delivery_address", order.deliveryAddress)
                 order.deliveryLatitude?.let { put("delivery_latitude", it) }
                 order.deliveryLongitude?.let { put("delivery_longitude", it) }
+                put("payment_method", order.paymentMethod)
+                put("wallet_used", order.walletUsed)
             }.toString()
 
             val created = SupabaseService.insert("orders", orderBody, token)

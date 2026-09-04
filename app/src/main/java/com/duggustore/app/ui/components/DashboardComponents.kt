@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,7 +30,9 @@ fun DashboardHeader(
     title: String,
     subtitle: String,
     stats: List<Pair<String, String>>,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    issuesBadgeCount: Int = 0,
+    onIssuesClick: (() -> Unit)? = null
 ) {
     Surface(color = Teal) {
         Column(
@@ -53,6 +56,43 @@ fun DashboardHeader(
                             fontSize = 13.sp
                         )
                     }
+                }
+                if (onIssuesClick != null) {
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.18f))
+                                .clickable { onIssuesClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.ReportProblem,
+                                contentDescription = "Reported issues",
+                                tint = Color.White,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                        if (issuesBadgeCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+                                    .clip(CircleShape)
+                                    .background(AccentRed),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (issuesBadgeCount > 9) "9+" else "$issuesBadgeCount",
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 3.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
                 }
                 Box(
                     modifier = Modifier

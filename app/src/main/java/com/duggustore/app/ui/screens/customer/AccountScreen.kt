@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
@@ -35,6 +36,7 @@ fun AccountScreen(
     onOrdersClick: () -> Unit,
     onFavoritesClick: () -> Unit,
     onAddressesClick: () -> Unit,
+    onWalletClick: () -> Unit = {},
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -70,6 +72,14 @@ fun AccountScreen(
                 subtitle = stringResource(R.string.account_addresses_sub),
                 tint = Orange,
                 onClick = onAddressesClick
+            )
+            Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+            AccountMenuItem(
+                icon = Icons.Default.AccountBalanceWallet,
+                title = stringResource(R.string.account_wallet),
+                subtitle = stringResource(R.string.account_wallet_sub),
+                tint = Teal,
+                onClick = onWalletClick
             )
         }
 

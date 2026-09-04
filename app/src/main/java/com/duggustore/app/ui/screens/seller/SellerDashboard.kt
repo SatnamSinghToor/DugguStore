@@ -56,6 +56,8 @@ fun SellerDashboard(
     onExpandOrderItems: (String) -> Unit = {},
     hasStoreLocation: Boolean = true,
     onSaveStoreLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
+    openIssuesCount: Int = 0,
+    onIssuesClick: () -> Unit = {},
     onSignOut: () -> Unit
 ) {
     val pendingCount = orders.count { it.status == OrderStatus.PENDING.value }
@@ -75,6 +77,8 @@ fun SellerDashboard(
                 "Orders" to "$totalOrders",
                 "Products" to "${products.size}"
             ),
+            issuesBadgeCount = openIssuesCount,
+            onIssuesClick = onIssuesClick,
             onSignOut = onSignOut
         )
 

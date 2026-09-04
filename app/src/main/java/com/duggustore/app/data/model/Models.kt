@@ -137,6 +137,8 @@ data class Order(
     @SerialName("delivery_latitude") val deliveryLatitude: Double? = null,
     @SerialName("delivery_longitude") val deliveryLongitude: Double? = null,
     @SerialName("created_at") val createdAt: String = "",
+    @SerialName("payment_method") val paymentMethod: String = "cod",
+    @SerialName("wallet_used") val walletUsed: Double = 0.0,
     val items: List<OrderItem> = emptyList(),
     // Embedded via a PostgREST select on the matching FK; each is only
     // populated by the order queries that actually ask for it — the seller's
@@ -187,6 +189,32 @@ data class Review(
     @SerialName("product_id") val productId: String = "",
     val rating: Int = 0,
     val comment: String = "",
+    @SerialName("created_at") val createdAt: String = ""
+)
+
+/** A customer's report of a problem with a delivered order/item, resolved by the seller or an admin. */
+@Serializable
+data class OrderIssue(
+    val id: String = "",
+    @SerialName("order_id") val orderId: String = "",
+    @SerialName("product_id") val productId: String? = null,
+    @SerialName("user_id") val userId: String = "",
+    val reason: String = "",
+    val description: String = "",
+    val status: String = "open",
+    @SerialName("refund_amount") val refundAmount: Int = 0,
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("resolved_at") val resolvedAt: String? = null
+)
+
+/** One line of the wallet ledger — the balance itself is derived by summing these, never stored. */
+@Serializable
+data class WalletTransaction(
+    val id: String = "",
+    @SerialName("user_id") val userId: String = "",
+    val title: String = "",
+    val amount: Int = 0,
+    val type: String = "CREDIT",
     @SerialName("created_at") val createdAt: String = ""
 )
 

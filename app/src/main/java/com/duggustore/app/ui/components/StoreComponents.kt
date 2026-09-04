@@ -581,3 +581,34 @@ fun discountPercent(product: Product): Int {
 fun trimAmount(value: Double): String =
     if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value)
 
+/**
+ * A flat estimate rather than a real routing calculation — there's no live
+ * distance/traffic API wired in, so this mirrors the fixed "X-Y mins" promise
+ * every quick-commerce app shows before an address and rider even exist.
+ */
+fun estimatedDeliveryWindow(): String = "15-20 mins"
+
+/** Small pill shown on cart/checkout so the delivery promise is visible before placing the order. */
+@Composable
+fun DeliveryEtaBanner(modifier: Modifier = Modifier, etaText: String = estimatedDeliveryWindow()) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = TealSurface
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Timer, contentDescription = null, tint = Teal, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Delivery in $etaText",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+        }
+    }
+}
+

@@ -11,6 +11,11 @@ import android.content.SharedPreferences
 object AppPrefs {
     private const val PREF_NAME = "duggu_store_prefs"
     private const val KEY_LANGUAGE = "language"
+    private const val KEY_RECENT_SEARCHES = "recent_searches"
+    // Newline rather than a comma — a search term could contain one, but the
+    // single-line search field it comes from can never produce a newline.
+    private const val RECENT_SEARCH_SEPARATOR = "\n"
+    private const val MAX_RECENT_SEARCHES = 8
 
     private lateinit var prefs: SharedPreferences
 
@@ -35,5 +40,30 @@ object AppPrefs {
             if (tag == null) remove(KEY_LANGUAGE) else putString(KEY_LANGUAGE, tag)
             apply()
         }
+    }
+
+    /** Most recent search first, capped at [MAX_RECENT_SEARCHES]. */
+    fun recentSearches(context: Context): List<String> =
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_RECENT_SEARCHES, null)
+            ?.split(RECENT_SEARCH_SEPARATOR)
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+
+    /** Moves [term] to the front, de-duplicating case-insensitively. */
+    fun addRecentSearch(context: Context, term: String) {
+        val trimmed = term.trim()
+        if (trimmed.isBlank()) return
+        val updated = (listOf(trimmed) + recentSearches(context).filterNot { it.equals(trimmed, ignoreCase = true) })
+            .take(MAX_RECENT_SEARCHES)
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+            .putString(KEY_RECENT_SEARCHES, updated.joinToString(RECENT_SEARCH_SEPARATOR))
+            .apply()
+    }
+
+    fun clearRecentSearches(context: Context) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+            .remove(KEY_RECENT_SEARCHES)
+            .apply()
     }
 }

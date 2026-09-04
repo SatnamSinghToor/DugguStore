@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.CartItem
+import com.duggustore.app.ui.components.DeliveryEtaBanner
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
 
@@ -42,8 +44,9 @@ fun CheckoutScreen(
     minOrderValue: Double,
     isLoading: Boolean,
     error: String? = null,
+    walletBalance: Int = 0,
     onManageAddresses: () -> Unit,
-    onPlaceOrder: (deliveryAddress: String, latitude: Double?, longitude: Double?) -> Unit,
+    onPlaceOrder: (deliveryAddress: String, latitude: Double?, longitude: Double?, walletAmount: Int) -> Unit,
     onBack: () -> Unit
 ) {
     // Preselect the default address so the common case is a single tap.
@@ -54,6 +57,11 @@ fun CheckoutScreen(
     }
     val selected = addresses.firstOrNull { it.id == selectedId }
 
+    var useWallet by remember { mutableStateOf(false) }
+    val maxWalletUsable = minOf(walletBalance, total.toInt())
+    val walletUsed = if (useWallet) maxWalletUsable else 0
+    val payableTotal = total - walletUsed
+
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         CheckoutHeader(onBack = onBack)
 
@@ -63,6 +71,9 @@ fun CheckoutScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            DeliveryEtaBanner()
+            Spacer(Modifier.height(16.dp))
+
             SectionTitle(Icons.Default.LocationOn, "Delivery address", Teal)
             Spacer(Modifier.height(10.dp))
 
@@ -141,6 +152,37 @@ fun CheckoutScreen(
                 }
             }
 
+            if (walletBalance > 0) {
+                Spacer(Modifier.height(10.dp))
+                Panel(modifier = Modifier.clickable { useWallet = !useWallet }) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconTile(Icons.Default.AccountBalanceWallet, Teal)
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Use wallet balance",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                "₹$walletBalance available",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                        Switch(
+                            checked = useWallet,
+                            onCheckedChange = { useWallet = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Teal, checkedTrackColor = TealSurface)
+                        )
+                    }
+                }
+            }
+
             Spacer(Modifier.height(22.dp))
 
             SectionTitle(Icons.Default.Receipt, "Order summary", Coral)
@@ -176,6 +218,9 @@ fun CheckoutScreen(
                     if (savings > 0) {
                         SummaryRow("You save", "-₹${trimAmount(savings)}", SuccessGreen)
                     }
+                    if (walletUsed > 0) {
+                        SummaryRow("Wallet used", "-₹$walletUsed", Teal)
+                    }
 
                     Divider(Modifier.padding(vertical = 10.dp), color = BorderGray)
 
@@ -188,7 +233,7 @@ fun CheckoutScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "₹${trimAmount(total)}",
+                            text = "₹${trimAmount(payableTotal)}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Teal
@@ -252,7 +297,7 @@ fun CheckoutScreen(
                             // (0°, 0°).
                             val lat = it.latitude.takeIf { v -> v != 0.0 }
                             val lng = it.longitude.takeIf { v -> v != 0.0 }
-                            onPlaceOrder(it.fullAddress, lat, lng)
+                            onPlaceOrder(it.fullAddress, lat, lng, walletUsed)
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
@@ -274,7 +319,7 @@ fun CheckoutScreen(
                         )
                     } else {
                         Text(
-                            text = "Place order · ₹${trimAmount(total)}",
+                            text = "Place order · ₹${trimAmount(payableTotal)}",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White

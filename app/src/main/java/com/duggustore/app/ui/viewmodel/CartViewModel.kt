@@ -3,10 +3,13 @@ package com.duggustore.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.CartItem
+import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.repository.CartRepository
 import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.OrderRepository
+import com.duggustore.app.data.repository.WalletRepository
+import com.duggustore.app.data.repository.walletBalance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -21,7 +24,8 @@ data class CartState(
     val couponApplied: Boolean = false,
     val couponDiscount: Double = 0.0,
     val couponError: String? = null,
-    val isCartOpen: Boolean = false
+    val isCartOpen: Boolean = false,
+    val walletBalance: Int = 0
 ) {
     companion object {
         /** Below this, an order isn't worth a seller packing and a rider carrying. */
@@ -63,6 +67,7 @@ class CartViewModel : ViewModel() {
     private val cartRepo = CartRepository()
     private val orderRepo = OrderRepository()
     private val offerRepo = OfferRepository()
+    private val walletRepo = WalletRepository()
 
     private val _state = MutableStateFlow(CartState())
     val state: StateFlow<CartState> = _state
@@ -71,6 +76,15 @@ class CartViewModel : ViewModel() {
         if (_state.value.customerId != customerId) {
             _state.value = _state.value.copy(customerId = customerId)
             loadCart()
+            loadWalletBalance(customerId)
+        }
+    }
+
+    private fun loadWalletBalance(customerId: String) {
+        viewModelScope.launch {
+            walletRepo.getTransactions(customerId).onSuccess { txns ->
+                _state.value = _state.value.copy(walletBalance = txns.walletBalance())
+            }
         }
     }
 
@@ -167,7 +181,12 @@ class CartViewModel : ViewModel() {
      * signed-in customer's own id, which stored every order with
      * seller_id = customer_id and left it invisible to the seller who has to fulfil it.
      */
-    fun placeOrder(deliveryAddress: String, latitude: Double? = null, longitude: Double? = null) {
+    fun placeOrder(
+        deliveryAddress: String,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        walletAmount: Int = 0
+    ) {
         viewModelScope.launch {
             val state = _state.value
             val customerId = state.customerId
@@ -191,15 +210,22 @@ class CartViewModel : ViewModel() {
 
             _state.value = _state.value.copy(isLoading = true, error = null)
 
+            // Clamped again here rather than trusted from the caller — the
+            // balance can move between the screen composing this call and
+            // the request actually landing.
+            val walletUsed = walletAmount.coerceIn(0, minOf(state.walletBalance, state.total.toInt()))
+
             val order = com.duggustore.app.data.model.Order(
                 customerId = customerId,
                 sellerId = sellerId,
                 status = "pending",
-                totalAmount = state.total,
+                totalAmount = state.total - walletUsed,
                 deliveryFee = state.deliveryFee,
                 deliveryAddress = deliveryAddress,
                 deliveryLatitude = latitude,
-                deliveryLongitude = longitude
+                deliveryLongitude = longitude,
+                paymentMethod = "cod",
+                walletUsed = walletUsed.toDouble()
             )
 
             val orderItems = state.cartItems.map { item ->
@@ -211,8 +237,11 @@ class CartViewModel : ViewModel() {
             }
 
             val result = orderRepo.createOrder(order, orderItems)
-            result.onSuccess {
+            result.onSuccess { orderId ->
                 cartRepo.clearCart(customerId)
+                if (walletUsed > 0) {
+                    walletRepo.debit(customerId, walletUsed, "Used on order #${orderId.takeLast(8).uppercase()}")
+                }
                 _state.value = _state.value.copy(
                     isLoading = false,
                     orderPlaced = true,
@@ -220,7 +249,8 @@ class CartViewModel : ViewModel() {
                     isCartOpen = false,
                     couponApplied = false,
                     couponDiscount = 0.0,
-                    couponError = null
+                    couponError = null,
+                    walletBalance = state.walletBalance - walletUsed
                 )
             }
             result.onFailure {
@@ -231,5 +261,17 @@ class CartViewModel : ViewModel() {
 
     fun resetOrderPlaced() {
         _state.value = _state.value.copy(orderPlaced = false)
+    }
+
+    /** "Buy again" from a past order — re-adds each line at its original quantity. */
+    fun reorderItems(items: List<OrderItem>) {
+        val customerId = _state.value.customerId
+        if (customerId.isEmpty() || items.isEmpty()) return
+        viewModelScope.launch {
+            items.forEach { item ->
+                cartRepo.addToCart(customerId, item.productId, item.quantity)
+            }
+            loadCart()
+        }
     }
 }

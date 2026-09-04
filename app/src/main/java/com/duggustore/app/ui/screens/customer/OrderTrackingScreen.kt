@@ -14,10 +14,16 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import com.duggustore.app.data.model.DeliveryTracking
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.OrderIssue
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Review
@@ -36,6 +43,8 @@ import com.duggustore.app.ui.components.RiderLocationCard
 import com.duggustore.app.ui.components.StatusBadge
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
+
+private val ISSUE_REASONS = listOf("Missing item", "Damaged item", "Wrong item", "Quality issue", "Other")
 
 @Composable
 fun OrderListScreen(
@@ -164,9 +173,13 @@ fun OrderTrackingDetailScreen(
     riderFixAgeMinutes: Long? = null,
     items: List<OrderItem> = emptyList(),
     myReviews: Map<String, Review> = emptyMap(),
-    onSubmitReview: (productId: String, rating: Int, comment: String) -> Unit = { _, _, _ -> }
+    onSubmitReview: (productId: String, rating: Int, comment: String) -> Unit = { _, _, _ -> },
+    onReorder: () -> Unit = {},
+    myIssues: List<OrderIssue> = emptyList(),
+    onReportIssue: (reason: String, description: String) -> Unit = { _, _ -> }
 ) {
     val cancelled = order.status == OrderStatus.CANCELLED.value
+    var showReportDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -282,6 +295,47 @@ fun OrderTrackingDetailScreen(
                         }
                     }
                 }
+                item {
+                    OutlinedButton(
+                        onClick = onReorder,
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Teal)
+                    ) {
+                        Icon(Icons.Default.Replay, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Reorder these items", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                }
+            }
+
+            if (order.status == OrderStatus.DELIVERED.value) {
+                item {
+                    val latestIssue = myIssues.maxByOrNull { it.createdAt }
+                    when {
+                        latestIssue == null -> {
+                            OutlinedButton(
+                                onClick = { showReportDialog = true },
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Coral)
+                            ) {
+                                Icon(Icons.Default.ReportProblem, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Report a problem", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                        }
+                        latestIssue.status == "open" -> IssueStatusNotice(
+                            text = "Issue reported — the seller is reviewing it",
+                            color = WarningYellow
+                        )
+                        latestIssue.status == "resolved" -> IssueStatusNotice(
+                            text = "Resolved — ₹${latestIssue.refundAmount} credited to your wallet",
+                            color = SuccessGreen
+                        )
+                        else -> IssueStatusNotice(text = "Your report was reviewed and rejected", color = Coral)
+                    }
+                }
             }
 
             // Only while it is actually on the road: before that there is no
@@ -354,7 +408,82 @@ fun OrderTrackingDetailScreen(
                 }
             }
         }
+
+        if (showReportDialog) {
+            ReportIssueDialog(
+                onSubmit = { reason, description ->
+                    onReportIssue(reason, description)
+                    showReportDialog = false
+                },
+                onDismiss = { showReportDialog = false }
+            )
+        }
     }
+}
+
+@Composable
+private fun IssueStatusNotice(text: String, color: Color) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = color.copy(alpha = 0.12f)
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.ReportProblem, null, tint = color, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+        }
+    }
+}
+
+@Composable
+private fun ReportIssueDialog(
+    onSubmit: (reason: String, description: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedReason by remember { mutableStateOf(ISSUE_REASONS.first()) }
+    var description by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Report a problem") },
+        text = {
+            Column {
+                ISSUE_REASONS.forEach { reason ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedReason = reason }
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedReason == reason,
+                            onClick = { selectedReason = reason },
+                            colors = RadioButtonDefaults.colors(selectedColor = Teal)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(reason, fontSize = 14.sp, color = TextPrimary)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Tell us more (optional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSubmit(selectedReason, description) }) {
+                Text("Submit", color = Teal, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) }
+        }
+    )
 }
 
 /** Tap a star to rate — submits immediately rather than waiting on a separate confirm step. */
