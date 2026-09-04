@@ -194,7 +194,7 @@ fun WelcomeScreen(
             }
         }
 
-        Column(modifier = Modifier.padding(horizontal = 24.dp, bottom = 20.dp)) {
+        Column(modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 20.dp)) {
             Button(
                 onClick = { if (isLast) onFinish() else goTo(index + 1) },
                 modifier = Modifier
