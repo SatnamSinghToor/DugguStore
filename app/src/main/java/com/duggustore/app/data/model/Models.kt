@@ -252,6 +252,119 @@ data class Favorite(
     @SerialName("product_id") val productId: String = ""
 )
 
+/** Shared by seller and delivery-partner applications — both tables use the same five values. */
+enum class VerificationStatus(val value: String) {
+    PENDING_VERIFICATION("PENDING_VERIFICATION"),
+    UNDER_REVIEW("UNDER_REVIEW"),
+    APPROVED("APPROVED"),
+    REJECTED("REJECTED"),
+    SUSPENDED("SUSPENDED");
+
+    companion object {
+        fun fromString(value: String): VerificationStatus = when (value) {
+            "UNDER_REVIEW" -> UNDER_REVIEW
+            "APPROVED" -> APPROVED
+            "REJECTED" -> REJECTED
+            "SUSPENDED" -> SUSPENDED
+            else -> PENDING_VERIFICATION
+        }
+    }
+}
+
+/** The document types the seller-documents table's check constraint accepts, in the order collected. */
+val SELLER_DOC_TYPES = listOf("PAN", "GST_CERTIFICATE", "FSSAI_LICENSE", "BANK_PROOF", "ADDRESS_PROOF")
+
+/** Same, for delivery_partner_documents. */
+val DELIVERY_DOC_TYPES = listOf("DRIVING_LICENCE", "AADHAAR", "PAN", "VEHICLE_RC", "VEHICLE_INSURANCE", "BANK_PROOF")
+
+val VEHICLE_TYPES = listOf("BIKE", "SCOOTER", "BICYCLE", "EV_SCOOTER")
+
+fun docTypeLabel(docType: String): String = when (docType) {
+    "PAN" -> "PAN card"
+    "GST_CERTIFICATE" -> "GST certificate"
+    "FSSAI_LICENSE" -> "FSSAI licence"
+    "BANK_PROOF" -> "Bank proof (cancelled cheque)"
+    "ADDRESS_PROOF" -> "Business address proof"
+    "DRIVING_LICENCE" -> "Driving licence"
+    "AADHAAR" -> "Aadhaar card"
+    "VEHICLE_RC" -> "Vehicle registration (RC)"
+    "VEHICLE_INSURANCE" -> "Vehicle insurance"
+    else -> docType
+}
+
+/** A seller's business KYC — separate from the customer-facing `profiles` row, gates whether they can list products. */
+@Serializable
+data class Seller(
+    val id: String = "",
+    @SerialName("business_name") val businessName: String = "",
+    @SerialName("owner_name") val ownerName: String = "",
+    val email: String = "",
+    val phone: String? = null,
+    @SerialName("pan_number") val panNumber: String? = null,
+    @SerialName("gst_number") val gstNumber: String? = null,
+    @SerialName("fssai_number") val fssaiNumber: String? = null,
+    @SerialName("bank_account_number") val bankAccountNumber: String? = null,
+    @SerialName("bank_ifsc") val bankIfsc: String? = null,
+    @SerialName("upi_id") val upiId: String? = null,
+    @SerialName("business_address") val businessAddress: String? = null,
+    val status: String = "PENDING_VERIFICATION",
+    @SerialName("rejection_reason") val rejectionReason: String? = null,
+    @SerialName("created_at") val createdAt: String = ""
+) {
+    fun verificationStatus(): VerificationStatus = VerificationStatus.fromString(status)
+    fun isApproved(): Boolean = status == "APPROVED"
+}
+
+@Serializable
+data class SellerDocument(
+    val id: String = "",
+    @SerialName("seller_id") val sellerId: String = "",
+    @SerialName("doc_type") val docType: String = "",
+    @SerialName("file_url") val fileUrl: String = "",
+    val status: String = "PENDING",
+    @SerialName("rejection_reason") val rejectionReason: String? = null,
+    @SerialName("created_at") val createdAt: String = ""
+)
+
+/** A rider's KYC — gates whether they can go online for pool orders. */
+@Serializable
+data class DeliveryPartner(
+    val id: String = "",
+    @SerialName("full_name") val fullName: String = "",
+    val email: String = "",
+    val phone: String? = null,
+    @SerialName("date_of_birth") val dateOfBirth: String? = null,
+    @SerialName("licence_number") val licenceNumber: String? = null,
+    @SerialName("aadhaar_number") val aadhaarNumber: String? = null,
+    @SerialName("pan_number") val panNumber: String? = null,
+    @SerialName("vehicle_type") val vehicleType: String? = null,
+    @SerialName("vehicle_number") val vehicleNumber: String? = null,
+    @SerialName("bank_account_number") val bankAccountNumber: String? = null,
+    @SerialName("bank_ifsc") val bankIfsc: String? = null,
+    @SerialName("upi_id") val upiId: String? = null,
+    val city: String? = null,
+    val address: String? = null,
+    @SerialName("emergency_contact_name") val emergencyContactName: String? = null,
+    @SerialName("emergency_contact_phone") val emergencyContactPhone: String? = null,
+    val status: String = "PENDING_VERIFICATION",
+    @SerialName("rejection_reason") val rejectionReason: String? = null,
+    @SerialName("created_at") val createdAt: String = ""
+) {
+    fun verificationStatus(): VerificationStatus = VerificationStatus.fromString(status)
+    fun isApproved(): Boolean = status == "APPROVED"
+}
+
+@Serializable
+data class DeliveryPartnerDocument(
+    val id: String = "",
+    @SerialName("partner_id") val partnerId: String = "",
+    @SerialName("doc_type") val docType: String = "",
+    @SerialName("file_url") val fileUrl: String = "",
+    val status: String = "PENDING",
+    @SerialName("rejection_reason") val rejectionReason: String? = null,
+    @SerialName("created_at") val createdAt: String = ""
+)
+
 // Wrapper classes for Supabase Postgrest
 @Serializable
 data class ProfileResponse(val profiles: List<UserProfile> = emptyList())

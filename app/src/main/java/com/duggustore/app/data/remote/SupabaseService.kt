@@ -368,6 +368,50 @@ object SupabaseService {
     }
 
     /**
+     * Uploads to a private bucket and hands back just the object's path
+     * rather than a URL — unlike [uploadFile]'s bucket, nothing can read
+     * this back over a plain "/object/public/..." URL, so callers turn the
+     * path into a short-lived link with [signedUrl] only when they actually
+     * need to display or download the file.
+     */
+    suspend fun uploadPrivateFile(
+        bucket: String,
+        path: String,
+        bytes: ByteArray,
+        contentType: String,
+        token: String?
+    ): String {
+        val mediaType = contentType.toMediaTypeOrNull() ?: "application/octet-stream".toMediaType()
+        val encodedPath = path.split("/").joinToString("/") { encode(it) }
+        val request = Request.Builder()
+            .url("$BASE_URL/storage/v1/object/$bucket/$encodedPath")
+            .post(bytes.toRequestBody(mediaType))
+            .apply {
+                addHeader("apikey", ANON_KEY)
+                addHeader("Authorization", "Bearer ${token ?: ANON_KEY}")
+                addHeader("x-upsert", "true")
+            }
+            .build()
+        executeRequest(request)
+        return path
+    }
+
+    /** A short-lived, directly loadable URL for a file in a private bucket. */
+    suspend fun signedUrl(bucket: String, path: String, token: String?, expiresInSeconds: Int = 3600): String {
+        val encodedPath = path.split("/").joinToString("/") { encode(it) }
+        val body = buildJsonObject { put("expiresIn", expiresInSeconds) }.toString()
+        val request = Request.Builder()
+            .url("$BASE_URL/storage/v1/object/sign/$bucket/$encodedPath")
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        val response = executeRequest(request)
+        val signedPath = stringField(parseOrNull(response), "signedURL")
+            ?: throw SupabaseException(0, "sign_failed", "Could not create a link for this file.")
+        return "$BASE_URL/storage/v1$signedPath"
+    }
+
+    /**
      * Calls a Postgres function via PostgREST's /rpc/ endpoint. Used for
      * SECURITY DEFINER functions that enforce their own authorization
      * server-side (e.g. resolving a refund) rather than a plain RLS-scoped
