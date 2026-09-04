@@ -10,10 +10,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -37,70 +39,100 @@ fun AccountScreen(
     onFavoritesClick: () -> Unit,
     onAddressesClick: () -> Unit,
     onWalletClick: () -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
-    Column(
+    // A Box rather than letting the scrolling Column alone fill the screen —
+    // otherwise a short menu (as this one is) leaves the footer floating in
+    // whatever blank space is left instead of sitting at the true bottom.
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
-            .verticalScroll(rememberScrollState())
     ) {
-        AccountHeader(user = user, onBack = onBack)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            AccountHeader(user = user, onBack = onBack)
 
-        Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(18.dp))
 
-        MenuGroup {
-            AccountMenuItem(
-                icon = Icons.Default.Receipt,
-                title = stringResource(R.string.account_my_orders),
-                subtitle = stringResource(R.string.account_my_orders_sub),
-                onClick = onOrdersClick
-            )
-            Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
-            AccountMenuItem(
-                icon = Icons.Default.Favorite,
-                title = stringResource(R.string.nav_favourites),
-                subtitle = stringResource(R.string.account_favourites_sub),
-                tint = Coral,
-                onClick = onFavoritesClick
-            )
-            Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
-            AccountMenuItem(
-                icon = Icons.Default.LocationOn,
-                title = stringResource(R.string.account_addresses),
-                subtitle = stringResource(R.string.account_addresses_sub),
-                tint = Orange,
-                onClick = onAddressesClick
-            )
-            Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
-            AccountMenuItem(
-                icon = Icons.Default.AccountBalanceWallet,
-                title = stringResource(R.string.account_wallet),
-                subtitle = stringResource(R.string.account_wallet_sub),
-                tint = Teal,
-                onClick = onWalletClick
-            )
+            MenuGroup {
+                AccountMenuItem(
+                    icon = Icons.Default.Receipt,
+                    title = stringResource(R.string.account_my_orders),
+                    subtitle = stringResource(R.string.account_my_orders_sub),
+                    onClick = onOrdersClick
+                )
+                Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+                AccountMenuItem(
+                    icon = Icons.Default.Favorite,
+                    title = stringResource(R.string.nav_favourites),
+                    subtitle = stringResource(R.string.account_favourites_sub),
+                    tint = Coral,
+                    onClick = onFavoritesClick
+                )
+                Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+                AccountMenuItem(
+                    icon = Icons.Default.LocationOn,
+                    title = stringResource(R.string.account_addresses),
+                    subtitle = stringResource(R.string.account_addresses_sub),
+                    tint = Orange,
+                    onClick = onAddressesClick
+                )
+                Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+                AccountMenuItem(
+                    icon = Icons.Default.AccountBalanceWallet,
+                    title = stringResource(R.string.account_wallet),
+                    subtitle = stringResource(R.string.account_wallet_sub),
+                    tint = Teal,
+                    onClick = onWalletClick
+                )
+                Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+                AccountMenuItem(
+                    icon = Icons.Default.CardGiftcard,
+                    title = stringResource(R.string.account_refer),
+                    subtitle = stringResource(R.string.account_refer_sub),
+                    tint = Orange,
+                    // The referral code and its terms live on the wallet screen
+                    // rather than a page of their own.
+                    onClick = onWalletClick
+                )
+                Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+                AccountMenuItem(
+                    icon = Icons.Default.Notifications,
+                    title = stringResource(R.string.account_notifications),
+                    subtitle = stringResource(R.string.account_notifications_sub),
+                    tint = InfoBlue,
+                    onClick = onNotificationsClick
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            MenuGroup {
+                AccountMenuItem(
+                    icon = Icons.Default.Logout,
+                    title = stringResource(R.string.account_sign_out),
+                    subtitle = stringResource(R.string.account_sign_out_sub),
+                    tint = Coral,
+                    showChevron = false,
+                    onClick = onSignOut
+                )
+            }
+
+            // Leaves room so the list never sits flush against the pinned
+            // footer below it.
+            Spacer(Modifier.height(72.dp))
         }
-
-        Spacer(Modifier.height(16.dp))
-
-        MenuGroup {
-            AccountMenuItem(
-                icon = Icons.Default.Logout,
-                title = stringResource(R.string.account_sign_out),
-                subtitle = stringResource(R.string.account_sign_out_sub),
-                tint = Coral,
-                showChevron = false,
-                onClick = onSignOut
-            )
-        }
-
-        Spacer(Modifier.height(28.dp))
 
         Text(
             text = "Duggu Store",
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
             fontSize = 12.sp,

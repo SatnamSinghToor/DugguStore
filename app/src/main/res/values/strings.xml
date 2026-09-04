@@ -97,6 +97,10 @@
     <string name="account_addresses_sub">Where your orders are delivered</string>
     <string name="account_wallet">My wallet</string>
     <string name="account_wallet_sub">Cashback and refund balance</string>
+    <string name="account_notifications">Notifications</string>
+    <string name="account_notifications_sub">Order updates and offers</string>
+    <string name="account_refer">Refer &amp; earn</string>
+    <string name="account_refer_sub">Share your code, earn wallet credit</string>
     <string name="account_sign_out">Sign out</string>
     <string name="account_sign_out_sub">Log out of this device</string>
     <string name="account_user">User</string>

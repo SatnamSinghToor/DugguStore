@@ -602,6 +602,7 @@ fun AppNavGraph(
                 onFavoritesClick = { navController.navigate(Screen.CustomerFavorites.route) },
                 onAddressesClick = { navController.navigate(Screen.CustomerAddresses.route) },
                 onWalletClick = { navController.navigate(Screen.CustomerWallet.route) },
+                onNotificationsClick = { navController.navigate(Screen.CustomerNotifications.route) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) {
