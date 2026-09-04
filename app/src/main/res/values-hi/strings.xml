@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">होम</string>
+    <string name="nav_categories">श्रेणियाँ</string>
+    <string name="nav_favourites">पसंदीदा</string>
+    <string name="nav_account">खाता</string>
+    <string name="nav_products">उत्पाद</string>
+    <string name="nav_orders">ऑर्डर</string>
+    <string name="nav_available">उपलब्ध</string>
+    <string name="nav_active">चालू</string>
+    <string name="nav_completed">पूर्ण</string>
+    <string name="nav_overview">सारांश</string>
+    <string name="nav_users">उपयोगकर्ता</string>
+    <string name="nav_cart">कार्ट</string>
+
+    <string name="home_search_hint">कुछ भी खोजें…</string>
+    <string name="home_voice_search">बोलकर खोजें</string>
+    <string name="home_notifications">सूचनाएँ</string>
+    <string name="home_deliver_to">यहाँ डिलीवरी</string>
+    <string name="home_greeting">नमस्ते %1$s</string>
+    <string name="home_categories">श्रेणियाँ</string>
+    <string name="home_popular">लोकप्रिय</string>
+    <string name="home_set_address">अपना डिलीवरी पता जोड़ें</string>
+
+    <string name="location_finding">आपको ढूँढ रहे हैं…</string>
+    <string name="location_current">वर्तमान स्थान</string>
+    <string name="location_wait">कृपया प्रतीक्षा करें</string>
+    <string name="location_use_current">मेरा वर्तमान स्थान लें</string>
+    <string name="location_permission_denied">स्थान की अनुमति नहीं मिली</string>
+    <string name="location_turn_on">पता पाने के लिए लोकेशन चालू करें</string>
+
+    <string name="language_title">भाषा चुनें</string>
+    <string name="language_system">डिवाइस की भाषा</string>
+
+    <string name="cart_title">मेरा कार्ट</string>
+    <string name="cart_item_count">%1$d सामान</string>
+    <string name="cart_one_item">1 सामान</string>
+    <string name="cart_empty_title">आपका कार्ट खाली है</string>
+    <string name="cart_empty_subtitle">शुरू करने के लिए सामान जोड़ें</string>
+    <string name="cart_coupon_hint">कोई कूपन है?</string>
+    <string name="cart_coupon_applied">कूपन लग गया</string>
+    <string name="cart_apply">लगाएँ</string>
+    <string name="cart_bill_details">बिल विवरण</string>
+    <string name="cart_subtotal">उप-योग</string>
+    <string name="cart_delivery_fee">डिलीवरी शुल्क</string>
+    <string name="cart_free">मुफ़्त</string>
+    <string name="cart_coupon_discount">कूपन छूट</string>
+    <string name="cart_you_save">आपकी बचत</string>
+    <string name="cart_total">कुल</string>
+    <string name="cart_checkout">चेकआउट करें</string>
+    <string name="cart_add">कार्ट में डालें</string>
+
+    <string name="auth_welcome_back">वापस स्वागत है</string>
+    <string name="auth_welcome_back_sub">खरीदारी जारी रखने के लिए साइन इन करें</string>
+    <string name="auth_email">ईमेल</string>
+    <string name="auth_email_hint">you@example.com</string>
+    <string name="auth_password">पासवर्ड</string>
+    <string name="auth_password_hint">आपका पासवर्ड</string>
+    <string name="auth_forgot">पासवर्ड भूल गए?</string>
+    <string name="auth_sign_in">साइन इन</string>
+    <string name="auth_new_here">Duggu Store पर नए हैं?</string>
+    <string name="auth_create_account">खाता बनाएँ</string>
+    <string name="auth_create_title">खाता बनाएँ</string>
+    <string name="auth_create_sub">मिनटों में किराना आपके दरवाज़े पर</string>
+    <string name="auth_full_name">पूरा नाम</string>
+    <string name="auth_full_name_hint">आपका नाम</string>
+    <string name="auth_phone">मोबाइल नंबर</string>
+    <string name="auth_phone_hint">10 अंकों का नंबर</string>
+    <string name="auth_password_min_hint">कम से कम 6 अक्षर</string>
+    <string name="auth_confirm_password">पासवर्ड दोबारा</string>
+    <string name="auth_confirm_password_hint">वही पासवर्ड दोबारा लिखें</string>
+    <string name="auth_i_want_to">मैं करना चाहता/चाहती हूँ</string>
+    <string name="auth_role_shop">खरीदारी</string>
+    <string name="auth_role_sell">बिक्री</string>
+    <string name="auth_role_deliver">डिलीवरी</string>
+    <string name="auth_have_account">पहले से खाता है?</string>
+    <string name="auth_err_name">कृपया अपना नाम लिखें</string>
+    <string name="auth_err_email">कृपया अपना ईमेल लिखें</string>
+    <string name="auth_err_phone">कृपया अपना मोबाइल नंबर लिखें</string>
+    <string name="auth_err_password_short">पासवर्ड कम से कम 6 अक्षर का होना चाहिए</string>
+    <string name="auth_err_password_match">दोनों पासवर्ड मेल नहीं खाते</string>
+
+    <string name="account_my_orders">मेरे ऑर्डर</string>
+    <string name="account_my_orders_sub">पुराने ऑर्डर देखें और ट्रैक करें</string>
+    <string name="account_favourites_sub">आपके सहेजे हुए उत्पाद</string>
+    <string name="account_addresses">पते</string>
+    <string name="account_addresses_sub">आपके ऑर्डर कहाँ पहुँचेंगे</string>
+    <string name="account_sign_out">साइन आउट</string>
+    <string name="account_sign_out_sub">इस डिवाइस से लॉग आउट करें</string>
+    <string name="account_user">उपयोगकर्ता</string>
+
+    <string name="notifications_title">सूचनाएँ</string>
+    <string name="notifications_empty_title">कुछ नया नहीं</string>
+    <string name="notifications_empty_sub">आपके ऑर्डर की जानकारी यहाँ दिखेगी</string>
+
+    <string name="common_back">वापस</string>
+    <string name="common_cancel">रद्द करें</string>
+    <string name="common_save">सहेजें</string>
+</resources>

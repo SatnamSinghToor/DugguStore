@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">ਹੋਮ</string>
+    <string name="nav_categories">ਸ਼੍ਰੇਣੀਆਂ</string>
+    <string name="nav_favourites">ਪਸੰਦੀਦਾ</string>
+    <string name="nav_account">ਖਾਤਾ</string>
+    <string name="nav_products">ਉਤਪਾਦ</string>
+    <string name="nav_orders">ਆਰਡਰ</string>
+    <string name="nav_available">ਉਪਲਬਧ</string>
+    <string name="nav_active">ਚਾਲੂ</string>
+    <string name="nav_completed">ਮੁਕੰਮਲ</string>
+    <string name="nav_overview">ਸੰਖੇਪ</string>
+    <string name="nav_users">ਵਰਤੋਂਕਾਰ</string>
+    <string name="nav_cart">ਕਾਰਟ</string>
+
+    <string name="home_search_hint">ਕੁਝ ਵੀ ਖੋਜੋ…</string>
+    <string name="home_voice_search">ਬੋਲ ਕੇ ਖੋਜੋ</string>
+    <string name="home_notifications">ਸੂਚਨਾਵਾਂ</string>
+    <string name="home_deliver_to">ਇੱਥੇ ਡਿਲੀਵਰੀ</string>
+    <string name="home_greeting">ਸਤ ਸ੍ਰੀ ਅਕਾਲ %1$s</string>
+    <string name="home_categories">ਸ਼੍ਰੇਣੀਆਂ</string>
+    <string name="home_popular">ਪ੍ਰਸਿੱਧ</string>
+    <string name="home_set_address">ਆਪਣਾ ਡਿਲੀਵਰੀ ਪਤਾ ਜੋੜੋ</string>
+
+    <string name="location_finding">ਤੁਹਾਨੂੰ ਲੱਭ ਰਹੇ ਹਾਂ…</string>
+    <string name="location_current">ਮੌਜੂਦਾ ਟਿਕਾਣਾ</string>
+    <string name="location_wait">ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕੋ</string>
+    <string name="location_use_current">ਮੇਰਾ ਮੌਜੂਦਾ ਟਿਕਾਣਾ ਵਰਤੋ</string>
+    <string name="location_permission_denied">ਟਿਕਾਣੇ ਦੀ ਇਜਾਜ਼ਤ ਨਹੀਂ ਮਿਲੀ</string>
+    <string name="location_turn_on">ਪਤਾ ਲੱਭਣ ਲਈ ਲੋਕੇਸ਼ਨ ਚਾਲੂ ਕਰੋ</string>
+
+    <string name="language_title">ਭਾਸ਼ਾ ਚੁਣੋ</string>
+    <string name="language_system">ਡਿਵਾਈਸ ਦੀ ਭਾਸ਼ਾ</string>
+
+    <string name="cart_title">ਮੇਰਾ ਕਾਰਟ</string>
+    <string name="cart_item_count">%1$d ਚੀਜ਼ਾਂ</string>
+    <string name="cart_one_item">1 ਚੀਜ਼</string>
+    <string name="cart_empty_title">ਤੁਹਾਡਾ ਕਾਰਟ ਖਾਲੀ ਹੈ</string>
+    <string name="cart_empty_subtitle">ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਚੀਜ਼ਾਂ ਜੋੜੋ</string>
+    <string name="cart_coupon_hint">ਕੋਈ ਕੂਪਨ ਹੈ?</string>
+    <string name="cart_coupon_applied">ਕੂਪਨ ਲੱਗ ਗਿਆ</string>
+    <string name="cart_apply">ਲਾਗੂ ਕਰੋ</string>
+    <string name="cart_bill_details">ਬਿੱਲ ਵੇਰਵਾ</string>
+    <string name="cart_subtotal">ਉਪ-ਜੋੜ</string>
+    <string name="cart_delivery_fee">ਡਿਲੀਵਰੀ ਖਰਚਾ</string>
+    <string name="cart_free">ਮੁਫ਼ਤ</string>
+    <string name="cart_coupon_discount">ਕੂਪਨ ਛੋਟ</string>
+    <string name="cart_you_save">ਤੁਹਾਡੀ ਬੱਚਤ</string>
+    <string name="cart_total">ਕੁੱਲ</string>
+    <string name="cart_checkout">ਚੈੱਕਆਊਟ ਕਰੋ</string>
+    <string name="cart_add">ਕਾਰਟ ਵਿੱਚ ਪਾਓ</string>
+
+    <string name="auth_welcome_back">ਮੁੜ ਸੁਆਗਤ ਹੈ</string>
+    <string name="auth_welcome_back_sub">ਖਰੀਦਦਾਰੀ ਜਾਰੀ ਰੱਖਣ ਲਈ ਸਾਈਨ ਇਨ ਕਰੋ</string>
+    <string name="auth_email">ਈਮੇਲ</string>
+    <string name="auth_email_hint">you@example.com</string>
+    <string name="auth_password">ਪਾਸਵਰਡ</string>
+    <string name="auth_password_hint">ਤੁਹਾਡਾ ਪਾਸਵਰਡ</string>
+    <string name="auth_forgot">ਪਾਸਵਰਡ ਭੁੱਲ ਗਏ?</string>
+    <string name="auth_sign_in">ਸਾਈਨ ਇਨ</string>
+    <string name="auth_new_here">Duggu Store ਉੱਤੇ ਨਵੇਂ ਹੋ?</string>
+    <string name="auth_create_account">ਖਾਤਾ ਬਣਾਓ</string>
+    <string name="auth_create_title">ਖਾਤਾ ਬਣਾਓ</string>
+    <string name="auth_create_sub">ਮਿੰਟਾਂ ਵਿੱਚ ਕਰਿਆਨਾ ਤੁਹਾਡੇ ਦਰਵਾਜ਼ੇ ਉੱਤੇ</string>
+    <string name="auth_full_name">ਪੂਰਾ ਨਾਂ</string>
+    <string name="auth_full_name_hint">ਤੁਹਾਡਾ ਨਾਂ</string>
+    <string name="auth_phone">ਮੋਬਾਈਲ ਨੰਬਰ</string>
+    <string name="auth_phone_hint">10 ਅੰਕਾਂ ਦਾ ਨੰਬਰ</string>
+    <string name="auth_password_min_hint">ਘੱਟੋ-ਘੱਟ 6 ਅੱਖਰ</string>
+    <string name="auth_confirm_password">ਪਾਸਵਰਡ ਦੁਬਾਰਾ</string>
+    <string name="auth_confirm_password_hint">ਉਹੀ ਪਾਸਵਰਡ ਦੁਬਾਰਾ ਲਿਖੋ</string>
+    <string name="auth_i_want_to">ਮੈਂ ਕਰਨਾ ਚਾਹੁੰਦਾ/ਚਾਹੁੰਦੀ ਹਾਂ</string>
+    <string name="auth_role_shop">ਖਰੀਦਦਾਰੀ</string>
+    <string name="auth_role_sell">ਵਿਕਰੀ</string>
+    <string name="auth_role_deliver">ਡਿਲੀਵਰੀ</string>
+    <string name="auth_have_account">ਪਹਿਲਾਂ ਤੋਂ ਖਾਤਾ ਹੈ?</string>
+    <string name="auth_err_name">ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਨਾਂ ਲਿਖੋ</string>
+    <string name="auth_err_email">ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਈਮੇਲ ਲਿਖੋ</string>
+    <string name="auth_err_phone">ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਮੋਬਾਈਲ ਨੰਬਰ ਲਿਖੋ</string>
+    <string name="auth_err_password_short">ਪਾਸਵਰਡ ਘੱਟੋ-ਘੱਟ 6 ਅੱਖਰਾਂ ਦਾ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ</string>
+    <string name="auth_err_password_match">ਦੋਵੇਂ ਪਾਸਵਰਡ ਮੇਲ ਨਹੀਂ ਖਾਂਦੇ</string>
+
+    <string name="account_my_orders">ਮੇਰੇ ਆਰਡਰ</string>
+    <string name="account_my_orders_sub">ਪੁਰਾਣੇ ਆਰਡਰ ਵੇਖੋ ਅਤੇ ਟਰੈਕ ਕਰੋ</string>
+    <string name="account_favourites_sub">ਤੁਹਾਡੇ ਸਾਂਭੇ ਹੋਏ ਉਤਪਾਦ</string>
+    <string name="account_addresses">ਪਤੇ</string>
+    <string name="account_addresses_sub">ਤੁਹਾਡੇ ਆਰਡਰ ਕਿੱਥੇ ਪਹੁੰਚਣਗੇ</string>
+    <string name="account_sign_out">ਸਾਈਨ ਆਊਟ</string>
+    <string name="account_sign_out_sub">ਇਸ ਡਿਵਾਈਸ ਤੋਂ ਲੌਗ ਆਊਟ ਕਰੋ</string>
+    <string name="account_user">ਵਰਤੋਂਕਾਰ</string>
+
+    <string name="notifications_title">ਸੂਚਨਾਵਾਂ</string>
+    <string name="notifications_empty_title">ਕੁਝ ਨਵਾਂ ਨਹੀਂ</string>
+    <string name="notifications_empty_sub">ਤੁਹਾਡੇ ਆਰਡਰ ਦੀ ਜਾਣਕਾਰੀ ਇੱਥੇ ਦਿਖੇਗੀ</string>
+
+    <string name="common_back">ਵਾਪਸ</string>
+    <string name="common_cancel">ਰੱਦ ਕਰੋ</string>
+    <string name="common_save">ਸੰਭਾਲੋ</string>
+</resources>
