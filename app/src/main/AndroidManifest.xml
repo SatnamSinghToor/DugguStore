@@ -62,5 +62,21 @@
                     android:host="auth-callback" />
             </intent-filter>
         </activity>
+
+        <!--
+            Handoff for the camera: TakePicture writes the full-resolution photo
+            to a file the camera app can reach, and this is what turns that file
+            into a content:// Uri the camera app is allowed to write to without
+            granting it broader storage access.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

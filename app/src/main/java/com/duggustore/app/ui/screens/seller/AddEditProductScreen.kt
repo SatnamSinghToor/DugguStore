@@ -1,5 +1,7 @@
 package com.duggustore.app.ui.screens.seller
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -19,8 +21,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
@@ -43,6 +50,7 @@ import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun AddEditProductScreen(
@@ -67,6 +75,9 @@ fun AddEditProductScreen(
     var isActive by remember(product) { mutableStateOf(product?.isActive ?: true) }
     var localError by remember { mutableStateOf<String?>(null) }
     var uploadingImage by remember { mutableStateOf(false) }
+    var showSourceMenu by remember { mutableStateOf(false) }
+    var showUrlDialog by remember { mutableStateOf(false) }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val priceValue = price.toDoubleOrNull()
     val discountValue = discountPrice.takeIf { it.isNotBlank() }?.toDoubleOrNull()
@@ -76,6 +87,44 @@ fun AddEditProductScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val productRepo = remember { ProductRepository() }
+
+    // Shared by both the gallery picker and the camera: read the bytes,
+    // best-effort cut the background out, upload, and hand back the URL —
+    // or null, letting the caller decide what "some of these failed" means
+    // for a single photo versus a batch from the gallery.
+    suspend fun processAndUpload(uri: Uri): String? {
+        val read = withContext(Dispatchers.IO) {
+            runCatching {
+                val resolver = context.contentResolver
+                val mimeType = resolver.getType(uri) ?: "image/jpeg"
+                val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: error("Could not read the selected image")
+                bytes to mimeType
+            }
+        }
+        val (bytes, mimeType) = read.getOrNull() ?: return null
+
+        // Best-effort: a photo the model can't cut out (or no Play Services /
+        // the model still downloading) just uploads as taken rather than
+        // blocking the listing.
+        val cutout = try {
+            withContext(Dispatchers.Default) {
+                BackgroundRemover.decodeScaledBitmap(bytes)
+                    ?.let { BackgroundRemover.removeBackground(it) }
+                    ?.let { bitmap ->
+                        java.io.ByteArrayOutputStream().use { out ->
+                            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                            out.toByteArray()
+                        }
+                    }
+            }
+        } catch (e: Exception) {
+            null
+        }
+        val (uploadBytes, uploadMime) = if (cutout != null) cutout to "image/png" else bytes to mimeType
+
+        return productRepo.uploadProductImage(sellerId, uploadBytes, uploadMime).getOrNull()
+    }
 
     val pickImages = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(MAX_PRODUCT_PHOTOS)
@@ -87,51 +136,55 @@ fun AddEditProductScreen(
             var failed = false
             for (uri in uris) {
                 if (photos.size + uploaded.size >= MAX_PRODUCT_PHOTOS) break
-                val read = withContext(Dispatchers.IO) {
-                    runCatching {
-                        val resolver = context.contentResolver
-                        val mimeType = resolver.getType(uri) ?: "image/jpeg"
-                        val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
-                            ?: error("Could not read the selected image")
-                        bytes to mimeType
-                    }
-                }
-                // Not read.getOrElse { ... continue }: a continue inside an
-                // inline lambda needs an experimental compiler flag this
-                // project doesn't enable, so the skip is done here instead.
-                val pair = read.getOrNull()
-                if (pair == null) {
-                    failed = true
-                    continue
-                }
-                val (bytes, mimeType) = pair
-
-                // Best-effort: a photo the model can't cut out (or no Play
-                // Services / the model still downloading) just uploads as
-                // the seller took it rather than blocking the listing.
-                val cutout = try {
-                    withContext(Dispatchers.Default) {
-                        BackgroundRemover.decodeScaledBitmap(bytes)
-                            ?.let { BackgroundRemover.removeBackground(it) }
-                            ?.let { bitmap ->
-                                java.io.ByteArrayOutputStream().use { out ->
-                                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-                                    out.toByteArray()
-                                }
-                            }
-                    }
-                } catch (e: Exception) {
-                    null
-                }
-                val (uploadBytes, uploadMime) = if (cutout != null) cutout to "image/png" else bytes to mimeType
-
-                productRepo.uploadProductImage(sellerId, uploadBytes, uploadMime)
-                    .onSuccess { url -> uploaded.add(url) }
-                    .onFailure { failed = true }
+                val url = processAndUpload(uri)
+                if (url != null) uploaded.add(url) else failed = true
             }
             photos = (photos + uploaded).take(MAX_PRODUCT_PHOTOS)
             localError = if (failed) "Some photos couldn't be uploaded — try those again" else null
             uploadingImage = false
+        }
+    }
+
+    val takePicture = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        val uri = pendingCameraUri
+        pendingCameraUri = null
+        if (!success || uri == null) return@rememberLauncherForActivityResult
+        uploadingImage = true
+        scope.launch {
+            val url = processAndUpload(uri)
+            if (url != null) {
+                photos = (photos + url).take(MAX_PRODUCT_PHOTOS)
+                localError = null
+            } else {
+                localError = "Couldn't upload that photo — try again"
+            }
+            uploadingImage = false
+        }
+    }
+
+    val cameraPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val uri = newCameraPhotoUri(context)
+            pendingCameraUri = uri
+            takePicture.launch(uri)
+        } else {
+            localError = "Camera permission is needed to take a photo"
+        }
+    }
+
+    fun launchCamera() {
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            val uri = newCameraPhotoUri(context)
+            pendingCameraUri = uri
+            takePicture.launch(uri)
+        } else {
+            cameraPermission.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -165,11 +218,33 @@ fun AddEditProductScreen(
             ProductPhotosPicker(
                 photos = photos,
                 uploading = uploadingImage,
-                onAddPhotos = {
+                showSourceMenu = showSourceMenu,
+                onOpenSourceMenu = { showSourceMenu = true },
+                onDismissSourceMenu = { showSourceMenu = false },
+                onTakePhoto = {
+                    showSourceMenu = false
+                    launchCamera()
+                },
+                onPickGallery = {
+                    showSourceMenu = false
                     pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onAddUrl = {
+                    showSourceMenu = false
+                    showUrlDialog = true
                 },
                 onRemovePhoto = { url -> photos = photos.filterNot { it == url } }
             )
+
+            if (showUrlDialog) {
+                AddPhotoUrlDialog(
+                    onAdd = { url ->
+                        photos = (photos + url).take(MAX_PRODUCT_PHOTOS)
+                        showUrlDialog = false
+                    },
+                    onDismiss = { showUrlDialog = false }
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -381,7 +456,12 @@ private const val MAX_PRODUCT_PHOTOS = 6
 private fun ProductPhotosPicker(
     photos: List<String>,
     uploading: Boolean,
-    onAddPhotos: () -> Unit,
+    showSourceMenu: Boolean,
+    onOpenSourceMenu: () -> Unit,
+    onDismissSourceMenu: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onPickGallery: () -> Unit,
+    onAddUrl: () -> Unit,
     onRemovePhoto: (String) -> Unit
 ) {
     Column {
@@ -431,38 +511,95 @@ private fun ProductPhotosPicker(
 
             if (photos.size < MAX_PRODUCT_PHOTOS) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(SurfaceMuted)
-                            .border(1.dp, BorderGray, RoundedCornerShape(14.dp))
-                            .clickable(enabled = !uploading) { onAddPhotos() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (uploading) {
-                            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Teal, strokeWidth = 2.dp)
-                        } else {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    if (photos.isEmpty()) Icons.Default.Image else Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = TextLight,
-                                    modifier = Modifier.size(26.dp)
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    if (photos.isEmpty()) "Add photos" else "Add more",
-                                    fontSize = 11.sp,
-                                    color = TextLight
-                                )
+                    Box {
+                        Box(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(SurfaceMuted)
+                                .border(1.dp, BorderGray, RoundedCornerShape(14.dp))
+                                .clickable(enabled = !uploading) { onOpenSourceMenu() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (uploading) {
+                                CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Teal, strokeWidth = 2.dp)
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        if (photos.isEmpty()) Icons.Default.Image else Icons.Default.Add,
+                                        contentDescription = null,
+                                        tint = TextLight,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        if (photos.isEmpty()) "Add photos" else "Add more",
+                                        fontSize = 11.sp,
+                                        color = TextLight
+                                    )
+                                }
                             }
+                        }
+
+                        DropdownMenu(expanded = showSourceMenu, onDismissRequest = onDismissSourceMenu) {
+                            DropdownMenuItem(
+                                text = { Text("Take a photo") },
+                                leadingIcon = { Icon(Icons.Default.CameraAlt, null, tint = Teal) },
+                                onClick = onTakePhoto
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Choose from gallery") },
+                                leadingIcon = { Icon(Icons.Default.PhotoLibrary, null, tint = Teal) },
+                                onClick = onPickGallery
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Add via URL") },
+                                leadingIcon = { Icon(Icons.Default.Link, null, tint = Teal) },
+                                onClick = onAddUrl
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
+
+/** Prompts for a plain image link rather than a device photo — no upload, no background removal, just the URL as given. */
+@Composable
+private fun AddPhotoUrlDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
+    var url by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add a photo link") },
+        text = {
+            AuthField(
+                value = url,
+                onValueChange = { url = it },
+                label = "Image URL",
+                placeholder = "https://…"
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { url.trim().takeIf { it.isNotBlank() }?.let(onAdd) },
+                enabled = url.isNotBlank()
+            ) {
+                Text("Add", color = Teal, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) }
+        }
+    )
+}
+
+/** A fresh, private, FileProvider-backed destination for the camera to write a full-resolution capture to. */
+private fun newCameraPhotoUri(context: android.content.Context): Uri {
+    val dir = File(context.cacheDir, "product_photos").apply { mkdirs() }
+    val file = File(dir, "product_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 }
 
 @Composable
