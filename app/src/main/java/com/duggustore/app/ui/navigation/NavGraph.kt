@@ -25,7 +25,9 @@ import com.duggustore.app.data.local.AppPrefs
 import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.delay
 import com.duggustore.app.platform.RiderLocationPublisher
+import com.duggustore.app.platform.rememberOrderAnnouncer
 import com.duggustore.app.platform.rememberRiderPosition
+import kotlin.math.roundToInt
 import com.duggustore.app.ui.components.BottomBarCentre
 import com.duggustore.app.ui.components.StoreBottomBar
 import com.duggustore.app.ui.components.StoreBottomBarHeight
@@ -62,6 +64,14 @@ import com.duggustore.app.ui.screens.delivery.DeliveryOnboardingScreen
 import com.duggustore.app.ui.screens.delivery.RouteMapScreen
 import com.duggustore.app.ui.screens.admin.AdminDashboard
 import com.duggustore.app.ui.viewmodel.*
+
+/**
+ * How often the seller dashboard re-asks for orders. Nothing pushes to the
+ * app, so this interval is the delay between an order being placed and the
+ * seller hearing about it — short enough to be useful standing at a counter,
+ * long enough not to hammer the API all day.
+ */
+private const val SELLER_ORDER_POLL_MILLIS = 20_000L
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
@@ -704,6 +714,37 @@ fun AppNavGraph(
                     }
                 }
                 sellerStatus == VerificationStatus.APPROVED -> {
+                    val announcer = rememberOrderAnnouncer()
+                    var voiceAlertsEnabled by remember { mutableStateOf(AppPrefs.isOrderAlertEnabled(context)) }
+
+                    // Nothing pushes to the app, so an order only turns up when
+                    // it is asked for — and an announcement nobody heard because
+                    // the list was an hour stale is no announcement at all.
+                    LaunchedEffect(authState.user) {
+                        val user = authState.user ?: return@LaunchedEffect
+                        orderViewModel.loadIssuesForReview()
+                        while (true) {
+                            sellerViewModel.loadSellerData(user.id)
+                            delay(SELLER_ORDER_POLL_MILLIS)
+                        }
+                    }
+
+                    LaunchedEffect(sellerState.newOrderAlerts) {
+                        val arrived = sellerState.newOrderAlerts
+                        if (arrived.isEmpty()) return@LaunchedEffect
+                        if (voiceAlertsEnabled) {
+                            arrived.forEach { order ->
+                                announcer.announce(
+                                    context.getString(
+                                        R.string.seller_order_announcement,
+                                        order.totalAmount.roundToInt()
+                                    )
+                                )
+                            }
+                        }
+                        sellerViewModel.consumeOrderAlerts()
+                    }
+
                     SellerDashboard(
                         selectedTab = dashboardTab,
                         products = sellerState.products,
@@ -724,12 +765,13 @@ fun AppNavGraph(
                         },
                         openIssuesCount = orderState.issuesForReview.count { it.status == "open" },
                         onIssuesClick = { navController.navigate(Screen.SellerIssues.route) },
+                        voiceAlertsEnabled = voiceAlertsEnabled,
+                        onToggleVoiceAlerts = {
+                            voiceAlertsEnabled = !voiceAlertsEnabled
+                            AppPrefs.setOrderAlertEnabled(context, voiceAlertsEnabled)
+                        },
                         onSignOut = onOnboardingSignOut
                     )
-                    LaunchedEffect(authState.user) {
-                        authState.user?.let { sellerViewModel.loadSellerData(it.id) }
-                        orderViewModel.loadIssuesForReview()
-                    }
                 }
                 sellerStatus == VerificationStatus.UNDER_REVIEW || sellerStatus == VerificationStatus.SUSPENDED -> {
                     OnboardingStatusScreen(

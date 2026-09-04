@@ -89,6 +89,12 @@
     <string name="account_sign_out_sub">ਇਸ ਡਿਵਾਈਸ ਤੋਂ ਲੌਗ ਆਊਟ ਕਰੋ</string>
     <string name="account_user">ਵਰਤੋਂਕਾਰ</string>
 
+    <string name="seller_order_announcement">ਨਵਾਂ ਆਰਡਰ ਆਇਆ ਹੈ। %1$d ਰੁਪਏ।</string>
+    <string name="seller_alerts_on">ਨਵੇਂ ਆਰਡਰ ਬੋਲ ਕੇ ਦੱਸੇ ਜਾਣਗੇ</string>
+    <string name="seller_alerts_off">ਨਵੇਂ ਆਰਡਰ ਬਿਨਾਂ ਆਵਾਜ਼ ਦੇ ਆਉਣਗੇ</string>
+    <string name="seller_alerts_on_action">ਬੰਦ ਕਰੋ</string>
+    <string name="seller_alerts_off_action">ਚਾਲੂ ਕਰੋ</string>
+
     <string name="notifications_title">ਸੂਚਨਾਵਾਂ</string>
     <string name="notifications_empty_title">ਕੁਝ ਨਵਾਂ ਨਹੀਂ</string>
     <string name="notifications_empty_sub">ਤੁਹਾਡੇ ਆਰਡਰ ਦੀ ਜਾਣਕਾਰੀ ਇੱਥੇ ਦਿਖੇਗੀ</string>

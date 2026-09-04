@@ -89,6 +89,12 @@
     <string name="account_sign_out_sub">इस डिवाइस से लॉग आउट करें</string>
     <string name="account_user">उपयोगकर्ता</string>
 
+    <string name="seller_order_announcement">नया ऑर्डर आया है। %1$d रुपये।</string>
+    <string name="seller_alerts_on">नए ऑर्डर बोलकर बताए जाएँगे</string>
+    <string name="seller_alerts_off">नए ऑर्डर बिना आवाज़ के आएँगे</string>
+    <string name="seller_alerts_on_action">बंद करें</string>
+    <string name="seller_alerts_off_action">चालू करें</string>
+
     <string name="notifications_title">सूचनाएँ</string>
     <string name="notifications_empty_title">कुछ नया नहीं</string>
     <string name="notifications_empty_sub">आपके ऑर्डर की जानकारी यहाँ दिखेगी</string>

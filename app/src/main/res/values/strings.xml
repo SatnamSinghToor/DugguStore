@@ -112,6 +112,13 @@
     <string name="account_sign_out_sub">Log out of this device</string>
     <string name="account_user">User</string>
 
+    <!-- Seller order announcements -->
+    <string name="seller_order_announcement">New order received. %1$d rupees.</string>
+    <string name="seller_alerts_on">Announcing new orders</string>
+    <string name="seller_alerts_off">New orders announced silently</string>
+    <string name="seller_alerts_on_action">Turn off</string>
+    <string name="seller_alerts_off_action">Turn on</string>
+
     <!-- Notifications -->
     <string name="notifications_title">Notifications</string>
     <string name="notifications_empty_title">Nothing new</string>

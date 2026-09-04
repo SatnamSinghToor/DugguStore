@@ -18,7 +18,9 @@ data class SellerState(
     val totalRevenue: Double = 0.0,
     val totalOrders: Int = 0,
     val error: String? = null,
-    val productSaved: Boolean = false
+    val productSaved: Boolean = false,
+    /** Orders that arrived since the last refresh, waiting to be read out. Cleared by [consumeOrderAlerts] once spoken. */
+    val newOrderAlerts: List<Order> = emptyList()
 )
 
 class SellerViewModel : ViewModel() {
@@ -27,6 +29,14 @@ class SellerViewModel : ViewModel() {
 
     private val _state = MutableStateFlow(SellerState())
     val state: StateFlow<SellerState> = _state
+
+    /**
+     * Every order id seen so far, so a refresh can tell a genuinely new order
+     * from one that was already there. Null until the first load finishes:
+     * without that distinction, opening the dashboard would announce every
+     * order the seller already knows about.
+     */
+    private var knownOrderIds: Set<String>? = null
 
     fun loadSellerData(sellerId: String) {
         viewModelScope.launch {
@@ -38,14 +48,31 @@ class SellerViewModel : ViewModel() {
                 _state.value = _state.value.copy(products = prods)
             }
             orders.onSuccess { ords ->
+                val alreadySeen = knownOrderIds
+                // Only orders still waiting on the seller are worth calling
+                // out; one that arrived already accepted needs no reaction.
+                val arrived = if (alreadySeen == null) {
+                    emptyList()
+                } else {
+                    ords.filter { it.id !in alreadySeen && it.status == OrderStatus.PENDING.value }
+                }
+                knownOrderIds = ords.map { it.id }.toSet()
+
                 _state.value = _state.value.copy(
                     orders = ords,
                     totalOrders = ords.size,
-                    totalRevenue = ords.filter { it.status == "delivered" }.sumOf { it.totalAmount }
+                    totalRevenue = ords.filter { it.status == "delivered" }.sumOf { it.totalAmount },
+                    newOrderAlerts = _state.value.newOrderAlerts + arrived
                 )
             }
             _state.value = _state.value.copy(isLoading = false)
         }
+    }
+
+    /** Called once the announcement has been handed to the speech engine. */
+    fun consumeOrderAlerts() {
+        if (_state.value.newOrderAlerts.isEmpty()) return
+        _state.value = _state.value.copy(newOrderAlerts = emptyList())
     }
 
     fun saveProduct(product: Product) {

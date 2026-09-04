@@ -17,8 +17,11 @@ import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,8 +40,53 @@ import com.duggustore.app.data.model.Product
 import com.duggustore.app.platform.LocationState
 import com.duggustore.app.platform.openDialer
 import com.duggustore.app.platform.rememberDeviceLocation
+import com.duggustore.app.R
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
+
+/**
+ * New orders are read out loud on the alarm stream so they carry across a
+ * shop, which is exactly why it needs to be one tap to silence.
+ */
+@Composable
+private fun VoiceAlertToggle(enabled: Boolean, onToggle: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = if (enabled) TealSurface else SurfaceMuted
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (enabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                contentDescription = null,
+                tint = if (enabled) TealDark else TextLight,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = stringResource(
+                    if (enabled) R.string.seller_alerts_on else R.string.seller_alerts_off
+                ),
+                modifier = Modifier.weight(1f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (enabled) TealDark else TextSecondary
+            )
+            Text(
+                text = stringResource(
+                    if (enabled) R.string.seller_alerts_on_action else R.string.seller_alerts_off_action
+                ),
+                modifier = Modifier.clickable { onToggle() },
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Teal
+            )
+        }
+    }
+}
 
 @Composable
 fun SellerDashboard(
@@ -58,6 +106,8 @@ fun SellerDashboard(
     onSaveStoreLocation: (String, Double, Double) -> Unit = { _, _, _ -> },
     openIssuesCount: Int = 0,
     onIssuesClick: () -> Unit = {},
+    voiceAlertsEnabled: Boolean = true,
+    onToggleVoiceAlerts: () -> Unit = {},
     onSignOut: () -> Unit
 ) {
     val pendingCount = orders.count { it.status == OrderStatus.PENDING.value }
@@ -145,6 +195,12 @@ fun SellerDashboard(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        item {
+                            VoiceAlertToggle(
+                                enabled = voiceAlertsEnabled,
+                                onToggle = onToggleVoiceAlerts
+                            )
+                        }
                         item { WeeklyRevenueCard(orders = orders) }
                         item { PayoutSummaryCard(orders = orders) }
                         items(orders, key = { it.id }) { order ->

@@ -17,6 +17,7 @@ object AppPrefs {
     private const val RECENT_SEARCH_SEPARATOR = "\n"
     private const val MAX_RECENT_SEARCHES = 8
     private const val KEY_WELCOME_SEEN = "welcome_seen"
+    private const val KEY_ORDER_ALERTS = "order_voice_alerts"
     private const val KEY_REORDER_REMINDERS = "reorder_reminders"
     // "orderId|dueAtEpochMillis" pairs, one per line — there's no server-side
     // scheduler, so due reminders are just checked against the clock whenever
@@ -61,6 +62,21 @@ object AppPrefs {
     fun setWelcomeSeen(context: Context) {
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
             .putBoolean(KEY_WELCOME_SEEN, true)
+            .apply()
+    }
+
+    /**
+     * Whether new orders are read out loud to the seller. On by default — a
+     * seller missing an order is the whole problem it exists to solve — but it
+     * plays on the alarm stream, so it has to be switchable.
+     */
+    fun isOrderAlertEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_ORDER_ALERTS, true)
+
+    fun setOrderAlertEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_ORDER_ALERTS, enabled)
             .apply()
     }
 
