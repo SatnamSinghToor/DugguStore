@@ -944,7 +944,23 @@ fun AppNavGraph(
             },
             onSelect = { key ->
                 if (role == UserRole.CUSTOMER) {
-                    if (key != currentRoute) {
+                    if (key == Screen.CustomerHome.route) {
+                        // Home is also the popUpTo anchor every other tab uses, so
+                        // routing it through the same navigate()+popUpTo(Home)+
+                        // launchSingleTop+restoreState combo means popping up to
+                        // the very route being navigated to — from a non-tab
+                        // screen like Cart, that combination could leave Cart on
+                        // top instead of swapping back to Home. A plain pop back
+                        // to Home has no such ambiguity.
+                        if (currentRoute != Screen.CustomerHome.route) {
+                            val poppedToHome = navController.popBackStack(Screen.CustomerHome.route, false)
+                            if (!poppedToHome) {
+                                navController.navigate(Screen.CustomerHome.route) {
+                                    popUpTo(Screen.CustomerHome.route) { inclusive = true }
+                                }
+                            }
+                        }
+                    } else if (key != currentRoute) {
                         navController.navigate(key) {
                             // Tabs re-enter rather than stack, so tapping around
                             // the bar does not build up a back stack of them.
