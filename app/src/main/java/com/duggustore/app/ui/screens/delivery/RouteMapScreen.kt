@@ -1,6 +1,7 @@
 package com.duggustore.app.ui.screens.delivery
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,10 +61,16 @@ fun RouteMapScreen(
     var routePoints by remember { mutableStateOf<List<GeoPoint>?>(null) }
     var routeInfo by remember { mutableStateOf<Pair<Double, Double>?>(null) } // metres, seconds
     var routeFailed by remember { mutableStateOf(false) }
+    var isRouting by remember { mutableStateOf(false) }
+    // Bumped by the retry tap. These are shared, rate-limited routing servers,
+    // so a refused request is worth asking again for rather than leaving the
+    // rider on a straight line for the rest of the trip.
+    var retryToken by remember { mutableStateOf(0) }
 
-    LaunchedEffect(originState?.latitude, originState?.longitude) {
+    LaunchedEffect(originState?.latitude, originState?.longitude, retryToken) {
         val fix = originState ?: return@LaunchedEffect
         routeFailed = false
+        isRouting = true
         routingRepo.getDrivingRoute(fix.latitude, fix.longitude, destinationLat, destinationLng)
             .onSuccess { result ->
                 routePoints = result.points.map { GeoPoint(it.latitude, it.longitude) }
@@ -76,6 +83,7 @@ fun RouteMapScreen(
                 routePoints = null
                 routeInfo = null
             }
+        isRouting = false
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -181,16 +189,31 @@ fun RouteMapScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, null, tint = Coral, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = when {
-                            distance != null -> "%.1f km".format(distance / 1000)
-                            routeFailed -> "Route unavailable"
-                            else -> "Locating…"
-                        },
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+                    Column {
+                        Text(
+                            text = when {
+                                distance != null -> "%.1f km".format(distance / 1000)
+                                isRouting -> "Finding route…"
+                                routeFailed -> "Showing direct line"
+                                else -> "Locating…"
+                            },
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        // Without this the straight line looks like the route
+                        // itself, with nothing saying the road route never
+                        // arrived or that asking again might get it.
+                        if (routeFailed && !isRouting) {
+                            Text(
+                                text = "Couldn't reach the routing service · Retry",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Teal,
+                                modifier = Modifier.clickable { retryToken++ }
+                            )
+                        }
+                    }
                 }
                 if (duration != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
