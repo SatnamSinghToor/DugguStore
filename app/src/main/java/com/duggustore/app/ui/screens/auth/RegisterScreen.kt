@@ -26,12 +26,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.duggustore.app.ui.components.*
@@ -214,6 +216,7 @@ fun RegisterScreen(
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
+                            StepIllustration(Icons.Default.Person, Teal, "A little personal touch makes every order feel right.")
                         }
                         STEP_EMAIL -> {
                             StepHeading("What's your email?", "You'll sign in with this, and we'll send order updates here.")
@@ -230,6 +233,7 @@ fun RegisterScreen(
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
+                            StepIllustration(Icons.Default.Email, Orange, "We'll never spam you — just order updates and receipts.")
                         }
                         STEP_PHONE -> {
                             StepHeading("Your phone number", "A rider or the store calls this number if they can't find you.")
@@ -249,6 +253,7 @@ fun RegisterScreen(
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
+                            StepIllustration(Icons.Default.LocalShipping, Coral, "Only used if a rider or store needs to reach you about an order.")
                         }
                         STEP_ROLE -> {
                             StepHeading("How will you use Duggu Store?", "Pick the one that fits — sellers and riders get a short verification after this.")
@@ -290,6 +295,7 @@ fun RegisterScreen(
                             Spacer(Modifier.height(6.dp))
                             AuthRequirementRow("At least 6 characters", passwordLongEnough)
                             AuthRequirementRow("Both passwords match", passwordsMatch)
+                            StepIllustration(Icons.Default.Lock, Violet, "Choose something only you would guess.")
                         }
                         else -> {
                             StepHeading("Got a referral code?", "Optional. If a friend shared their code, you both get wallet credit.")
@@ -375,6 +381,39 @@ private fun StepHeading(title: String, subtitle: String) {
     Spacer(Modifier.height(6.dp))
     Text(subtitle, fontSize = 14.sp, color = TextSecondary, lineHeight = 20.sp)
     Spacer(Modifier.height(22.dp))
+}
+
+/**
+ * Fills the blank space a one-field step leaves below the keyboard on tall
+ * screens, and doubles as a small bit of reassurance about why we're asking.
+ */
+@Composable
+private fun StepIllustration(icon: ImageVector, tint: Color, caption: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 36.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(60.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = caption,
+            fontSize = 13.sp,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        )
+    }
 }
 
 @Composable
