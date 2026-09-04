@@ -48,7 +48,12 @@ fun RouteMapScreen(
 ) {
     val detected = rememberDeviceLocation()
     val originState = detected.state as? LocationState.Found
-    val origin = originState?.let { GeoPoint(it.latitude, it.longitude) }
+    // Kept across recompositions rather than rebuilt each time: a fresh
+    // GeoPoint for the same coordinates would re-run the map's update pass
+    // for nothing.
+    val origin = remember(originState?.latitude, originState?.longitude) {
+        originState?.let { GeoPoint(it.latitude, it.longitude) }
+    }
     val destination = remember(destinationLat, destinationLng) { GeoPoint(destinationLat, destinationLng) }
 
     val routingRepo = remember { RoutingRepository() }
