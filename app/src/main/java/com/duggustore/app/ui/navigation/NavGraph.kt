@@ -80,6 +80,7 @@ sealed class Screen(val route: String) {
     object CustomerNotifications : Screen("customer_notifications")
     object CustomerFavorites : Screen("customer_favorites")
     object CustomerAccount : Screen("customer_account")
+    object CustomerSettings : Screen("customer_settings")
     object CustomerAddresses : Screen("customer_addresses")
     object CustomerCheckout : Screen("customer_checkout")
     object CustomerWallet : Screen("customer_wallet")
@@ -603,12 +604,27 @@ fun AppNavGraph(
                 onAddressesClick = { navController.navigate(Screen.CustomerAddresses.route) },
                 onWalletClick = { navController.navigate(Screen.CustomerWallet.route) },
                 onNotificationsClick = { navController.navigate(Screen.CustomerNotifications.route) },
+                onSettingsClick = { navController.navigate(Screen.CustomerSettings.route) },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.CustomerSettings.route) {
+            SettingsScreen(
+                user = authState.user,
+                isSaving = authState.isLoading,
+                error = authState.error,
+                passwordUpdated = authState.passwordUpdated,
+                onSaveProfile = { name, phone -> authViewModel.updateProfile(name, phone) },
+                onChangePassword = { newPassword, confirm -> authViewModel.updatePassword(newPassword, confirm) },
+                onClearError = { authViewModel.clearError() },
+                onClearPasswordUpdated = { authViewModel.clearPasswordUpdated() },
                 onBack = { navController.popBackStack() }
             )
         }

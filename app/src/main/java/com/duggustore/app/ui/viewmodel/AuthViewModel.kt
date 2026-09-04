@@ -351,4 +351,20 @@ class AuthViewModel : ViewModel() {
             }
         }
     }
+
+    /** Name/phone edited from Settings. */
+    fun updateProfile(fullName: String, phone: String, onDone: () -> Unit = {}) {
+        val user = _state.value.user ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val result = repository.updateProfile(user.copy(fullName = fullName, phone = phone))
+            result.onSuccess { updated ->
+                _state.value = _state.value.copy(isLoading = false, user = updated)
+                onDone()
+            }
+            result.onFailure {
+                _state.value = _state.value.copy(isLoading = false, error = it.message)
+            }
+        }
+    }
 }

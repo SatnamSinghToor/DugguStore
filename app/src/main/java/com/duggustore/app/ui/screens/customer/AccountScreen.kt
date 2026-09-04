@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ fun AccountScreen(
     onAddressesClick: () -> Unit,
     onWalletClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -108,6 +110,14 @@ fun AccountScreen(
                     subtitle = stringResource(R.string.account_notifications_sub),
                     tint = InfoBlue,
                     onClick = onNotificationsClick
+                )
+                Divider(color = BorderGray, modifier = Modifier.padding(start = 68.dp))
+                AccountMenuItem(
+                    icon = Icons.Default.Settings,
+                    title = stringResource(R.string.account_settings),
+                    subtitle = stringResource(R.string.account_settings_sub),
+                    tint = TextSecondary,
+                    onClick = onSettingsClick
                 )
             }
 

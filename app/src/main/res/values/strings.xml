@@ -101,6 +101,8 @@
     <string name="account_notifications_sub">Order updates and offers</string>
     <string name="account_refer">Refer &amp; earn</string>
     <string name="account_refer_sub">Share your code, earn wallet credit</string>
+    <string name="account_settings">Settings</string>
+    <string name="account_settings_sub">Profile, password, and more</string>
     <string name="account_sign_out">Sign out</string>
     <string name="account_sign_out_sub">Log out of this device</string>
     <string name="account_user">User</string>
