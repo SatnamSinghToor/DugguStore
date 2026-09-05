@@ -32,9 +32,9 @@ fun ForgotPasswordScreen(
     var email by remember { mutableStateOf("") }
 
     AuthScaffold(
-        title = if (resetSent) "Check your email" else "Reset password",
-        subtitle = if (resetSent) "The link is on its way"
-                   else "We'll email you a link to set a new one"
+        title = if (resetSent) "Check your email" else "Reset Your Duggu Password",
+        subtitle = if (resetSent) "The link is on its way" else null,
+        showLogoName = false
     ) {
         if (resetSent) {
             Box(
