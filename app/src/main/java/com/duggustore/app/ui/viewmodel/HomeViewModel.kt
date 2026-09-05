@@ -51,20 +51,19 @@ class HomeViewModel : ViewModel() {
             val productsDeferred = async { productRepo.getAllProducts() }
             val offersDeferred = async { offerRepo.getOffers() }
 
-            categoriesDeferred.await().onSuccess { cats ->
-                _state.value = _state.value.copy(categories = cats)
-            }
-            productsDeferred.await().onSuccess { prods ->
-                _state.value = _state.value.copy(
-                    products = prods.filter { it.isActive },
-                    filteredProducts = prods.filter { it.isActive }
-                )
-            }
+            val categories = categoriesDeferred.await().getOrNull()
+            val products = productsDeferred.await().getOrNull()?.filter { it.isActive }
             // A store with no coupons is a normal state, not an error worth
             // showing; the carousel simply does not render.
-            offersDeferred.await().onSuccess { _state.value = _state.value.copy(offers = it) }
+            val offers = offersDeferred.await().getOrNull()
 
-            _state.value = _state.value.copy(isLoading = false)
+            _state.value = _state.value.copy(
+                categories = categories ?: _state.value.categories,
+                products = products ?: _state.value.products,
+                filteredProducts = products ?: _state.value.filteredProducts,
+                offers = offers ?: _state.value.offers,
+                isLoading = false
+            )
         }
     }
 
