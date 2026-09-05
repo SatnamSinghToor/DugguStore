@@ -66,8 +66,13 @@ class MainActivity : ComponentActivity() {
                 // the boolean actually flipping, so this only recomposes
                 // once per open/close instead of once per animation frame.
                 val density = LocalDensity.current
-                val imeVisible by remember(density) {
-                    derivedStateOf { WindowInsets.ime.getBottom(density) > 0 }
+                // WindowInsets.ime is itself a @Composable getter, so it has
+                // to be read here, in composable context — only the plain
+                // getBottom() call on the result can live inside
+                // derivedStateOf's (non-composable) calculation lambda.
+                val imeInsets = WindowInsets.ime
+                val imeVisible by remember(density, imeInsets) {
+                    derivedStateOf { imeInsets.getBottom(density) > 0 }
                 }
                 Surface(
                     modifier = Modifier
