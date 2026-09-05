@@ -88,17 +88,16 @@ fun HomeScreen(
             // Pinned. The wordmark, the location strip and the search field were
             // the first item of the list, so they scrolled away with the
             // products — searching meant scrolling back to the top first.
-            // A Surface rather than a plain background so the rounded bottom
-            // corners and the elevation shadow below it match the rounded,
-            // shadowed bottom nav bar. zIndex keeps that shadow drawing over
-            // the scrolling list beneath instead of being painted over by it.
+            // A Surface rather than a plain background so the elevation shadow
+            // below it matches the bottom nav bar's — square corners, same
+            // shadow. zIndex keeps that shadow drawing over the scrolling
+            // list beneath instead of being painted over by it.
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .zIndex(1f),
-                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
                 color = SurfaceWhite,
-                shadowElevation = 8.dp
+                shadowElevation = 16.dp
             ) {
             Column(
                 modifier = Modifier
