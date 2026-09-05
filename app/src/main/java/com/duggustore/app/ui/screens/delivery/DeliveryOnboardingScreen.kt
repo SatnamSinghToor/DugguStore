@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,29 +13,60 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.ContactPhone
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.R
 import com.duggustore.app.data.model.DELIVERY_DOC_TYPES
 import com.duggustore.app.data.model.DeliveryPartner
 import com.duggustore.app.data.model.DeliveryPartnerDocument
 import com.duggustore.app.data.model.VEHICLE_TYPES
 import com.duggustore.app.data.model.docTypeLabel
 import com.duggustore.app.ui.components.DocumentUploadRow
+import com.duggustore.app.ui.components.StepHeading
+import com.duggustore.app.ui.components.StepIllustration
+import com.duggustore.app.ui.components.StepProgressBar
 import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** A rider's application — licence, ID and vehicle details plus the documents backing them, same shape as the seller one. */
+private const val STEP_NAME = 0
+private const val STEP_ADDRESS = 1
+private const val STEP_EMERGENCY = 2
+private const val STEP_ID = 3
+private const val STEP_VEHICLE = 4
+private const val STEP_BANK = 5
+private const val STEP_DOCUMENTS = 6
+private const val STEP_COUNT = 7
+
+/**
+ * A rider's application, one question per screen — same pattern as sign-up
+ * and the seller wizard: a progress bar, a "Step X of Y" count, and a back
+ * arrow that steps backward instead of one long form. Licence, ID, vehicle
+ * and bank details, plus the documents that back them up.
+ *
+ * The application row has to exist before a document can be attached to it,
+ * so moving on from the bank details step saves everything collected so
+ * far — the documents step then unlocks once that save has landed.
+ */
 @Composable
 fun DeliveryOnboardingScreen(
     userId: String,
@@ -52,6 +84,9 @@ fun DeliveryOnboardingScreen(
     onClearError: () -> Unit,
     onSignOut: () -> Unit
 ) {
+    var step by rememberSaveable { mutableStateOf(STEP_NAME) }
+    var movingForward by remember { mutableStateOf(true) }
+
     var fullName by remember(existing) { mutableStateOf(existing?.fullName.orEmpty()) }
     var phone by remember(existing) { mutableStateOf(existing?.phone ?: prefillPhone) }
     var licence by remember(existing) { mutableStateOf(existing?.licenceNumber.orEmpty()) }
@@ -94,9 +129,74 @@ fun DeliveryOnboardingScreen(
 
     val documentsByType = remember(documents) { documents.associateBy { it.docType } }
     val allDocsUploaded = remember(documents) { DELIVERY_DOC_TYPES.all { documentsByType.containsKey(it) } }
-    val requiredFilled = fullName.isNotBlank() && phone.isNotBlank() && licence.isNotBlank() &&
-        aadhaar.isNotBlank() && vehicleNumber.isNotBlank() && bankAccount.isNotBlank() &&
-        bankIfsc.isNotBlank() && address.isNotBlank()
+
+    val stepProblem: String? = when (step) {
+        STEP_NAME -> when {
+            fullName.isBlank() -> "Enter your full name"
+            phone.isBlank() -> "Enter a phone number"
+            else -> null
+        }
+        STEP_ADDRESS -> if (address.isBlank()) "Enter your home address" else null
+        STEP_ID -> when {
+            licence.isBlank() -> "Enter your driving licence number"
+            aadhaar.isBlank() -> "Enter your Aadhaar number"
+            else -> null
+        }
+        STEP_VEHICLE -> if (vehicleNumber.isBlank()) "Enter your vehicle number" else null
+        STEP_BANK -> when {
+            bankAccount.isBlank() -> "Enter your bank account number"
+            bankIfsc.isBlank() -> "Enter your bank IFSC code"
+            else -> null
+        }
+        else -> null
+    }
+
+    val shownError = localError ?: error
+
+    fun currentPartner() = DeliveryPartner(
+        id = userId,
+        fullName = fullName.trim(),
+        email = prefillEmail,
+        phone = phone.trim(),
+        licenceNumber = licence.trim(),
+        aadhaarNumber = aadhaar.trim(),
+        panNumber = pan.trim().ifBlank { null },
+        vehicleType = vehicleType,
+        vehicleNumber = vehicleNumber.trim(),
+        bankAccountNumber = bankAccount.trim(),
+        bankIfsc = bankIfsc.trim(),
+        upiId = upiId.trim().ifBlank { null },
+        city = city.trim().ifBlank { null },
+        address = address.trim(),
+        emergencyContactName = emergencyName.trim().ifBlank { null },
+        emergencyContactPhone = emergencyPhone.trim().ifBlank { null }
+    )
+
+    fun goNext() {
+        if (stepProblem != null) {
+            localError = stepProblem
+            return
+        }
+        localError = null
+        onClearError()
+        // The application row has to exist before a document can reference
+        // it, so this is the one point that actually saves — the documents
+        // step below unlocks once it lands.
+        if (step == STEP_BANK) onSave(currentPartner())
+        if (step < STEP_COUNT - 1) {
+            movingForward = true
+            step++
+        }
+    }
+
+    fun goBack() {
+        localError = null
+        onClearError()
+        if (step > STEP_NAME) {
+            movingForward = false
+            step--
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         Surface(color = Teal) {
@@ -121,153 +221,192 @@ fun DeliveryOnboardingScreen(
             }
         }
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (step > STEP_NAME) {
+                IconButton(onClick = ::goBack) {
+                    Icon(Icons.Default.ArrowBack, stringResource(R.string.auth_back), tint = TextPrimary)
+                }
+            } else {
+                Spacer(Modifier.width(48.dp))
+            }
+            StepProgressBar(current = step, total = STEP_COUNT, modifier = Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.auth_step_of, step + 1, STEP_COUNT),
+                modifier = Modifier.padding(horizontal = 12.dp),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
+        }
+
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp)
+                .padding(horizontal = 20.dp)
         ) {
+            Spacer(Modifier.height(8.dp))
+
             if (existing?.rejectionReason?.isNotBlank() == true) {
                 OnboardingErrorBanner("Your last application was rejected: ${existing.rejectionReason}")
                 Spacer(Modifier.height(16.dp))
             }
-            val shownError = localError ?: error
+
+            AnimatedContent(
+                targetState = step,
+                transitionSpec = {
+                    if (movingForward) {
+                        (slideInHorizontally { it } + fadeIn()) togetherWith (slideOutHorizontally { -it } + fadeOut())
+                    } else {
+                        (slideInHorizontally { -it } + fadeIn()) togetherWith (slideOutHorizontally { it } + fadeOut())
+                    }
+                },
+                label = "delivery-onboarding-step"
+            ) { s ->
+                Column {
+                    when (s) {
+                        STEP_NAME -> {
+                            StepHeading("Tell us about yourself", "This is what a store or customer will see when you deliver their order.")
+                            OnboardingField(fullName, { fullName = it }, "Full name")
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(phone, { phone = it }, "Phone number", keyboardType = KeyboardType.Phone)
+                            StepIllustration(Icons.Default.Person, Teal, "Used for order pickups and drop confirmations.")
+                        }
+                        STEP_ADDRESS -> {
+                            StepHeading("Where are you based?", "Helps us match you with orders nearby.")
+                            OnboardingField(city, { city = it }, "City")
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(address, { address = it }, "Home address")
+                            StepIllustration(Icons.Default.LocationOn, Coral, "Kept private — never shown to customers or sellers.")
+                        }
+                        STEP_EMERGENCY -> {
+                            StepHeading("Emergency contact", "Optional, but useful to have on file while you're out delivering.")
+                            OnboardingField(emergencyName, { emergencyName = it }, "Contact name (optional)")
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(emergencyPhone, { emergencyPhone = it }, "Contact phone (optional)", keyboardType = KeyboardType.Phone)
+                            StepIllustration(Icons.Default.ContactPhone, Orange, "Only ever contacted if something goes wrong on a delivery.")
+                        }
+                        STEP_ID -> {
+                            StepHeading("ID details", "PAN is optional — licence and Aadhaar are required to verify you.")
+                            OnboardingField(licence, { licence = it.uppercase() }, "Driving licence number")
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(aadhaar, { aadhaar = it }, "Aadhaar number", keyboardType = KeyboardType.Number)
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(pan, { pan = it.uppercase() }, "PAN number (optional)")
+                            StepIllustration(Icons.Default.Badge, Violet, "Matched against your documents in the next step.")
+                        }
+                        STEP_VEHICLE -> {
+                            StepHeading("Your vehicle", "So we know what kind of deliveries to send your way.")
+                            Text("Vehicle type", fontSize = 12.sp, color = TextSecondary)
+                            Spacer(Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                VEHICLE_TYPES.forEach { type ->
+                                    VehicleTypeChip(
+                                        label = type.lowercase().replaceFirstChar { it.uppercase() },
+                                        selected = vehicleType == type,
+                                        onClick = { vehicleType = type }
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(vehicleNumber, { vehicleNumber = it.uppercase() }, "Vehicle number")
+                            StepIllustration(Icons.Default.TwoWheeler, Teal, "Checked against your vehicle RC and insurance.")
+                        }
+                        STEP_BANK -> {
+                            StepHeading("Where should we pay you?", "Your delivery earnings go to this account.")
+                            OnboardingField(bankAccount, { bankAccount = it }, "Bank account number", keyboardType = KeyboardType.Number)
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(bankIfsc, { bankIfsc = it.uppercase() }, "Bank IFSC code")
+                            Spacer(Modifier.height(14.dp))
+                            OnboardingField(upiId, { upiId = it }, "UPI ID (optional)")
+                            StepIllustration(Icons.Default.AccountBalance, Orange, "Double-check these — payouts fail silently if they're wrong.")
+                        }
+                        else -> {
+                            StepHeading("Upload your documents", "A clear photo of each is fine.")
+                            if (existing == null) {
+                                DocumentsPendingSave(isSaving)
+                            } else {
+                                DELIVERY_DOC_TYPES.forEach { docType ->
+                                    DocumentUploadRow(
+                                        label = docTypeLabel(docType),
+                                        docStatus = documentsByType[docType]?.status,
+                                        isUploading = uploadingDocType == docType,
+                                        onPick = {
+                                            pendingDocType = docType
+                                            pickDocument.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                        }
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+        }
+
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
             if (shownError != null) {
                 OnboardingErrorBanner(shownError, onDismiss = { localError = null; onClearError() })
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
             }
 
-            SectionLabel("Step 1 · Your details")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(fullName, { fullName = it }, "Full name")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(phone, { phone = it }, "Phone number", keyboardType = KeyboardType.Phone)
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(city, { city = it }, "City")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(address, { address = it }, "Home address")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(emergencyName, { emergencyName = it }, "Emergency contact name (optional)")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(emergencyPhone, { emergencyPhone = it }, "Emergency contact phone (optional)", keyboardType = KeyboardType.Phone)
-
-            Spacer(Modifier.height(22.dp))
-            SectionLabel("Step 2 · ID, vehicle & bank details")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(licence, { licence = it.uppercase() }, "Driving licence number")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(aadhaar, { aadhaar = it }, "Aadhaar number", keyboardType = KeyboardType.Number)
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(pan, { pan = it.uppercase() }, "PAN number (optional)")
-            Spacer(Modifier.height(10.dp))
-            Text("Vehicle type", fontSize = 12.sp, color = TextSecondary)
-            Spacer(Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                VEHICLE_TYPES.forEach { type ->
-                    VehicleTypeChip(
-                        label = type.lowercase().replaceFirstChar { it.uppercase() },
-                        selected = vehicleType == type,
-                        onClick = { vehicleType = type }
-                    )
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(vehicleNumber, { vehicleNumber = it.uppercase() }, "Vehicle number")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(bankAccount, { bankAccount = it }, "Bank account number", keyboardType = KeyboardType.Number)
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(bankIfsc, { bankIfsc = it.uppercase() }, "Bank IFSC code")
-            Spacer(Modifier.height(10.dp))
-            OnboardingField(upiId, { upiId = it }, "UPI ID (optional)")
-
-            Spacer(Modifier.height(22.dp))
-            SectionLabel("Step 3 · Documents")
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "A clear photo of each is fine — save first, then upload.",
-                fontSize = 12.sp,
-                color = TextSecondary
-            )
-            Spacer(Modifier.height(10.dp))
-
-            if (existing == null) {
-                Text(
-                    "Save your details first to unlock document uploads.",
-                    fontSize = 13.sp,
-                    color = TextLight,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            } else {
-                DELIVERY_DOC_TYPES.forEach { docType ->
-                    DocumentUploadRow(
-                        label = docTypeLabel(docType),
-                        docStatus = documentsByType[docType]?.status,
-                        isUploading = uploadingDocType == docType,
-                        onPick = {
-                            pendingDocType = docType
-                            pickDocument.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    if (!requiredFilled) {
-                        localError = "Please fill in every required field"
-                        return@Button
+            if (step == STEP_DOCUMENTS) {
+                Button(
+                    onClick = onSubmit,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                    enabled = existing != null && allDocsUploaded && !isSubmitting && !isSaving
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Submit for review", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                    onSave(
-                        DeliveryPartner(
-                            id = userId,
-                            fullName = fullName.trim(),
-                            email = prefillEmail,
-                            phone = phone.trim(),
-                            licenceNumber = licence.trim(),
-                            aadhaarNumber = aadhaar.trim(),
-                            panNumber = pan.trim().ifBlank { null },
-                            vehicleType = vehicleType,
-                            vehicleNumber = vehicleNumber.trim(),
-                            bankAccountNumber = bankAccount.trim(),
-                            bankIfsc = bankIfsc.trim(),
-                            upiId = upiId.trim().ifBlank { null },
-                            city = city.trim().ifBlank { null },
-                            address = address.trim(),
-                            emergencyContactName = emergencyName.trim().ifBlank { null },
-                            emergencyContactPhone = emergencyPhone.trim().ifBlank { null }
-                        )
-                    )
-                    if (existing != null && allDocsUploaded) onSubmit()
-                },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                enabled = !isSaving && !isSubmitting
-            ) {
-                if (isSaving || isSubmitting) {
-                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
-                } else {
-                    Text(
-                        text = if (existing == null) "Save details" else if (allDocsUploaded) "Save & submit for review" else "Save details",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                }
+                if (existing != null && !allDocsUploaded) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Upload every document above to submit for review.", fontSize = 12.sp, color = TextLight)
+                }
+            } else {
+                Button(
+                    onClick = ::goNext,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                    enabled = stepProblem == null && !isSaving
+                ) {
+                    if (isSaving && step == STEP_BANK) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(R.string.auth_next), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
-            if (existing != null && !allDocsUploaded) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Upload every document above to submit for review.",
-                    fontSize = 12.sp,
-                    color = TextLight
-                )
-            }
-            Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun DocumentsPendingSave(isSaving: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+        if (isSaving) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Teal)
+            Spacer(Modifier.width(10.dp))
+        }
+        Text(
+            text = if (isSaving) "Saving your details…" else "Your details are being saved — this unlocks in a moment.",
+            fontSize = 13.sp,
+            color = TextLight
+        )
     }
 }
 
@@ -286,11 +425,6 @@ private fun VehicleTypeChip(label: String, selected: Boolean, onClick: () -> Uni
             color = if (selected) Color.White else TextSecondary
         )
     }
-}
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(text, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
 }
 
 @Composable

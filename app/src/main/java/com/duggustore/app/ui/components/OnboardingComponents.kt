@@ -21,8 +21,72 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.duggustore.app.data.model.VerificationStatus
 import com.duggustore.app.ui.theme.*
+
+/**
+ * The thin progress bar + "Step X of Y" chrome shared by every step-by-step
+ * wizard in the app (sign-up, seller onboarding, rider onboarding), so all
+ * three read as one consistent pattern rather than three similar-looking
+ * ones.
+ */
+@Composable
+fun StepProgressBar(current: Int, total: Int, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(total) { index ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (index <= current) Teal else BorderGray)
+            )
+        }
+    }
+}
+
+/** A step's title + one-line reason it's being asked, above that step's field(s). */
+@Composable
+fun StepHeading(title: String, subtitle: String) {
+    Text(title, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+    Spacer(Modifier.height(6.dp))
+    Text(subtitle, fontSize = 14.sp, color = TextSecondary, lineHeight = 20.sp)
+    Spacer(Modifier.height(22.dp))
+}
+
+/**
+ * Fills the blank space a one-field step leaves below the keyboard on tall
+ * screens, and doubles as a small bit of reassurance about why we're asking.
+ */
+@Composable
+fun StepIllustration(icon: ImageVector, tint: Color, caption: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 36.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(60.dp))
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = caption,
+            fontSize = 13.sp,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        )
+    }
+}
 
 /** One document's row in the onboarding form: label, its current status, and an upload/re-upload action. */
 @Composable
