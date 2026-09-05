@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.screens.customer
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -88,16 +89,18 @@ fun HomeScreen(
             // Pinned. The wordmark, the location strip and the search field were
             // the first item of the list, so they scrolled away with the
             // products — searching meant scrolling back to the top first.
-            // A Surface rather than a plain background so the elevation shadow
-            // below it matches the bottom nav bar's — square corners, same
-            // shadow. zIndex keeps that shadow drawing over the scrolling
+            // A Surface rather than a plain background so it can round its
+            // bottom edge — curving down, the opposite of the bottom nav
+            // bar's upward curve — with a hairline border instead of a
+            // shadow. zIndex keeps that border drawing over the scrolling
             // list beneath instead of being painted over by it.
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .zIndex(1f),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
                 color = SurfaceWhite,
-                shadowElevation = 16.dp
+                border = BorderStroke(1.dp, BorderGray)
             ) {
             Column(
                 modifier = Modifier
