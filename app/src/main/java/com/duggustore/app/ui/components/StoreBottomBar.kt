@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -57,9 +58,8 @@ fun StoreBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = if (centre != null) 22.dp else 0.dp),
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
             color = SurfaceWhite,
-            shadowElevation = 16.dp
+            border = BorderStroke(1.dp, BorderGray)
         ) {
             Row(
                 modifier = Modifier
