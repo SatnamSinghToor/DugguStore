@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.duggustore.app.data.local.AppPrefs
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.data.model.Category
@@ -87,10 +88,21 @@ fun HomeScreen(
             // Pinned. The wordmark, the location strip and the search field were
             // the first item of the list, so they scrolled away with the
             // products — searching meant scrolling back to the top first.
+            // A Surface rather than a plain background so the rounded bottom
+            // corners and the elevation shadow below it match the rounded,
+            // shadowed bottom nav bar. zIndex keeps that shadow drawing over
+            // the scrolling list beneath instead of being painted over by it.
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .zIndex(1f),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                color = SurfaceWhite,
+                shadowElevation = 8.dp
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(SurfaceWhite)
                     .statusBarsPadding()
                     // 20dp, not the usual 16 — this is what lines the search
                     // bar's edges up with the offer cards below it, whose
@@ -188,6 +200,7 @@ fun HomeScreen(
                         }
                     )
                 }
+            }
             }
 
             if (isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {

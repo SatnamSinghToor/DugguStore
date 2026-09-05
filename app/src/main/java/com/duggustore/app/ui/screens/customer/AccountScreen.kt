@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -155,26 +156,41 @@ fun AccountScreen(
 
 @Composable
 private fun AccountHeader(user: UserProfile?, onBack: () -> Unit) {
-    Box {
+    // How far the card rises up into the teal band — a fixed visual
+    // overlap, kept independent of the card's own content-driven height
+    // (a longer name, or the phone line appearing) so it can never grow
+    // tall enough to reach up into the back button.
+    val cardOverlap = 40.dp
+    val bandClearance = 16.dp
+
+    Column {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Teal)
                 .statusBarsPadding()
-                .padding(bottom = 44.dp)
         ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, stringResource(R.string.common_back), tint = Color.White)
             }
+            Spacer(Modifier.height(cardOverlap + bandClearance))
         }
 
         // The card straddles the band, as the sheets do on the other screens.
+        // The `layout` modifier reports the card's height minus the overlap
+        // and then draws it shifted up by that same amount, so the content
+        // below the card slides up to meet it instead of leaving a gap.
         Surface(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .offset(y = 34.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    val overlapPx = cardOverlap.roundToPx()
+                    layout(placeable.width, placeable.height - overlapPx) {
+                        placeable.placeRelative(0, -overlapPx)
+                    }
+                },
             shape = RoundedCornerShape(22.dp),
             color = SurfaceWhite,
             shadowElevation = 4.dp
@@ -226,9 +242,6 @@ private fun AccountHeader(user: UserProfile?, onBack: () -> Unit) {
             }
         }
     }
-
-    // Room for the part of the card that hangs below the band.
-    Spacer(Modifier.height(34.dp))
 }
 
 @Composable
