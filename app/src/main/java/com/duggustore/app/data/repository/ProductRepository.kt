@@ -9,6 +9,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 
 private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
 
@@ -127,6 +129,34 @@ class ProductRepository {
             Result.success(products.filter {
                 it.name.contains(query, ignoreCase = true) || it.description.contains(query, ignoreCase = true)
             })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Calls the `decrement_stock` Postgres function to atomically reduce stock
+     * for every item in an order. Uses GREATEST(0, stock - qty) on the server
+     * side, so a race condition can never drive stock below zero.
+     *
+     * Called right after [OrderRepository.createOrder] succeeds. Failures are
+     * treated as non-fatal: the order is already placed and the seller can
+     * correct stock manually, so we don't want to confuse the customer with
+     * an error dialog at this point.
+     */
+    suspend fun decrementStock(items: List<Pair<String, Int>>): Result<Unit> {
+        return try {
+            val itemsJson = buildJsonArray {
+                items.forEach { (productId, quantity) ->
+                    add(buildJsonObject {
+                        put("product_id", productId)
+                        put("quantity", quantity)
+                    })
+                }
+            }
+            val body = buildJsonObject { put("items", itemsJson) }.toString()
+            SupabaseService.rpc("decrement_stock", body, token())
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -46,6 +46,7 @@ import com.duggustore.app.data.model.UserRole
 import com.duggustore.app.data.model.VerificationStatus
 import com.duggustore.app.data.model.toNotification
 import com.duggustore.app.data.remote.SessionManager
+import com.duggustore.app.data.repository.ProductRepository
 import com.duggustore.app.data.repository.ReviewRepository
 import com.duggustore.app.ui.components.OnboardingStatusScreen
 import com.duggustore.app.ui.screens.auth.ForgotPasswordScreen
@@ -380,25 +381,51 @@ fun AppNavGraph(
         }
 
         composable(Screen.CustomerNotifications.route) {
-            val notifications = orderState.customerOrders.map { it.toNotification() }
+            // Use DB-backed notifications when available; fall back to the
+            // client-derived list while the first load is in flight (empty state).
+            val notifications = if (orderState.dbNotifications.isNotEmpty())
+                orderState.dbNotifications
+            else
+                orderState.customerOrders.map { it.toNotification() }
+
+            val readIds = if (orderState.dbNotifications.isNotEmpty())
+                orderState.readNotificationIds
+            else
+                seenNotificationIds
+
             NotificationsScreen(
                 notifications = notifications,
-                readIds = seenNotificationIds,
+                readIds = readIds,
                 onNotificationClick = { notification ->
-                    AppPrefs.markNotificationsSeen(context, listOf(notification.id))
-                    seenNotificationIds = AppPrefs.seenNotificationIds(context)
-                    navController.navigate(
-                        Screen.CustomerOrderTracking.createRoute(notification.orderId)
-                    )
+                    if (orderState.dbNotifications.isNotEmpty()) {
+                        orderViewModel.markNotificationRead(notification.id)
+                    } else {
+                        AppPrefs.markNotificationsSeen(context, listOf(notification.id))
+                        seenNotificationIds = AppPrefs.seenNotificationIds(context)
+                    }
+                    if (notification.orderId.isNotBlank()) {
+                        navController.navigate(
+                            Screen.CustomerOrderTracking.createRoute(notification.orderId)
+                        )
+                    } else {
+                        navController.navigate(Screen.CustomerOrders.route)
+                    }
                 },
                 onMarkAllRead = {
-                    AppPrefs.markNotificationsSeen(context, notifications.map { it.id })
-                    seenNotificationIds = AppPrefs.seenNotificationIds(context)
+                    if (orderState.dbNotifications.isNotEmpty()) {
+                        authState.user?.let { orderViewModel.markAllNotificationsRead(it.id) }
+                    } else {
+                        AppPrefs.markNotificationsSeen(context, notifications.map { it.id })
+                        seenNotificationIds = AppPrefs.seenNotificationIds(context)
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )
             LaunchedEffect(authState.user) {
-                authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
+                authState.user?.let {
+                    orderViewModel.loadCustomerOrders(it.id)
+                    orderViewModel.loadNotifications(it.id)
+                }
             }
         }
 
@@ -453,12 +480,15 @@ fun AppNavGraph(
                 // and cancelled ones are not news. Opening the notifications
                 // list marks its ids seen, which is what actually lets this
                 // drop back to zero rather than just reflecting order count.
-                notificationCount = orderState.customerOrders
-                    .filter {
-                        it.status != OrderStatus.DELIVERED.value &&
-                            it.status != OrderStatus.CANCELLED.value
-                    }
-                    .count { it.toNotification().id !in seenNotificationIds },
+                notificationCount = if (orderState.dbNotifications.isNotEmpty())
+                    orderState.dbNotifications.count { it.id !in orderState.readNotificationIds }
+                else
+                    orderState.customerOrders
+                        .filter {
+                            it.status != OrderStatus.DELIVERED.value &&
+                                it.status != OrderStatus.CANCELLED.value
+                        }
+                        .count { it.toNotification().id !in seenNotificationIds },
                 onNotificationsClick = { navController.navigate(Screen.CustomerNotifications.route) },
                 savedAddresses = addressState.addresses,
                 onSelectAddress = { addressViewModel.setDefault(it.id) },
@@ -725,6 +755,7 @@ fun AppNavGraph(
                 passwordUpdated = authState.passwordUpdated,
                 onSaveProfile = { name, phone -> authViewModel.updateProfile(name, phone) },
                 onChangePassword = { newPassword, confirm -> authViewModel.updatePassword(newPassword, confirm) },
+                onUploadAvatar = { bytes, mimeType -> authViewModel.uploadAvatar(bytes, mimeType) },
                 onClearError = { authViewModel.clearError() },
                 onClearPasswordUpdated = { authViewModel.clearPasswordUpdated() },
                 onBack = { navController.popBackStack() }
@@ -996,11 +1027,14 @@ fun AppNavGraph(
         ) { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
             val kind = backStackEntry.arguments?.getString("kind") ?: "pickup"
-            // Looked up from what's already loaded rather than fetched again —
-            // the order (and its embedded seller store info) is already in
-            // deliveryState from the dashboard this screen was opened from.
             val order = (deliveryState.activeOrders + deliveryState.availableOrders)
                 .firstOrNull { it.id == orderId }
+
+            // Show an error card instead of silently going back when coordinates
+            // are missing — the rider tapped Navigate and deserves to know why
+            // the map can't open rather than just finding themselves on the
+            // previous screen with no explanation.
+            var noCoordinatesError by remember { mutableStateOf<String?>(null) }
 
             if (order == null) {
                 LaunchedEffect(Unit) { navController.popBackStack() }
@@ -1008,7 +1042,7 @@ fun AppNavGraph(
                 val lat = order.seller?.storeLatitude
                 val lng = order.seller?.storeLongitude
                 if (lat == null || lng == null) {
-                    LaunchedEffect(Unit) { navController.popBackStack() }
+                    noCoordinatesError = "Seller hasn't set a store location yet. Contact them to add it."
                 } else {
                     RouteMapScreen(
                         title = "Navigate to pickup",
@@ -1022,7 +1056,7 @@ fun AppNavGraph(
                 val lat = order.deliveryLatitude
                 val lng = order.deliveryLongitude
                 if (lat == null || lng == null) {
-                    LaunchedEffect(Unit) { navController.popBackStack() }
+                    noCoordinatesError = "Delivery address has no GPS coordinates. The customer typed it manually — use the address text to navigate."
                 } else {
                     RouteMapScreen(
                         title = "Navigate to drop",
@@ -1032,6 +1066,19 @@ fun AppNavGraph(
                         onBack = { navController.popBackStack() }
                     )
                 }
+            }
+
+            noCoordinatesError?.let { message ->
+                AlertDialog(
+                    onDismissRequest = { navController.popBackStack() },
+                    title = { Text("Location not available") },
+                    text = { Text(message) },
+                    confirmButton = {
+                        TextButton(onClick = { navController.popBackStack() }) {
+                            Text("Go back")
+                        }
+                    }
+                )
             }
         }
 
@@ -1126,14 +1173,19 @@ fun AppNavGraph(
             val productId = backStackEntry.arguments?.getString("productId") ?: ""
             // Look in the catalogue first, then favourites, so the screen still resolves
             // when it is opened from the favourites grid.
-            val product = homeState.products.firstOrNull { it.id == productId }
+            val productInMemory = homeState.products.firstOrNull { it.id == productId }
                 ?: favState.favoriteProducts.firstOrNull { it.id == productId }
+
+            // If the product isn't in any in-memory list (e.g. deep-linked or shared
+            // URL), fetch it by ID directly so the screen never spins forever.
+            val productRepo = remember { ProductRepository() }
+            var fetchedProduct by remember(productId) { mutableStateOf(productInMemory) }
 
             val reviewRepo = remember { ReviewRepository() }
             var productReviews by remember(productId) { mutableStateOf<List<Review>>(emptyList()) }
 
             ProductDetailScreen(
-                product = product,
+                product = fetchedProduct,
                 isFavorite = favState.favorites.any { it.productId == productId },
                 reviews = productReviews,
                 onAddToCart = { p, qty ->
@@ -1150,7 +1202,14 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() }
             )
 
+            // Fallback network fetch — only fires when the product wasn't found in
+            // any cached list above; avoids a redundant round trip in the common case.
             LaunchedEffect(productId) {
+                if (fetchedProduct == null) {
+                    productRepo.getProduct(productId).onSuccess { p ->
+                        if (p != null) fetchedProduct = p
+                    }
+                }
                 reviewRepo.getReviewsForProduct(productId).onSuccess { productReviews = it }
             }
 
@@ -1163,8 +1222,8 @@ fun AppNavGraph(
             AddressesScreen(
                 addresses = addressState.addresses,
                 isLoading = addressState.isLoading,
-                onSaveAddress = { label, full, isDefault, existingId ->
-                    addressViewModel.saveAddress(label, full, isDefault, existingId)
+                onSaveAddress = { label, full, isDefault, existingId, lat, lng ->
+                    addressViewModel.saveAddress(label, full, isDefault, existingId, lat, lng)
                 },
                 onDeleteAddress = { addressViewModel.deleteAddress(it) },
                 onSetDefault = { addressViewModel.setDefault(it) },

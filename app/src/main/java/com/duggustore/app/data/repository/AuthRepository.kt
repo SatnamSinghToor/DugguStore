@@ -525,4 +525,33 @@ class AuthRepository {
             Result.failure(e)
         }
     }
+
+    /**
+     * Uploads a profile photo to the `avatars` storage bucket (public) and
+     * updates the profile row's avatar_url with the resulting public URL.
+     * Returns the updated [UserProfile] so the caller can refresh state.
+     */
+    suspend fun uploadAvatar(userId: String, bytes: ByteArray, mimeType: String): Result<UserProfile> {
+        return try {
+            val token = SessionManager.getAccessToken()
+            val extension = when (mimeType) {
+                "image/png" -> "png"
+                "image/webp" -> "webp"
+                else -> "jpg"
+            }
+            val path = "$userId/avatar.$extension"
+            val url = SupabaseService.uploadFile("avatars", path, bytes, mimeType, token)
+
+            val body = buildJsonObject { put("avatar_url", url) }.toString()
+            SupabaseService.update("profiles", userId, body, token)
+
+            // Fetch fresh profile so the returned object has all current fields.
+            val profile = fetchProfile(userId, token ?: "") ?: return Result.failure(
+                Exception("Avatar uploaded but profile could not be refreshed.")
+            )
+            Result.success(profile)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

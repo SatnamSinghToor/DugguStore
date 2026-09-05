@@ -1,14 +1,21 @@
 package com.duggustore.app.ui.screens.customer
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
@@ -18,13 +25,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.duggustore.app.BuildConfig
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.ui.theme.*
@@ -37,6 +48,7 @@ fun SettingsScreen(
     passwordUpdated: Boolean,
     onSaveProfile: (fullName: String, phone: String) -> Unit,
     onChangePassword: (newPassword: String, confirmPassword: String) -> Unit,
+    onUploadAvatar: (bytes: ByteArray, mimeType: String) -> Unit,
     onClearError: () -> Unit,
     onClearPasswordUpdated: () -> Unit,
     onBack: () -> Unit
@@ -114,6 +126,7 @@ fun SettingsScreen(
             error = error,
             onDismiss = { showEditProfile = false; onClearError() },
             onSave = { name, phone -> onSaveProfile(name, phone) },
+            onUploadAvatar = onUploadAvatar,
             closeOnSaved = { showEditProfile = false }
         )
     }
@@ -204,8 +217,10 @@ private fun EditProfileDialog(
     error: String?,
     onDismiss: () -> Unit,
     onSave: (fullName: String, phone: String) -> Unit,
+    onUploadAvatar: (bytes: ByteArray, mimeType: String) -> Unit,
     closeOnSaved: () -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf(user?.fullName.orEmpty()) }
     var phone by remember { mutableStateOf(user?.phone.orEmpty()) }
     var wasSaving by remember { mutableStateOf(false) }
@@ -217,14 +232,88 @@ private fun EditProfileDialog(
         wasSaving = isSaving
     }
 
+    // Single-image picker — opens the system photo picker (Android 13+) or
+    // falls back to the legacy chooser on older devices automatically.
+    val pickAvatar = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri ?: return@rememberLauncherForActivityResult
+        val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: return@rememberLauncherForActivityResult
+        onUploadAvatar(bytes, mimeType)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit profile") },
         text = {
-            Column {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (error != null) {
                     Text(error, color = CoralDark, fontSize = 12.sp, modifier = Modifier.padding(bottom = 10.dp))
                 }
+
+                // Avatar preview + change button
+                Box(
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .size(80.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    if (!user?.avatarUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = user!!.avatarUrl,
+                            contentDescription = "Profile photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .border(2.dp, BorderGray, CircleShape)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(TealSurface)
+                                .border(2.dp, BorderGray, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Person, null, tint = Teal, modifier = Modifier.size(40.dp))
+                        }
+                    }
+                    // Camera badge overlaid at bottom-right of the avatar circle
+                    Surface(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clickable {
+                                pickAvatar.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        shape = CircleShape,
+                        color = Teal,
+                        shadowElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.CameraAlt,
+                                    contentDescription = "Change photo",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
