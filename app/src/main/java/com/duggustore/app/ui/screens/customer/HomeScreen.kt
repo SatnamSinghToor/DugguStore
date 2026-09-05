@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.screens.customer
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -70,6 +71,15 @@ fun HomeScreen(
     var showLocationSheet by remember { mutableStateOf(false) }
     val detected = rememberDeviceLocation()
     val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
+
+    // Home is the bottom of the back stack, so with no search active the
+    // system back button already does the right thing (exits to the
+    // launcher). With a search active it did that too — the whole app
+    // closed instead of just backing out of the search, which is what
+    // actually looks like a crash from the outside.
+    BackHandler(enabled = searchQuery.isNotBlank()) {
+        onSearchQueryChange("")
+    }
 
     val context = LocalContext.current
     var recentSearches by remember { mutableStateOf(AppPrefs.recentSearches(context)) }
