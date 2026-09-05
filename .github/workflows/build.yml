@@ -10,6 +10,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # GitHub's workflow parser rejects a step-level `if:` that references
+      # `secrets` directly (the whole workflow fails to schedule any job,
+      # not just that step) — so the check happens once here, as a plain
+      # env var, and steps below test that instead.
+      HAS_RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
 
     steps:
       - name: Checkout code
@@ -36,7 +42,7 @@ jobs:
       # stays unsigned exactly as it always has (build.gradle.kts checks the
       # same properties before wiring up a signing config).
       - name: Set up release signing
-        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+        if: env.HAS_RELEASE_KEYSTORE == 'true'
         run: |
           mkdir -p keystore
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > keystore/duggustore-release.jks
@@ -52,7 +58,7 @@ jobs:
         run: ./gradlew assembleRelease --stacktrace
 
       - name: Build Release Bundle (AAB)
-        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+        if: env.HAS_RELEASE_KEYSTORE == 'true'
         run: ./gradlew bundleRelease --stacktrace
 
       - name: Upload Debug APK
@@ -76,7 +82,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Release Bundle (AAB)
-        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+        if: env.HAS_RELEASE_KEYSTORE == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: duggu-store-release-bundle
