@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -375,8 +376,10 @@ fun StoreProductCard(
     Surface(
         modifier = modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        // Slightly translucent rather than flat white.
-        color = SurfaceWhite.copy(alpha = 0.9f)
+        // Slightly translucent rather than flat white, with a hairline no
+        // heavier than a chat input box's — a boundary, not a shadow.
+        color = SurfaceWhite.copy(alpha = 0.9f),
+        border = BorderStroke(1.dp, BorderGray.copy(alpha = 0.6f))
     ) {
         Column {
             Box(
@@ -394,8 +397,10 @@ fun StoreProductCard(
                     contentScale = ContentScale.Fit,
                     // Faded rather than full colour once it's unavailable, so
                     // the image itself signals "can't buy this" at a glance
-                    // instead of only the text underneath.
-                    imageModifier = Modifier.padding(10.dp).alpha(if (outOfStock) 0.35f else 1f)
+                    // instead of only the text underneath. Tighter padding
+                    // than before — the photo is the point of the card, not
+                    // the white margin around it.
+                    imageModifier = Modifier.padding(6.dp).alpha(if (outOfStock) 0.35f else 1f)
                 )
 
                 if (outOfStock) {
@@ -434,22 +439,29 @@ fun StoreProductCard(
                 }
             }
 
-            Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+            // A Material3 Text without its own lineHeight keeps bodyLarge's
+            // 24sp regardless of the fontSize set on it — every line below
+            // was rendering several dp taller than its own glyphs, which
+            // added up across the card into real, visible dead space. Every
+            // one now sets a lineHeight that actually matches its fontSize.
+            Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp)) {
                 Text(
                     text = product.name,
                     fontSize = 15.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(5.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "₹${trimAmount(product.effectivePrice())}",
                         fontSize = 16.sp,
+                        lineHeight = 19.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary
                     )
@@ -458,6 +470,7 @@ fun StoreProductCard(
                         Text(
                             text = "₹${trimAmount(product.price)}",
                             fontSize = 12.sp,
+                            lineHeight = 15.sp,
                             color = TextLight,
                             textDecoration = TextDecoration.LineThrough
                         )
@@ -468,11 +481,12 @@ fun StoreProductCard(
                     Text(
                         text = "/${product.unit}",
                         fontSize = 12.sp,
+                        lineHeight = 15.sp,
                         color = TextSecondary
                     )
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
 
                 when {
                     product.stock <= 0 -> Surface(
@@ -482,8 +496,9 @@ fun StoreProductCard(
                     ) {
                         Text(
                             "Out of stock",
-                            modifier = Modifier.padding(vertical = 10.dp),
+                            modifier = Modifier.padding(vertical = 8.dp),
                             fontSize = 13.sp,
+                            lineHeight = 16.sp,
                             color = TextLight,
                             textAlign = TextAlign.Center
                         )
@@ -508,8 +523,9 @@ private fun AddToCartButton(onAdd: () -> Unit) {
     ) {
         Text(
             text = "Add to cart",
-            modifier = Modifier.padding(vertical = 10.dp),
+            modifier = Modifier.padding(vertical = 9.dp),
             fontSize = 14.sp,
+            lineHeight = 17.sp,
             fontWeight = FontWeight.Bold,
             color = Orange,
             textAlign = TextAlign.Center
