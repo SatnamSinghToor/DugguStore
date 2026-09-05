@@ -169,6 +169,10 @@ fun AppNavGraph(
     // signed-out app goes straight to the login form.
     val context = LocalContext.current
     val hasSeenWelcome = remember { AppPrefs.hasSeenWelcome(context) }
+    // Backs the Home bell's badge. A plain AppPrefs read wouldn't recompose
+    // the badge the moment the notifications list is opened, so it's mirrored
+    // into state here and refreshed right after marking ids seen.
+    var seenNotificationIds by remember { mutableStateOf(AppPrefs.seenNotificationIds(context)) }
 
     val startDestination = remember(authState.isLoggedIn, authState.user) {
         if (!authState.isLoggedIn) {
@@ -376,8 +380,9 @@ fun AppNavGraph(
         }
 
         composable(Screen.CustomerNotifications.route) {
+            val notifications = orderState.customerOrders.map { it.toNotification() }
             NotificationsScreen(
-                notifications = orderState.customerOrders.map { it.toNotification() },
+                notifications = notifications,
                 onNotificationClick = { notification ->
                     navController.navigate(
                         Screen.CustomerOrderTracking.createRoute(notification.orderId)
@@ -387,6 +392,17 @@ fun AppNavGraph(
             )
             LaunchedEffect(authState.user) {
                 authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
+            }
+            // Clears the Home bell's badge for whatever is showing here. Keyed
+            // on the ids themselves so an order that moves along while this
+            // screen is open (a fresh id, per toNotification()) gets marked
+            // seen too rather than waiting for the next visit.
+            LaunchedEffect(notifications.map { it.id }) {
+                val ids = notifications.map { it.id }
+                if (!seenNotificationIds.containsAll(ids)) {
+                    AppPrefs.markNotificationsSeen(context, ids)
+                    seenNotificationIds = AppPrefs.seenNotificationIds(context)
+                }
             }
         }
 
@@ -438,11 +454,15 @@ fun AppNavGraph(
                 },
                 onAddressClick = { navController.navigate(Screen.CustomerAddresses.route) },
                 // Orders still in flight are the ones worth a badge; delivered
-                // and cancelled ones are not news.
-                notificationCount = orderState.customerOrders.count {
-                    it.status != OrderStatus.DELIVERED.value &&
-                        it.status != OrderStatus.CANCELLED.value
-                },
+                // and cancelled ones are not news. Opening the notifications
+                // list marks its ids seen, which is what actually lets this
+                // drop back to zero rather than just reflecting order count.
+                notificationCount = orderState.customerOrders
+                    .filter {
+                        it.status != OrderStatus.DELIVERED.value &&
+                            it.status != OrderStatus.CANCELLED.value
+                    }
+                    .count { it.toNotification().id !in seenNotificationIds },
                 onNotificationsClick = { navController.navigate(Screen.CustomerNotifications.route) },
                 savedAddresses = addressState.addresses,
                 onSelectAddress = { addressViewModel.setDefault(it.id) },

@@ -18,6 +18,10 @@ object AppPrefs {
     private const val MAX_RECENT_SEARCHES = 8
     private const val KEY_WELCOME_SEEN = "welcome_seen"
     private const val KEY_ORDER_ALERTS = "order_voice_alerts"
+    // A StoreNotification's id already bakes the order's status into it
+    // ("$orderId-$status"), so a status change produces a fresh id here on
+    // its own — nothing to invalidate when an order moves along.
+    private const val KEY_SEEN_NOTIFICATIONS = "seen_notification_ids"
     private const val KEY_REORDER_REMINDERS = "reorder_reminders"
     // "orderId|dueAtEpochMillis" pairs, one per line — there's no server-side
     // scheduler, so due reminders are just checked against the clock whenever
@@ -143,5 +147,21 @@ object AppPrefs {
 
     fun clearReorderReminder(context: Context, orderId: String) {
         saveReminderMap(context, reminderMap(context) - orderId)
+    }
+
+    /** Notification ids the customer has already opened the notifications list for. */
+    fun seenNotificationIds(context: Context): Set<String> =
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            .getStringSet(KEY_SEEN_NOTIFICATIONS, null)
+            ?: emptySet()
+
+    fun markNotificationsSeen(context: Context, ids: Collection<String>) {
+        val updated = seenNotificationIds(context) + ids
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+            // putStringSet keeps a live reference in some implementations —
+            // pass a fresh copy so a later mutation of this set can't corrupt
+            // what's already been handed to SharedPreferences.
+            .putStringSet(KEY_SEEN_NOTIFICATIONS, java.util.HashSet(updated))
+            .apply()
     }
 }
