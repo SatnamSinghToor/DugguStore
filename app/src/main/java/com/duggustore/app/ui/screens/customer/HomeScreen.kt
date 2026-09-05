@@ -90,15 +90,17 @@ fun HomeScreen(
             // the first item of the list, so they scrolled away with the
             // products — searching meant scrolling back to the top first.
             // A Surface rather than a plain background so it can round its
-            // bottom edge — curving down, the opposite of the bottom nav
-            // bar's upward curve — with a hairline border instead of a
-            // shadow. zIndex keeps that border drawing over the scrolling
-            // list beneath instead of being painted over by it.
+            // top corners — the same corner the screen itself has, mirroring
+            // the bottom nav bar rounding its bottom corners, so the whole
+            // visible page reads as one rounded frame — with a hairline
+            // border instead of a shadow. zIndex keeps that border drawing
+            // over the scrolling list beneath instead of being painted over
+            // by it.
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .zIndex(1f),
-                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 color = SurfaceWhite,
                 border = BorderStroke(1.dp, BorderGray)
             ) {

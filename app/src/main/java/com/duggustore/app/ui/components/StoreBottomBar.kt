@@ -57,7 +57,7 @@ fun StoreBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = if (centre != null) 22.dp else 0.dp),
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
             color = SurfaceWhite,
             shadowElevation = 16.dp
         ) {
