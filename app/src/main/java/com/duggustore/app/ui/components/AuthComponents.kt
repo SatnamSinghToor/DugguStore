@@ -48,8 +48,9 @@ import com.duggustore.app.ui.theme.*
  */
 @Composable
 fun AuthScaffold(
-    title: String,
-    subtitle: String,
+    title: String?,
+    subtitle: String?,
+    showLogoName: Boolean = true,
     footer: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -64,22 +65,30 @@ fun AuthScaffold(
             .padding(top = 32.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AppLogo()
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = title,
-            color = TextPrimary,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = subtitle,
-            color = TextSecondary,
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center
-        )
+        AppLogo(showName = showLogoName)
+        if (title != null || subtitle != null) {
+            Spacer(Modifier.height(16.dp))
+        }
+        if (title != null) {
+            Text(
+                text = title,
+                color = TextPrimary,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
+            )
+        }
+        if (title != null && subtitle != null) {
+            Spacer(Modifier.height(6.dp))
+        }
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                color = TextSecondary,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+        }
 
         Spacer(Modifier.height(22.dp))
 
@@ -101,7 +110,7 @@ fun AuthScaffold(
  * branding on them at all once the old teal header band was removed.
  */
 @Composable
-fun AppLogo(size: Int = 140) {
+fun AppLogo(size: Int = 140, showName: Boolean = true) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Image(
             painter = painterResource(R.drawable.app_logo),
@@ -111,69 +120,13 @@ fun AppLogo(size: Int = 140) {
                 .width(size.dp)
                 .aspectRatio(289f / 321f)
         )
-        Spacer(Modifier.height((size / 20).dp))
-        Text(
-            text = stringResource(R.string.app_name),
-            color = TextPrimary,
-            fontSize = (size / 5).sp,
-            fontWeight = FontWeight.ExtraBold
-        )
-    }
-}
-
-enum class AuthTab { LOG_IN, SIGN_UP }
-
-/**
- * Pill switcher at the top of the login/signup forms — tapping the side
- * you're not on navigates there. The active side's fill colour follows
- * which tab it is (orange for Log In, teal for Sign Up) rather than a
- * single accent, matching the two screens' own button colours.
- */
-@Composable
-fun AuthTabSwitcher(selected: AuthTab, onSelect: (AuthTab) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        color = SurfaceMuted
-    ) {
-        Row(modifier = Modifier.padding(4.dp)) {
-            AuthTabSegment(
-                text = "Log In",
-                selected = selected == AuthTab.LOG_IN,
-                activeColor = Orange,
-                modifier = Modifier.weight(1f),
-                onClick = { onSelect(AuthTab.LOG_IN) }
-            )
-            AuthTabSegment(
-                text = "Sign Up",
-                selected = selected == AuthTab.SIGN_UP,
-                activeColor = Teal,
-                modifier = Modifier.weight(1f),
-                onClick = { onSelect(AuthTab.SIGN_UP) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun AuthTabSegment(
-    text: String,
-    selected: Boolean,
-    activeColor: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(22.dp),
-        color = if (selected) activeColor else Color.Transparent
-    ) {
-        Box(modifier = Modifier.padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+        if (showName) {
+            Spacer(Modifier.height((size / 20).dp))
             Text(
-                text = text,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (selected) Color.White else TextSecondary
+                text = stringResource(R.string.app_name),
+                color = TextPrimary,
+                fontSize = (size / 5).sp,
+                fontWeight = FontWeight.ExtraBold
             )
         }
     }

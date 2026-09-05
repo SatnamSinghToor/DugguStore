@@ -47,8 +47,9 @@ fun LoginScreen(
     }
 
     AuthScaffold(
-        title = stringResource(R.string.auth_welcome_back),
-        subtitle = stringResource(R.string.auth_welcome_back_sub),
+        title = null,
+        subtitle = null,
+        showLogoName = false,
         footer = {
             AuthSwitchRow(
                 question = stringResource(R.string.auth_new_here),
@@ -57,12 +58,6 @@ fun LoginScreen(
             )
         }
     ) {
-        AuthTabSwitcher(
-            selected = AuthTab.LOG_IN,
-            onSelect = { tab -> if (tab == AuthTab.SIGN_UP) onNavigateToRegister() }
-        )
-        Spacer(Modifier.height(18.dp))
-
         if (error != null) {
             AuthErrorBanner(message = error, onDismiss = onClearError)
             Spacer(Modifier.height(18.dp))
