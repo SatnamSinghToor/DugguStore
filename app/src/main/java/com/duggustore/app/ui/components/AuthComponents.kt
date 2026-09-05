@@ -25,6 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -45,6 +47,12 @@ import com.duggustore.app.ui.theme.*
  * Shared frame for the auth screens: logo, centred title, then the form
  * sitting directly on the page background — no card behind the fields,
  * which just doubled up on the outlined fields' own borders.
+ *
+ * A flat white page made every one of these screens feel bare above the
+ * fields, so a soft gradient wash sits behind the logo, with two pale discs
+ * bleeding off the top corners — the same soft-circle language the home
+ * screen's offer cards already use — for a bit of depth without competing
+ * with the form.
  */
 @Composable
 fun AuthScaffold(
@@ -54,51 +62,88 @@ fun AuthScaffold(
     footer: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 22.dp)
-            .padding(top = 32.dp, bottom = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        AppLogo(showName = showLogoName)
-        if (title != null || subtitle != null) {
-            Spacer(Modifier.height(16.dp))
-        }
-        if (title != null) {
-            Text(
-                text = title,
-                color = TextPrimary,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center
-            )
-        }
-        if (title != null && subtitle != null) {
-            Spacer(Modifier.height(6.dp))
-        }
-        if (subtitle != null) {
-            Text(
-                text = subtitle,
-                color = TextSecondary,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(Modifier.height(22.dp))
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            content = content
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(280.dp)
+                .background(Brush.verticalGradient(listOf(TealSurface, Background)))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = (-60).dp, y = (-50).dp)
+                .size(190.dp)
+                .clip(CircleShape)
+                .background(Orange.copy(alpha = 0.10f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 50.dp, y = (-30).dp)
+                .size(150.dp)
+                .clip(CircleShape)
+                .background(Teal.copy(alpha = 0.12f))
         )
 
-        Spacer(Modifier.height(20.dp))
-        footer()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp)
+                .padding(top = 28.dp, bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // A plain image floating on the gradient still looked adrift, so
+            // it sits on a round white "medallion" with its own shadow —
+            // scoped to this frame rather than AppLogo itself, which is also
+            // used inline in the onboarding header at a much smaller size.
+            Box(contentAlignment = Alignment.TopCenter) {
+                Box(
+                    modifier = Modifier
+                        .size(168.dp)
+                        .shadow(elevation = 16.dp, shape = CircleShape, clip = false)
+                        .clip(CircleShape)
+                        .background(SurfaceWhite)
+                )
+                AppLogo(showName = showLogoName)
+            }
+            if (title != null || subtitle != null) {
+                Spacer(Modifier.height(16.dp))
+            }
+            if (title != null) {
+                Text(
+                    text = title,
+                    color = TextPrimary,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center
+                )
+            }
+            if (title != null && subtitle != null) {
+                Spacer(Modifier.height(6.dp))
+            }
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    color = TextSecondary,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(Modifier.height(22.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                content = content
+            )
+
+            Spacer(Modifier.height(20.dp))
+            footer()
+        }
     }
 }
 
@@ -197,12 +242,15 @@ fun AuthField(
             visualTransformation =
                 if (hideCharacters) PasswordVisualTransformation() else VisualTransformation.None,
             singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
+            // A soft filled tint at rest, with the border only appearing once
+            // focused, reads less like a bare form and more like the rest of
+            // the app's tinted surfaces (the search bar, the muted chips).
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = SurfaceWhite,
-                unfocusedContainerColor = SurfaceWhite,
+                unfocusedContainerColor = SurfaceMuted,
                 focusedBorderColor = Teal,
-                unfocusedBorderColor = BorderGray,
+                unfocusedBorderColor = Color.Transparent,
                 errorBorderColor = Coral,
                 focusedLabelColor = Teal,
                 unfocusedLabelColor = TextSecondary,
@@ -255,8 +303,8 @@ fun AuthPrimaryButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(14.dp),
+            .height(54.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Teal,
             disabledContainerColor = BorderGray
