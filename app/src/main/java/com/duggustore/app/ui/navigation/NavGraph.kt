@@ -40,6 +40,7 @@ import androidx.navigation.navArgument
 import androidx.compose.ui.res.stringResource
 import com.duggustore.app.R
 import com.duggustore.app.data.model.OrderStatus
+import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Review
 import com.duggustore.app.data.model.UserRole
 import com.duggustore.app.data.model.VerificationStatus
@@ -228,6 +229,18 @@ fun AppNavGraph(
         }
     }
 
+    // A guest's cart never has a customer id to attach to, so addToCart would
+    // otherwise just silently do nothing — sign-in is the actual next step,
+    // not a dead tap. Every "Add to cart" / quantity-increase action across
+    // Home, Categories, Favourites and product detail goes through this.
+    fun addToCartOrPromptLogin(product: Product) {
+        if (authState.user == null) {
+            navController.navigate(Screen.Login.route)
+        } else {
+            cartViewModel.addToCart(product)
+        }
+    }
+
     // The bar is part of the shell rather than of any one screen, so every
     // top-level destination gets it and the selected item always matches where
     // the user actually is.
@@ -383,8 +396,8 @@ fun AppNavGraph(
                 products = homeState.products,
                 cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
                 favoriteIds = favState.favorites.map { it.productId }.toSet(),
-                onAddToCart = { cartViewModel.addToCart(it) },
-                onIncrease = { cartViewModel.addToCart(it) },
+                onAddToCart = ::addToCartOrPromptLogin,
+                onIncrease = ::addToCartOrPromptLogin,
                 onDecrease = { product ->
                     cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
                         cartViewModel.updateQuantity(item.id, item.quantity - 1)
@@ -405,7 +418,7 @@ fun AppNavGraph(
                 searchQuery = homeState.searchQuery,
                 onSearchQueryChange = { homeViewModel.search(it) },
                 onCategorySelected = { homeViewModel.selectCategory(it) },
-                onAddToCart = { cartViewModel.addToCart(it) },
+                onAddToCart = ::addToCartOrPromptLogin,
                 onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) },
                 userName = authState.user?.fullName?.substringBefore(' ').orEmpty(),
                 deliveryAddress = addressState.defaultAddress?.fullAddress
@@ -414,7 +427,7 @@ fun AppNavGraph(
                 // product is already in the cart, as in the design.
                 cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
                 favoriteIds = favState.favorites.map { it.productId }.toSet(),
-                onIncrease = { cartViewModel.addToCart(it) },
+                onIncrease = ::addToCartOrPromptLogin,
                 onDecrease = { product ->
                     cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
                         cartViewModel.updateQuantity(item.id, item.quantity - 1)
@@ -640,11 +653,11 @@ fun AppNavGraph(
         composable(Screen.CustomerFavorites.route) {
             FavoritesScreen(
                 favoriteProducts = favState.favoriteProducts,
-                onAddToCart = { cartViewModel.addToCart(it) },
+                onAddToCart = ::addToCartOrPromptLogin,
                 onBack = { navController.popBackStack() },
                 onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) },
                 cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
-                onIncrease = { cartViewModel.addToCart(it) },
+                onIncrease = ::addToCartOrPromptLogin,
                 onDecrease = { product ->
                     cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
                         cartViewModel.updateQuantity(item.id, item.quantity - 1)
@@ -1081,8 +1094,12 @@ fun AppNavGraph(
                 isFavorite = favState.favorites.any { it.productId == productId },
                 reviews = productReviews,
                 onAddToCart = { p, qty ->
-                    repeat(qty) { cartViewModel.addToCart(p) }
-                    navController.popBackStack()
+                    if (authState.user == null) {
+                        navController.navigate(Screen.Login.route)
+                    } else {
+                        repeat(qty) { cartViewModel.addToCart(p) }
+                        navController.popBackStack()
+                    }
                 },
                 onToggleFavorite = { p ->
                     authState.user?.let { favoriteViewModel.toggleFavorite(it.id, p.id) }
