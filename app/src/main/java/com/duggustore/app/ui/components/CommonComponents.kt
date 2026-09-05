@@ -423,6 +423,43 @@ fun StatusBadge(
 }
 
 @Composable
+fun ErrorRetryBlock(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.ErrorOutline,
+            contentDescription = null,
+            modifier = Modifier.size(56.dp),
+            tint = TextLight
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            fontSize = 14.sp,
+            color = TextSecondary,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onRetry,
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Teal)
+        ) {
+            Text("Retry", color = Color.White, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
 fun SectionHeader(
     title: String,
     actionText: String? = null,

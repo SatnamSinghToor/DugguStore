@@ -298,6 +298,7 @@ class CartViewModel : ViewModel() {
                     orderPlaced = true,
                     cartItems = emptyList(),
                     isCartOpen = false,
+                    couponCode = "",
                     couponApplied = false,
                     couponDiscount = 0.0,
                     couponError = null,

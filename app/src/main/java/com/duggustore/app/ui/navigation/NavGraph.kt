@@ -513,7 +513,10 @@ fun AppNavGraph(
                 // The card carries a real coupon code, so tapping it puts the
                 // customer where they can spend it.
                 onOfferClick = { navController.navigate(Screen.CustomerCart.route) },
-                isLoading = homeState.isLoading
+                isLoading = homeState.isLoading,
+                error = homeState.error,
+                onRefresh = { homeViewModel.loadData() },
+                onRetry = { homeViewModel.loadData() }
             )
 
             LaunchedEffect(authState.user) {
@@ -546,7 +549,10 @@ fun AppNavGraph(
                 onRemoveItem = { cartViewModel.removeItem(it) },
                 onApplyCoupon = { cartViewModel.applyCoupon(it) },
                 onPlaceOrder = { navController.navigate(Screen.CustomerCheckout.route) },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                error = cartState.error,
+                onRefresh = { cartViewModel.loadCart() },
+                onRetry = { cartViewModel.loadCart() }
             )
 
             LaunchedEffect(Unit) {
@@ -577,6 +583,8 @@ fun AppNavGraph(
 
         composable(Screen.CustomerOrders.route) {
             val remindersContext = LocalContext.current
+            var ordersSearchQuery by rememberSaveable { mutableStateOf("") }
+            var ordersSelectedStatus by rememberSaveable { mutableStateOf("All") }
             OrderListScreen(
                 orders = orderState.customerOrders,
                 itemsByOrderId = orderState.orderItemsByOrderId,
@@ -586,7 +594,15 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() },
                 dueReminderOrderIds = remember(orderState.customerOrders) {
                     AppPrefs.dueReorderReminders(remindersContext).toSet()
-                }
+                },
+                isLoading = orderState.isLoading,
+                error = orderState.error,
+                onRefresh = { authState.user?.let { orderViewModel.loadCustomerOrders(it.id) } },
+                onRetry = { authState.user?.let { orderViewModel.loadCustomerOrders(it.id) } },
+                searchQuery = ordersSearchQuery,
+                onSearchQueryChange = { ordersSearchQuery = it },
+                selectedStatus = ordersSelectedStatus,
+                onStatusSelected = { ordersSelectedStatus = it }
             )
 
             LaunchedEffect(Unit) {
@@ -720,7 +736,8 @@ fun AppNavGraph(
                 },
                 onRemoveFavorite = { product ->
                     authState.user?.let { favoriteViewModel.toggleFavorite(it.id, product.id) }
-                }
+                },
+                isLoading = favState.isLoading
             )
 
             LaunchedEffect(Unit) {
@@ -766,7 +783,8 @@ fun AppNavGraph(
             WalletScreen(
                 transactions = orderState.walletTransactions,
                 referralCode = authState.user?.referralCode ?: "",
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                isLoading = orderState.isLoading
             )
             LaunchedEffect(Unit) {
                 authState.user?.let { orderViewModel.loadWallet(it.id) }
@@ -849,6 +867,8 @@ fun AppNavGraph(
                         selectedTab = dashboardTab,
                         products = sellerState.products,
                         orders = sellerState.orders,
+                        isLoading = sellerState.isLoading,
+                        onRefreshOrders = { authState.user?.let { sellerViewModel.loadSellerData(it.id) } },
                         totalRevenue = sellerState.totalRevenue,
                         totalOrders = sellerState.totalOrders,
                         onAddProduct = { navController.navigate(Screen.SellerProductForm.createRoute()) },
@@ -954,7 +974,13 @@ fun AppNavGraph(
                         orderItemsByOrderId = orderState.orderItemsByOrderId,
                         onExpandOrderItems = { orderViewModel.loadOrderItems(it) },
                         isOnline = authState.user?.isOnline ?: false,
-                        onToggleOnline = { authViewModel.setOnline(it) }
+                        onToggleOnline = { authViewModel.setOnline(it) },
+                        error = deliveryState.error,
+                        onDismissError = { deliveryViewModel.clearError() },
+                        isLoading = deliveryState.isLoading,
+                        onRefreshAvailable = { deliveryViewModel.loadAvailableOrders() },
+                        onRefreshActive = { authState.user?.let { deliveryViewModel.loadDeliveryData(it.id) } },
+                        dailyEarnings = deliveryState.dailyEarnings
                     )
 
                     // Runs only while the dashboard is on screen and the rider has the

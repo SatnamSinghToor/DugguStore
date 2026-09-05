@@ -8,6 +8,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -38,6 +42,7 @@ import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     categories: List<Category>,
@@ -63,13 +68,17 @@ fun HomeScreen(
     onSaveDetectedAddress: (String, Double, Double) -> Unit = { _, _, _ -> },
     offers: List<Coupon> = emptyList(),
     onOfferClick: (Coupon) -> Unit = {},
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    error: String? = null,
+    onRefresh: () -> Unit = {},
+    onRetry: () -> Unit = {}
 ) {
     // Both sheets are owned here so the header can stay a plain row of
     // controls and the sheets sit above the whole screen.
     var showLocationSheet by remember { mutableStateOf(false) }
     val detected = rememberDeviceLocation()
     val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
+    val pullRefreshState = rememberPullRefreshState(refreshing = isLoading, onRefresh = onRefresh)
 
     val context = LocalContext.current
     var recentSearches by remember { mutableStateOf(AppPrefs.recentSearches(context)) }
@@ -204,7 +213,15 @@ fun HomeScreen(
             }
             }
 
-            if (isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .pullRefresh(pullRefreshState)
+            ) {
+            if (error != null && !isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
+                ErrorRetryBlock(message = error, onRetry = onRetry)
+            } else if (isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
                 // Fills the same weight(1f) area the list below would, so
                 // there is no jump in the page's overall height once real
                 // content replaces it — a small "nothing here" block that
@@ -212,17 +229,14 @@ fun HomeScreen(
                 // search bar, was the actual first-load stutter this
                 // screen used to show.
                 Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(color = Teal)
                 }
             } else {
             LazyColumn(
-                // weight, not fillMaxSize: the header above has already taken
-                // its height, and fillMaxSize here would ask for the whole
-                // screen again and push the list off the bottom.
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
 
@@ -332,6 +346,14 @@ fun HomeScreen(
                 }
             }
             }
+            }
+
+            PullRefreshIndicator(
+                refreshing = isLoading,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+                contentColor = Teal
+            )
             }
         }
 

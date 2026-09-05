@@ -7,6 +7,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.ShoppingCart
@@ -27,11 +31,13 @@ import coil.compose.AsyncImage
 import com.duggustore.app.data.model.CartItem
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.components.DeliveryEtaBanner
+import com.duggustore.app.ui.components.ErrorRetryBlock
 import com.duggustore.app.ui.components.QuantityStepperRow
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun CartScreen(
     cartItems: List<CartItem>,
@@ -50,8 +56,13 @@ fun CartScreen(
     onRemoveItem: (String) -> Unit,
     onApplyCoupon: (String) -> Unit,
     onPlaceOrder: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    error: String? = null,
+    onRefresh: () -> Unit = {},
+    onRetry: () -> Unit = {}
 ) {
+    val pullRefreshState = rememberPullRefreshState(refreshing = isLoading, onRefresh = onRefresh)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -66,43 +77,59 @@ fun CartScreen(
                 )
             }
 
-            if (cartItems.isEmpty()) {
-                EmptyCart()
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 16.dp,
-                        // Clears the summary sheet floating over the list.
-                        bottom = 300.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(cartItems, key = { it.id }) { item ->
-                        item.product?.let { product ->
-                            CartRow(
-                                product = product,
-                                quantity = item.quantity,
-                                onIncrement = { onIncrementQuantity(item.id, item.quantity + 1) },
-                                onDecrement = {
-                                    if (item.quantity <= 1) onRemoveItem(item.id)
-                                    else onDecrementQuantity(item.id, item.quantity - 1)
-                                },
-                                onRemove = { onRemoveItem(item.id) }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .pullRefresh(pullRefreshState)
+            ) {
+                if (error != null && !isLoading && cartItems.isEmpty()) {
+                    ErrorRetryBlock(message = error, onRetry = onRetry)
+                } else if (cartItems.isEmpty()) {
+                    EmptyCart()
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 16.dp,
+                            // Clears the summary sheet floating over the list.
+                            bottom = 300.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(cartItems, key = { it.id }) { item ->
+                            item.product?.let { product ->
+                                CartRow(
+                                    product = product,
+                                    quantity = item.quantity,
+                                    onIncrement = { onIncrementQuantity(item.id, item.quantity + 1) },
+                                    onDecrement = {
+                                        if (item.quantity <= 1) onRemoveItem(item.id)
+                                        else onDecrementQuantity(item.id, item.quantity - 1)
+                                    },
+                                    onRemove = { onRemoveItem(item.id) }
+                                )
+                            }
+                        }
+
+                        item {
+                            CouponCard(
+                                onApplyCoupon = onApplyCoupon,
+                                applied = couponApplied,
+                                error = couponError
                             )
                         }
                     }
-
-                    item {
-                        CouponCard(
-                            onApplyCoupon = onApplyCoupon,
-                            applied = couponApplied,
-                            error = couponError
-                        )
-                    }
                 }
+
+                PullRefreshIndicator(
+                    refreshing = isLoading,
+                    state = pullRefreshState,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    contentColor = Teal
+                )
             }
         }
 

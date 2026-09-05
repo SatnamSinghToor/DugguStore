@@ -24,7 +24,9 @@ data class DeliveryState(
     /** Whether the rider is publishing their position for their active orders. */
     val sharingLocation: Boolean = false,
     val lastSharedAt: String? = null,
-    val sharingError: String? = null
+    val sharingError: String? = null,
+    /** Per-day earnings for the last 7 calendar days, oldest to newest. */
+    val dailyEarnings: List<Pair<String, Double>> = emptyList()
 )
 
 class DeliveryViewModel : ViewModel() {
@@ -50,6 +52,7 @@ class DeliveryViewModel : ViewModel() {
                     completedOrders = completed,
                     totalDeliveries = completed.size,
                     totalEarnings = completed.sumOf { it.deliveryFee },
+                    dailyEarnings = lastSevenDaysEarnings(completed),
                     isLoading = false
                 )
             }
@@ -102,6 +105,10 @@ class DeliveryViewModel : ViewModel() {
         _state.value = _state.value.copy(claimError = null)
     }
 
+    fun clearError() {
+        _state.value = _state.value.copy(error = null)
+    }
+
     fun updateDeliveryStatus(orderId: String, status: String, deliveryId: String) {
         viewModelScope.launch {
             val result = orderRepo.updateOrderStatus(orderId, status)
@@ -147,6 +154,29 @@ class DeliveryViewModel : ViewModel() {
                 lastSharedAt = System.currentTimeMillis().toString(),
                 sharingError = failure
             )
+        }
+    }
+
+    /** Oldest to newest, mirroring `lastSevenDaysRevenue` in SellerDashboard. */
+    private fun lastSevenDaysEarnings(orders: List<Order>): List<Pair<String, Double>> {
+        val dayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        val calendar = java.util.Calendar.getInstance()
+        val today = calendar.get(java.util.Calendar.DAY_OF_YEAR)
+        val year = calendar.get(java.util.Calendar.YEAR)
+
+        val earningsByDate = orders
+            .groupBy { it.createdAt.take(10) }
+            .mapValues { (_, group) -> group.sumOf { it.deliveryFee } }
+
+        return (6 downTo 0).map { daysAgo ->
+            val cal = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.YEAR, year)
+                set(java.util.Calendar.DAY_OF_YEAR, today)
+                add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+            }
+            val dateKey = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(cal.time)
+            val weekday = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+            dayLabels[weekday] to (earningsByDate[dateKey] ?: 0.0)
         }
     }
 }

@@ -41,6 +41,7 @@ class AuthViewModel : ViewModel() {
 
     private fun checkCurrentUser() {
         viewModelScope.launch {
+            _state.value = _state.value.copy(error = null)
             if (!SessionManager.isLoggedIn()) {
                 _state.value = _state.value.copy(isRestoringSession = false)
                 return@launch

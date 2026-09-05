@@ -215,6 +215,10 @@ fun AddEditProductScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            PrimaryImagePreview(imageUrl = photos.firstOrNull())
+
+            Spacer(Modifier.height(12.dp))
+
             ProductPhotosPicker(
                 photos = photos,
                 uploading = uploadingImage,
@@ -439,6 +443,39 @@ fun AddEditProductScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/** The cover photo, shown large above the thumbnail row so the seller can confirm it before saving. */
+@Composable
+private fun PrimaryImagePreview(imageUrl: String?) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceMuted),
+        contentAlignment = Alignment.Center
+    ) {
+        if (imageUrl.isNullOrBlank()) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.Image,
+                    contentDescription = null,
+                    tint = TextLight,
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(Modifier.height(6.dp))
+                Text("No image set", fontSize = 13.sp, color = TextLight)
+            }
+        } else {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Product cover photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
@@ -88,12 +92,15 @@ private fun VoiceAlertToggle(enabled: Boolean, onToggle: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun SellerDashboard(
     /** Driven by the bottom bar, which is the only tab control now. */
     selectedTab: Int,
     products: List<Product>,
     orders: List<Order>,
+    isLoading: Boolean = false,
+    onRefreshOrders: () -> Unit = {},
     totalRevenue: Double,
     totalOrders: Int,
     onAddProduct: () -> Unit,
@@ -183,35 +190,49 @@ fun SellerDashboard(
                 }
             }
 
-            else -> Box(modifier = Modifier.weight(1f)) {
-                if (orders.isEmpty()) {
-                    DashboardEmpty(
-                        icon = Icons.Default.Receipt,
-                        title = "No orders yet",
-                        subtitle = "Orders from customers will appear here"
-                    )
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            VoiceAlertToggle(
-                                enabled = voiceAlertsEnabled,
-                                onToggle = onToggleVoiceAlerts
-                            )
-                        }
-                        item { WeeklyRevenueCard(orders = orders) }
-                        item { PayoutSummaryCard(orders = orders) }
-                        items(orders, key = { it.id }) { order ->
-                            OrderManagementCard(
-                                order = order,
-                                items = orderItemsByOrderId[order.id] ?: emptyList(),
-                                onUpdateStatus = { status -> onUpdateOrderStatus(order.id, status) },
-                                onExpandItems = { onExpandOrderItems(order.id) }
-                            )
+            else -> {
+                val ordersPullRefreshState = rememberPullRefreshState(refreshing = isLoading, onRefresh = onRefreshOrders)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .pullRefresh(ordersPullRefreshState)
+                ) {
+                    if (orders.isEmpty()) {
+                        DashboardEmpty(
+                            icon = Icons.Default.Receipt,
+                            title = "No orders yet",
+                            subtitle = "Orders from customers will appear here"
+                        )
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            item {
+                                VoiceAlertToggle(
+                                    enabled = voiceAlertsEnabled,
+                                    onToggle = onToggleVoiceAlerts
+                                )
+                            }
+                            item { WeeklyRevenueCard(orders = orders) }
+                            item { PayoutSummaryCard(orders = orders) }
+                            items(orders, key = { it.id }) { order ->
+                                OrderManagementCard(
+                                    order = order,
+                                    items = orderItemsByOrderId[order.id] ?: emptyList(),
+                                    onUpdateStatus = { status -> onUpdateOrderStatus(order.id, status) },
+                                    onExpandItems = { onExpandOrderItems(order.id) }
+                                )
+                            }
                         }
                     }
+
+                    PullRefreshIndicator(
+                        refreshing = isLoading,
+                        state = ordersPullRefreshState,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        contentColor = Teal
+                    )
                 }
             }
         }

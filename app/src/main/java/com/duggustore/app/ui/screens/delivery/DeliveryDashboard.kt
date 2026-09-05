@@ -5,6 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Call
@@ -20,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +40,7 @@ import com.duggustore.app.platform.openNavigation
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun DeliveryDashboard(
     /** Driven by the bottom bar, which is the only tab control now. 0=Available, 1=Active, 2=Completed */
@@ -59,7 +66,13 @@ fun DeliveryDashboard(
     orderItemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
     onExpandOrderItems: (String) -> Unit = {},
     isOnline: Boolean = false,
-    onToggleOnline: (Boolean) -> Unit = {}
+    onToggleOnline: (Boolean) -> Unit = {},
+    error: String? = null,
+    onDismissError: () -> Unit = {},
+    isLoading: Boolean = false,
+    onRefreshAvailable: () -> Unit = {},
+    onRefreshActive: () -> Unit = {},
+    dailyEarnings: List<Pair<String, Double>> = emptyList()
 ) {
     Column(
         modifier = Modifier
@@ -104,61 +117,94 @@ fun DeliveryDashboard(
             }
         }
 
+        if (error != null) {
+            Surface(color = CoralSurface) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(error, fontSize = 12.sp, color = CoralDark, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismissError) { Text("Dismiss", fontSize = 12.sp) }
+                }
+            }
+        }
+
         Box(modifier = Modifier.weight(1f)) {
             when (selectedTab) {
                 0 -> {
-                    if (!isOnline) {
-                        DashboardEmpty(
-                            icon = Icons.Default.LocationOff,
-                            title = "You're offline",
-                            subtitle = "Turn online above to start seeing orders ready for pickup"
-                        )
-                    } else if (availableOrders.isEmpty()) {
-                        DashboardEmpty(
-                            icon = Icons.Default.ShoppingBag,
-                            title = "No orders waiting",
-                            subtitle = "Orders ready for pickup will show up here"
-                        )
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(availableOrders, key = { it.id }) { order ->
-                                AvailableOrderCard(
-                                    order = order,
-                                    items = orderItemsByOrderId[order.id] ?: emptyList(),
-                                    onClaim = { onClaimOrder(order.id) },
-                                    onNavigateToPickup = { onNavigateToPickup(order) },
-                                    onExpandItems = { onExpandOrderItems(order.id) }
-                                )
+                    val availablePullRefreshState = rememberPullRefreshState(refreshing = isLoading, onRefresh = onRefreshAvailable)
+                    Box(modifier = Modifier.fillMaxSize().pullRefresh(availablePullRefreshState)) {
+                        if (!isOnline) {
+                            DashboardEmpty(
+                                icon = Icons.Default.LocationOff,
+                                title = "You're offline",
+                                subtitle = "Turn online above to start seeing orders ready for pickup"
+                            )
+                        } else if (availableOrders.isEmpty()) {
+                            DashboardEmpty(
+                                icon = Icons.Default.ShoppingBag,
+                                title = "No orders waiting",
+                                subtitle = "Orders ready for pickup will show up here"
+                            )
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(availableOrders, key = { it.id }) { order ->
+                                    AvailableOrderCard(
+                                        order = order,
+                                        items = orderItemsByOrderId[order.id] ?: emptyList(),
+                                        onClaim = { onClaimOrder(order.id) },
+                                        onNavigateToPickup = { onNavigateToPickup(order) },
+                                        onExpandItems = { onExpandOrderItems(order.id) }
+                                    )
+                                }
                             }
                         }
+
+                        PullRefreshIndicator(
+                            refreshing = isLoading,
+                            state = availablePullRefreshState,
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            contentColor = Teal
+                        )
                     }
                 }
                 1 -> {
-                    if (activeOrders.isEmpty()) {
-                        DashboardEmpty(
-                            icon = Icons.Default.LocalShipping,
-                            title = "No active deliveries",
-                            subtitle = "Accept an order from Available to start your route"
-                        )
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(activeOrders, key = { it.id }) { order ->
-                                DeliveryOrderCard(
-                                    order = order,
-                                    items = orderItemsByOrderId[order.id] ?: emptyList(),
-                                    onMarkDelivered = { onMarkDelivered(order.id) },
-                                    onNavigateToPickup = { onNavigateToPickup(order) },
-                                    onNavigateToDrop = { onNavigateToDrop(order) },
-                                    onExpandItems = { onExpandOrderItems(order.id) }
-                                )
+                    val activePullRefreshState = rememberPullRefreshState(refreshing = isLoading, onRefresh = onRefreshActive)
+                    Box(modifier = Modifier.fillMaxSize().pullRefresh(activePullRefreshState)) {
+                        if (activeOrders.isEmpty()) {
+                            DashboardEmpty(
+                                icon = Icons.Default.LocalShipping,
+                                title = "No active deliveries",
+                                subtitle = "Accept an order from Available to start your route"
+                            )
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(activeOrders, key = { it.id }) { order ->
+                                    DeliveryOrderCard(
+                                        order = order,
+                                        items = orderItemsByOrderId[order.id] ?: emptyList(),
+                                        onMarkDelivered = { onMarkDelivered(order.id) },
+                                        onNavigateToPickup = { onNavigateToPickup(order) },
+                                        onNavigateToDrop = { onNavigateToDrop(order) },
+                                        onExpandItems = { onExpandOrderItems(order.id) }
+                                    )
+                                }
                             }
                         }
+
+                        PullRefreshIndicator(
+                            refreshing = isLoading,
+                            state = activePullRefreshState,
+                            modifier = Modifier.align(Alignment.TopCenter),
+                            contentColor = Teal
+                        )
                     }
                 }
                 else -> {
@@ -173,6 +219,7 @@ fun DeliveryDashboard(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            item { DeliveryEarningsCard(dailyEarnings = dailyEarnings) }
                             items(completedOrders, key = { it.id }) { order ->
                                 DeliveryOrderCard(
                                     order = order,
@@ -181,6 +228,51 @@ fun DeliveryDashboard(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The last 7 days' delivery earnings as a simple bar per day, mirroring
+ * `WeeklyRevenueCard` on the seller dashboard.
+ */
+@Composable
+private fun DeliveryEarningsCard(dailyEarnings: List<Pair<String, Double>>) {
+    val days = if (dailyEarnings.isEmpty()) {
+        listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").map { it to 0.0 }
+    } else {
+        dailyEarnings
+    }
+    val maxEarnings = days.maxOf { it.second }.coerceAtLeast(1.0)
+
+    DashboardPanel {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Earnings, last 7 days",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().height(90.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                days.forEach { (label, earnings) ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .width(22.dp)
+                                .height((60 * (earnings / maxEarnings)).dp.coerceAtLeast(3.dp))
+                                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                .background(if (earnings > 0) Teal else BorderGray)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(label, fontSize = 10.sp, color = TextLight)
                     }
                 }
             }

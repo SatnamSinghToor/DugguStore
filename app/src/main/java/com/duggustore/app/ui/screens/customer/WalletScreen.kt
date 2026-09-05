@@ -33,7 +33,8 @@ import com.duggustore.app.ui.theme.*
 fun WalletScreen(
     transactions: List<WalletTransaction>,
     referralCode: String = "",
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isLoading: Boolean = false
 ) {
     val balance = transactions.walletBalance()
 
@@ -75,7 +76,14 @@ fun WalletScreen(
             ReferralCard(referralCode)
         }
 
-        if (transactions.isEmpty()) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Teal)
+            }
+        } else if (transactions.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,

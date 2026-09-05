@@ -219,8 +219,11 @@ class OrderViewModel : ViewModel() {
 
     fun loadWallet(userId: String) {
         viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
             walletRepo.getTransactions(userId).onSuccess { txns ->
-                _state.value = _state.value.copy(walletTransactions = txns)
+                _state.value = _state.value.copy(walletTransactions = txns, isLoading = false)
+            }.onFailure {
+                _state.value = _state.value.copy(isLoading = false, error = it.message)
             }
         }
     }
@@ -228,10 +231,12 @@ class OrderViewModel : ViewModel() {
     fun loadMyIssues(userId: String, orderId: String) {
         if (_state.value.myIssuesByOrderId.containsKey(orderId)) return
         viewModelScope.launch {
-            issueRepo.getMyIssues(userId).onSuccess { issues ->
+            issueRepo.getIssuesForOrder(userId, orderId).onSuccess { issues ->
                 _state.value = _state.value.copy(
-                    myIssuesByOrderId = issues.groupBy { it.orderId }
+                    myIssuesByOrderId = _state.value.myIssuesByOrderId + (orderId to issues)
                 )
+            }.onFailure {
+                _state.value = _state.value.copy(error = it.message)
             }
         }
     }
