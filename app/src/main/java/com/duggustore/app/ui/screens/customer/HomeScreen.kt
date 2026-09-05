@@ -19,9 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -246,28 +249,39 @@ fun HomeScreen(
                     Spacer(Modifier.height(22.dp))
                     RowHeader("Categories", Modifier.padding(horizontal = 20.dp))
                     Spacer(Modifier.height(12.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    // A faint dot grid on a pale tint sets this strip apart from
+                    // the plain white page — the tiles themselves sit on top of
+                    // it, so the pattern only ever shows in the gaps around them.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(SurfaceMuted)
+                            .dotGridBackground(Teal.copy(alpha = 0.12f))
                     ) {
-                        item {
-                            AllCategoriesTile(
-                                selected = selectedCategoryId == null,
-                                onClick = { onCategorySelected(null) }
-                            )
-                        }
-                        items(categories, key = { it.id }) { category ->
-                            CategoryTile(
-                                category = category,
-                                color = CategoryColors[
-                                    (categories.indexOf(category)).mod(CategoryColors.size)
-                                ],
-                                onClick = {
-                                    onCategorySelected(
-                                        if (selectedCategoryId == category.id) null else category.id
-                                    )
-                                }
-                            )
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            item {
+                                AllCategoriesTile(
+                                    selected = selectedCategoryId == null,
+                                    onClick = { onCategorySelected(null) }
+                                )
+                            }
+                            items(categories, key = { it.id }) { category ->
+                                CategoryTile(
+                                    category = category,
+                                    color = CategoryColors[
+                                        (categories.indexOf(category)).mod(CategoryColors.size)
+                                    ],
+                                    onClick = {
+                                        onCategorySelected(
+                                            if (selectedCategoryId == category.id) null else category.id
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -417,5 +431,24 @@ private fun AllCategoriesTile(selected: Boolean, onClick: () -> Unit) {
                 color = if (selected) Color.White else TextPrimary
             )
         }
+    }
+}
+
+/** A faint, evenly-spaced grid of dots — the "different pattern" behind the categories strip. */
+private fun Modifier.dotGridBackground(
+    dotColor: Color,
+    spacing: Dp = 22.dp,
+    radius: Dp = 1.6.dp
+): Modifier = this.drawBehind {
+    val spacingPx = spacing.toPx()
+    val radiusPx = radius.toPx()
+    var y = spacingPx / 2
+    while (y < size.height) {
+        var x = spacingPx / 2
+        while (x < size.width) {
+            drawCircle(color = dotColor, radius = radiusPx, center = Offset(x, y))
+            x += spacingPx
+        }
+        y += spacingPx
     }
 }

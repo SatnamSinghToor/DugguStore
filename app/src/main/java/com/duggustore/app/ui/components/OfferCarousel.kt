@@ -65,11 +65,11 @@ fun OfferCarousel(
     Column(modifier = modifier) {
         HorizontalPager(
             state = pagerState,
-            // This padding is what leaves a sliver of the previous and next card
-            // showing at each edge — smaller now so the card itself gets more
-            // of the screen's width instead of most of it going to the peek.
-            contentPadding = PaddingValues(horizontal = 20.dp),
-            pageSpacing = 8.dp,
+            // Wider than before, so more of the previous and next card
+            // shows at each edge, and a tighter pageSpacing means that
+            // extra peek is actual neighbouring card rather than gap.
+            contentPadding = PaddingValues(horizontal = 28.dp),
+            pageSpacing = 4.dp,
             modifier = Modifier.fillMaxWidth()
         ) { page ->
             val selected = page == pagerState.currentPage
@@ -126,12 +126,11 @@ private fun OfferCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            // Matches StoreProductCard's own height: 130.dp image + the text/
-            // button area below it (name line, price row, spacer, Add to cart
-            // button, bottom padding) — so the offer rail and the product grid
-            // read as the same row height rather than the offers looking like
-            // an odd, shorter strip above taller cards.
-            .height(250.dp)
+            // A little shorter than StoreProductCard's own height — the offer
+            // banner doesn't carry an image plus a name/price/button stack
+            // the way a product card does, so matching that height exactly
+            // left it looking emptier than the cards below it.
+            .height(224.dp)
             .clip(RoundedCornerShape(20.dp))
             // A light wash of the card's colour rather than the colour itself:
             // the reference banner is a pale tint with dark type on it, and a

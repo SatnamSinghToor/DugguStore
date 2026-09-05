@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -137,7 +138,7 @@ fun StoreSearchBar(
             // this bar sits flush with the screen margin, and the old boxed
             // icon (with its own 8dp of padding before it) started noticeably
             // further right than the pin — the two controls didn't line up.
-            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 9.dp, bottom = 9.dp),
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Plain tinted glyph rather than a filled tile: a solid orange
@@ -233,7 +234,10 @@ fun CategoryTile(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
-            .background(color)
+            // A touch lighter than the raw palette colour — blended toward
+            // white rather than made translucent, so it stays the same
+            // shade regardless of whatever sits behind the tile.
+            .background(lerp(color, Color.White, 0.18f))
             .clickable { onClick() }
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween
