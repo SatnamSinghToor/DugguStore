@@ -126,11 +126,11 @@ private fun OfferCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            // A little shorter than StoreProductCard's own height — the offer
-            // banner doesn't carry an image plus a name/price/button stack
-            // the way a product card does, so matching that height exactly
-            // left it looking emptier than the cards below it.
-            .height(224.dp)
+            // Sized to the card's own content (icon+label row, title,
+            // two-line description, code chip, plus its padding) rather than
+            // matched to the product card's height — that left a visibly
+            // empty band under the text instead of a snug banner.
+            .height(186.dp)
             .clip(RoundedCornerShape(20.dp))
             // A light wash of the card's colour rather than the colour itself:
             // the reference banner is a pale tint with dark type on it, and a
@@ -139,18 +139,19 @@ private fun OfferCard(
             .clickable { onClick() }
     ) {
         // Two soft discs bleeding off the right edge, so a flat tint still has
-        // some depth without needing artwork per offer.
+        // some depth without needing artwork per offer. Scaled down to match
+        // the shorter card.
         Box(
             modifier = Modifier
-                .size(150.dp)
-                .offset(x = 250.dp, y = (-66).dp)
+                .size(112.dp)
+                .offset(x = 188.dp, y = (-50).dp)
                 .clip(CircleShape)
                 .background(color.copy(alpha = 0.16f))
         )
         Box(
             modifier = Modifier
-                .size(110.dp)
-                .offset(x = 285.dp, y = 122.dp)
+                .size(82.dp)
+                .offset(x = 212.dp, y = 91.dp)
                 .clip(CircleShape)
                 .background(color.copy(alpha = 0.12f))
         )

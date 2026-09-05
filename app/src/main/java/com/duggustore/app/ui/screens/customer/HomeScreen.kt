@@ -1,6 +1,5 @@
 package com.duggustore.app.ui.screens.customer
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -92,16 +91,11 @@ fun HomeScreen(
             // Pinned. The wordmark, the location strip and the search field were
             // the first item of the list, so they scrolled away with the
             // products — searching meant scrolling back to the top first.
-            // A Surface rather than a plain background so it can carry a
-            // hairline border below it instead of a shadow. zIndex keeps
-            // that border drawing over the scrolling list beneath instead
-            // of being painted over by it.
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .zIndex(1f),
-                color = SurfaceWhite,
-                border = BorderStroke(1.dp, BorderGray)
+                color = SurfaceWhite
             ) {
             Column(
                 modifier = Modifier
@@ -113,7 +107,14 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
                     .padding(top = 8.dp, bottom = 8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    // Matches the 8dp end inset on the location strip's
+                    // reload icon and the search bar's mic icon below, so
+                    // all three land on the same vertical line instead of
+                    // the bell sitting flush with the true edge.
+                    modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     StoreWordmark()
                     Spacer(Modifier.weight(1f))
                     LanguagePicker()
