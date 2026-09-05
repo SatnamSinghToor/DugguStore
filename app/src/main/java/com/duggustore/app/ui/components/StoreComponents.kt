@@ -22,7 +22,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -234,10 +233,9 @@ fun CategoryTile(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
-            // A touch lighter than the raw palette colour — blended toward
-            // white rather than made translucent, so it stays the same
-            // shade regardless of whatever sits behind the tile.
-            .background(lerp(color, Color.White, 0.18f))
+            // Translucent rather than a solid or lightened fill, so
+            // whatever sits behind the tile shows through a little.
+            .background(color.copy(alpha = 0.55f))
             .clickable { onClick() }
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween
@@ -245,7 +243,9 @@ fun CategoryTile(
         Icon(
             imageVector = iconForCategory(category.name),
             contentDescription = null,
-            tint = Color.White,
+            // Translucent too, but less than the card behind it, so the
+            // glyph still reads clearly against it.
+            tint = Color.White.copy(alpha = 0.85f),
             modifier = Modifier.size(34.dp)
         )
         Text(
