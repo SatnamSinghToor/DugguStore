@@ -293,6 +293,16 @@ fun AppNavGraph(
                     authViewModel.resetPasswordResetState()
                     navController.navigate(Screen.ForgotPassword.route)
                 },
+                // Browsing doesn't touch authState at all — the customer home
+                // route already treats a null user as a guest (no name in the
+                // greeting, favourites/orders never loaded). The bottom bar's
+                // Favourites, Account and Cart still send a guest back here
+                // when they actually need one.
+                onSkip = {
+                    navController.navigate(Screen.CustomerHome.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
                 isLoading = authState.isLoading,
                 error = authState.error,
                 onLogin = { email, password -> authViewModel.signIn(email, password) },
@@ -1195,7 +1205,14 @@ fun AppNavGraph(
             },
             onSelect = { key ->
                 if (role == UserRole.CUSTOMER) {
-                    if (key == Screen.CustomerHome.route) {
+                    // A guest can browse Home and Categories, but Favourites and
+                    // Account both need a real customer id — send them to sign
+                    // in instead of opening a screen with nothing to show.
+                    val needsAccount = key == Screen.CustomerFavorites.route ||
+                        key == Screen.CustomerAccount.route
+                    if (needsAccount && authState.user == null) {
+                        navController.navigate(Screen.Login.route)
+                    } else if (key == Screen.CustomerHome.route) {
                         // Home is also the popUpTo anchor every other tab uses, so
                         // routing it through the same navigate()+popUpTo(Home)+
                         // launchSingleTop+restoreState combo means popping up to
@@ -1229,7 +1246,15 @@ fun AppNavGraph(
                     count = cartState.itemCount,
                     selected = currentRoute == Screen.CustomerCart.route,
                     onClick = {
-                        if (currentRoute != Screen.CustomerCart.route) {
+                        // The cart itself is fine to browse without an account —
+                        // it's placing the order that actually needs one — but a
+                        // guest's cart is never populated (addToCart no-ops with
+                        // no customer id set), so sending them to sign in here is
+                        // both correct and a clearer moment to ask than an empty
+                        // cart screen would be.
+                        if (authState.user == null) {
+                            navController.navigate(Screen.Login.route)
+                        } else if (currentRoute != Screen.CustomerCart.route) {
                             navController.navigate(Screen.CustomerCart.route)
                         }
                     }

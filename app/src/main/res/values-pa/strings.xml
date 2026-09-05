@@ -60,6 +60,7 @@
     <string name="auth_sign_in">ਸਾਈਨ ਇਨ</string>
     <string name="auth_new_here">Duggu Store ਉੱਤੇ ਨਵੇਂ ਹੋ?</string>
     <string name="auth_create_account">ਖਾਤਾ ਬਣਾਓ</string>
+    <string name="auth_skip">ਛੱਡੋ ਅਤੇ ਮਹਿਮਾਨ ਵਜੋਂ ਦੇਖੋ</string>
     <string name="auth_create_title">ਖਾਤਾ ਬਣਾਓ</string>
     <string name="auth_create_sub">ਮਿੰਟਾਂ ਵਿੱਚ ਕਰਿਆਨਾ ਤੁਹਾਡੇ ਦਰਵਾਜ਼ੇ ਉੱਤੇ</string>
     <string name="auth_full_name">ਪੂਰਾ ਨਾਂ</string>

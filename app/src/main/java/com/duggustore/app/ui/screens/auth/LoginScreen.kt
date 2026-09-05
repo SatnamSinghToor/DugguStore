@@ -25,6 +25,7 @@ import com.duggustore.app.ui.theme.*
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onForgotPassword: () -> Unit = {},
+    onSkip: () -> Unit = {},
     isLoading: Boolean = false,
     error: String? = null,
     onLogin: (String, String) -> Unit,
@@ -51,11 +52,21 @@ fun LoginScreen(
         subtitle = null,
         showLogoName = false,
         footer = {
-            AuthSwitchRow(
-                question = stringResource(R.string.auth_new_here),
-                action = stringResource(R.string.auth_create_account),
-                onClick = onNavigateToRegister
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                AuthSwitchRow(
+                    question = stringResource(R.string.auth_new_here),
+                    action = stringResource(R.string.auth_create_account),
+                    onClick = onNavigateToRegister
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = stringResource(R.string.auth_skip),
+                    modifier = Modifier.clickable { onSkip() },
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary
+                )
+            }
         }
     ) {
         Spacer(Modifier.height(12.dp))
