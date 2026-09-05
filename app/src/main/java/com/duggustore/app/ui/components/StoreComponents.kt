@@ -1,6 +1,5 @@
 package com.duggustore.app.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -237,8 +236,6 @@ fun CategoryTile(
             // Translucent rather than a solid or lightened fill, so
             // whatever sits behind the tile shows through a little.
             .background(color.copy(alpha = 0.55f))
-            // A faint hairline, the same treatment every card gets now.
-            .border(1.dp, BorderGray.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
             .clickable { onClick() }
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween
@@ -378,11 +375,8 @@ fun StoreProductCard(
     Surface(
         modifier = modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        // Slightly translucent rather than flat white, plus a faint hairline
-        // instead of leaning on the shadow alone to separate it from the page.
-        color = SurfaceWhite.copy(alpha = 0.9f),
-        border = BorderStroke(1.dp, BorderGray.copy(alpha = 0.6f)),
-        shadowElevation = 2.dp
+        // Slightly translucent rather than flat white.
+        color = SurfaceWhite.copy(alpha = 0.9f)
     ) {
         Column {
             Box(

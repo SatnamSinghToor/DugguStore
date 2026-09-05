@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -137,8 +136,6 @@ private fun OfferCard(
             // the reference banner is a pale tint with dark type on it, and a
             // fully saturated panel reads far heavier than the rest of the page.
             .background(color.copy(alpha = 0.14f))
-            // A faint hairline, the same treatment every card gets now.
-            .border(1.dp, BorderGray.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
             .clickable { onClick() }
     ) {
         // Two soft discs bleeding off the right edge, so a flat tint still has
