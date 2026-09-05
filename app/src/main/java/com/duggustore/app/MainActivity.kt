@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.navigation.compose.rememberNavController
@@ -53,7 +56,19 @@ class MainActivity : ComponentActivity() {
                 // the navigation-bar inset is consumed at the same time —
                 // otherwise the screens that pad for it themselves would add
                 // that height a second time and float above the keyboard.
-                val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+                //
+                // The raw inset shrinks and grows on every frame of the
+                // keyboard's slide animation, and reading it directly here —
+                // above the whole nav graph — recomposed the entire visible
+                // screen on every one of those frames, which is what showed
+                // up as jank each time the keyboard opened or closed,
+                // anywhere in the app. derivedStateOf collapses that down to
+                // the boolean actually flipping, so this only recomposes
+                // once per open/close instead of once per animation frame.
+                val density = LocalDensity.current
+                val imeVisible by remember(density) {
+                    derivedStateOf { WindowInsets.ime.getBottom(density) > 0 }
+                }
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
