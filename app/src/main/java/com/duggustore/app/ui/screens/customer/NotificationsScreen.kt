@@ -35,9 +35,13 @@ import com.duggustore.app.ui.theme.*
 @Composable
 fun NotificationsScreen(
     notifications: List<StoreNotification>,
+    readIds: Set<String>,
     onNotificationClick: (StoreNotification) -> Unit,
+    onMarkAllRead: () -> Unit,
     onBack: () -> Unit
 ) {
+    val unreadCount = notifications.count { it.id !in readIds }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,7 +58,7 @@ fun NotificationsScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.Default.ArrowBack, stringResource(R.string.common_back), tint = Color.White)
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.notifications_title),
                         color = Color.White,
@@ -66,6 +70,18 @@ fun NotificationsScreen(
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 12.sp
                     )
+                }
+                // Only worth showing once there's something it would change —
+                // an always-on button next to zero unread reads as broken.
+                if (unreadCount > 0) {
+                    TextButton(onClick = onMarkAllRead) {
+                        Text(
+                            stringResource(R.string.notifications_mark_all_read),
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -84,6 +100,7 @@ fun NotificationsScreen(
                 items(notifications, key = { it.id }) { notification ->
                     NotificationRow(
                         notification = notification,
+                        isRead = notification.id in readIds,
                         onClick = { onNotificationClick(notification) }
                     )
                 }
@@ -93,7 +110,7 @@ fun NotificationsScreen(
 }
 
 @Composable
-private fun NotificationRow(notification: StoreNotification, onClick: () -> Unit) {
+private fun NotificationRow(notification: StoreNotification, isRead: Boolean, onClick: () -> Unit) {
     val (icon, tint) = iconFor(notification.kind)
 
     Surface(
@@ -101,27 +118,46 @@ private fun NotificationRow(notification: StoreNotification, onClick: () -> Unit
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
-        color = SurfaceWhite,
-        shadowElevation = 2.dp
+        // A read card sinks back into the page (muted fill, no shadow) so an
+        // unread one is the thing that visibly stands out, rather than the
+        // other way round.
+        color = if (isRead) SurfaceMuted else SurfaceWhite,
+        shadowElevation = if (isRead) 0.dp else 2.dp
     ) {
         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(tint.copy(alpha = 0.12f)),
+                    .background(tint.copy(alpha = if (isRead) 0.08f else 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+                Icon(
+                    icon,
+                    null,
+                    tint = if (isRead) tint.copy(alpha = 0.6f) else tint,
+                    modifier = Modifier.size(20.dp)
+                )
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = notification.title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = notification.title,
+                        fontSize = 15.sp,
+                        fontWeight = if (isRead) FontWeight.Medium else FontWeight.Bold,
+                        color = if (isRead) TextSecondary else TextPrimary
+                    )
+                    if (!isRead) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Coral)
+                        )
+                    }
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = notification.body,

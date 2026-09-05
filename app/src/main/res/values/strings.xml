@@ -124,6 +124,7 @@
     <string name="notifications_title">Notifications</string>
     <string name="notifications_empty_title">Nothing new</string>
     <string name="notifications_empty_sub">Updates about your orders will show up here</string>
+    <string name="notifications_mark_all_read">Mark all read</string>
 
     <!-- Common -->
     <string name="common_back">Back</string>

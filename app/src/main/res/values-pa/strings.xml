@@ -99,6 +99,7 @@
     <string name="notifications_title">ਸੂਚਨਾਵਾਂ</string>
     <string name="notifications_empty_title">ਕੁਝ ਨਵਾਂ ਨਹੀਂ</string>
     <string name="notifications_empty_sub">ਤੁਹਾਡੇ ਆਰਡਰ ਦੀ ਜਾਣਕਾਰੀ ਇੱਥੇ ਦਿਖੇਗੀ</string>
+    <string name="notifications_mark_all_read">ਸਭ ਨੂੰ ਪੜ੍ਹਿਆ ਹੋਇਆ ਚਿੰਨ੍ਹਿਤ ਕਰੋ</string>
 
     <string name="common_back">ਵਾਪਸ</string>
     <string name="common_cancel">ਰੱਦ ਕਰੋ</string>

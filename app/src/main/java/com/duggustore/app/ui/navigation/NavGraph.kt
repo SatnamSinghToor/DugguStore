@@ -383,26 +383,22 @@ fun AppNavGraph(
             val notifications = orderState.customerOrders.map { it.toNotification() }
             NotificationsScreen(
                 notifications = notifications,
+                readIds = seenNotificationIds,
                 onNotificationClick = { notification ->
+                    AppPrefs.markNotificationsSeen(context, listOf(notification.id))
+                    seenNotificationIds = AppPrefs.seenNotificationIds(context)
                     navController.navigate(
                         Screen.CustomerOrderTracking.createRoute(notification.orderId)
                     )
+                },
+                onMarkAllRead = {
+                    AppPrefs.markNotificationsSeen(context, notifications.map { it.id })
+                    seenNotificationIds = AppPrefs.seenNotificationIds(context)
                 },
                 onBack = { navController.popBackStack() }
             )
             LaunchedEffect(authState.user) {
                 authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
-            }
-            // Clears the Home bell's badge for whatever is showing here. Keyed
-            // on the ids themselves so an order that moves along while this
-            // screen is open (a fresh id, per toNotification()) gets marked
-            // seen too rather than waiting for the next visit.
-            LaunchedEffect(notifications.map { it.id }) {
-                val ids = notifications.map { it.id }
-                if (!seenNotificationIds.containsAll(ids)) {
-                    AppPrefs.markNotificationsSeen(context, ids)
-                    seenNotificationIds = AppPrefs.seenNotificationIds(context)
-                }
             }
         }
 
