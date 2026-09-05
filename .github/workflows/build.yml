@@ -31,11 +31,29 @@ jobs:
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > local.properties
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> local.properties
 
+      # Only writes anything when RELEASE_KEYSTORE_BASE64 is actually set as
+      # a repo secret — until then this is a no-op and the release build
+      # stays unsigned exactly as it always has (build.gradle.kts checks the
+      # same properties before wiring up a signing config).
+      - name: Set up release signing
+        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+        run: |
+          mkdir -p keystore
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > keystore/duggustore-release.jks
+          echo "RELEASE_STORE_FILE=keystore/duggustore-release.jks" >> local.properties
+          echo "RELEASE_STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }}" >> local.properties
+          echo "RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}" >> local.properties
+          echo "RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}" >> local.properties
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Build Release APK
         run: ./gradlew assembleRelease --stacktrace
+
+      - name: Build Release Bundle (AAB)
+        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+        run: ./gradlew bundleRelease --stacktrace
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -48,5 +66,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: duggu-store-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          # Signed once RELEASE_KEYSTORE_BASE64 is set (app-release.apk),
+          # unsigned until then (app-release-unsigned.apk) — either way,
+          # whichever one Gradle actually produced.
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Release Bundle (AAB)
+        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: duggu-store-release-bundle
+          path: app/build/outputs/bundle/release/app-release.aab
           retention-days: 30

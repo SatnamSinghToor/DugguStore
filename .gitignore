@@ -11,3 +11,10 @@ local.properties
 /app/build
 *.apk
 *.aab
+
+# Release signing key — losing this or leaking it is a one-way door
+# (Play App Signing can reset a lost upload key, but a leaked one lets
+# someone else sign updates to your app). Never commit it.
+*.jks
+*.keystore
+/keystore/

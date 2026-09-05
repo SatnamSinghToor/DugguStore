@@ -26,6 +26,25 @@ android {
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProps.getProperty("SUPABASE_ANON_KEY", "your-anon-key")}\"")
     }
 
+    // Only defined when the four RELEASE_* properties are actually present
+    // (locally via local.properties, or in CI via secrets written into it) —
+    // a release build without them stays unsigned exactly as before, rather
+    // than failing the Gradle configuration for anyone who hasn't set up
+    // signing yet.
+    val releaseStoreFile = localProps.getProperty("RELEASE_STORE_FILE")
+    val hasReleaseSigning = !releaseStoreFile.isNullOrBlank()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile!!)
+                storePassword = localProps.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -34,6 +53,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false
