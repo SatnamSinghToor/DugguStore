@@ -58,7 +58,7 @@ fun SplashScreen() {
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .width(200.dp)
-                .aspectRatio(289f / 321f)
+                .aspectRatio(450f / 484f)
                 .scale(scale)
         )
 

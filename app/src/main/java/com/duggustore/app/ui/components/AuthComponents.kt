@@ -163,7 +163,7 @@ fun AppLogo(size: Int = 140, showName: Boolean = true) {
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .width(size.dp)
-                .aspectRatio(289f / 321f)
+                .aspectRatio(450f / 484f)
         )
         if (showName) {
             Spacer(Modifier.height((size / 20).dp))
