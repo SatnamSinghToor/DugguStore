@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -96,20 +95,7 @@ fun AuthScaffold(
                 .padding(top = 28.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // A plain image floating on the gradient still looked adrift, so
-            // it sits on a round white "medallion" with its own shadow —
-            // scoped to this frame rather than AppLogo itself, which is also
-            // used inline in the onboarding header at a much smaller size.
-            Box(contentAlignment = Alignment.TopCenter) {
-                Box(
-                    modifier = Modifier
-                        .size(168.dp)
-                        .shadow(elevation = 16.dp, shape = CircleShape, clip = false)
-                        .clip(CircleShape)
-                        .background(SurfaceWhite)
-                )
-                AppLogo(showName = showLogoName)
-            }
+            AppLogo(showName = showLogoName)
             if (title != null || subtitle != null) {
                 Spacer(Modifier.height(16.dp))
             }

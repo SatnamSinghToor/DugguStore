@@ -47,7 +47,7 @@ fun LoginScreen(
     }
 
     AuthScaffold(
-        title = null,
+        title = "Welcome to Duggu",
         subtitle = null,
         showLogoName = false,
         footer = {
@@ -58,6 +58,8 @@ fun LoginScreen(
             )
         }
     ) {
+        Spacer(Modifier.height(12.dp))
+
         if (error != null) {
             AuthErrorBanner(message = error, onDismiss = onClearError)
             Spacer(Modifier.height(18.dp))
