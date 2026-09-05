@@ -329,7 +329,15 @@ fun SellerOnboardingScreen(
             Spacer(Modifier.height(16.dp))
         }
 
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+        // This screen has no bottom nav bar (approval is still pending, so the
+        // outer nav host reserves no space for one), which means the system
+        // navigation bar inset is otherwise unhandled — without this, the
+        // Next/Submit button sits partly underneath it.
+        Column(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
             if (shownError != null) {
                 OnboardingErrorBanner(shownError, onDismiss = { localError = null; onClearError() })
                 Spacer(Modifier.height(12.dp))
