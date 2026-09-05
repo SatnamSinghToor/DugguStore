@@ -29,11 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
+import coil.compose.AsyncImage
 import com.duggustore.app.data.model.DeliveryTracking
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderIssue
@@ -50,6 +52,7 @@ private val ISSUE_REASONS = listOf("Missing item", "Damaged item", "Wrong item",
 @Composable
 fun OrderListScreen(
     orders: List<Order>,
+    itemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
     onOrderClick: (String) -> Unit,
     onBack: () -> Unit,
     dueReminderOrderIds: Set<String> = emptySet()
@@ -127,7 +130,11 @@ fun OrderListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(orders, key = { it.id }) { order ->
-                    OrderCard(order = order, onClick = { onOrderClick(order.id) })
+                    OrderCard(
+                        order = order,
+                        items = itemsByOrderId[order.id] ?: emptyList(),
+                        onClick = { onOrderClick(order.id) }
+                    )
                 }
             }
         }
@@ -135,7 +142,7 @@ fun OrderListScreen(
 }
 
 @Composable
-fun OrderCard(order: Order, onClick: () -> Unit) {
+fun OrderCard(order: Order, items: List<OrderItem> = emptyList(), onClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -157,6 +164,48 @@ fun OrderCard(order: Order, onClick: () -> Unit) {
                     color = TextPrimary
                 )
                 StatusBadge(status = order.status)
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // What was actually ordered, not just its number — the order id
+            // above is for support/reference, not something a customer
+            // recognises their groceries by.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val firstItem = items.firstOrNull()
+                val thumbnailUrl = firstItem?.product?.images()?.firstOrNull()
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceMuted),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (thumbnailUrl != null) {
+                        AsyncImage(
+                            model = thumbnailUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Icon(Icons.Default.Receipt, null, tint = TextLight, modifier = Modifier.size(18.dp))
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = when {
+                        items.isEmpty() -> "Loading items…"
+                        items.size == 1 -> items[0].product?.name ?: "1 item"
+                        else -> "${items[0].product?.name ?: "Item"} +${items.size - 1} more"
+                    },
+                    modifier = Modifier.weight(1f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
             Spacer(Modifier.height(10.dp))
@@ -279,9 +328,28 @@ fun OrderTrackingDetailScreen(
                             items.forEachIndexed { index, item ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val imageUrl = item.product?.images()?.firstOrNull()
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(SurfaceMuted),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (imageUrl != null) {
+                                            AsyncImage(
+                                                model = imageUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize().padding(3.dp),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        } else {
+                                            Icon(Icons.Default.Receipt, null, tint = TextLight, modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                    Spacer(Modifier.width(10.dp))
                                     Text(
                                         text = item.product?.name ?: "Item",
                                         modifier = Modifier.weight(1f).padding(end = 8.dp),

@@ -531,6 +531,47 @@ fun OrderManagementCard(
 
             Spacer(Modifier.height(8.dp))
 
+            // What's actually in the order, not just its number — this used
+            // to only show once "View items" was tapped.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val firstItem = items.firstOrNull()
+                val thumbnailUrl = firstItem?.product?.images()?.firstOrNull()
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(SurfaceMuted),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (thumbnailUrl != null) {
+                        AsyncImage(
+                            model = thumbnailUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().padding(4.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Icon(Icons.Default.ShoppingBag, null, tint = TextLight, modifier = Modifier.size(16.dp))
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = when {
+                        items.isEmpty() -> "Loading items…"
+                        items.size == 1 -> items[0].product?.name ?: "1 item"
+                        else -> "${items[0].product?.name ?: "Item"} +${items.size - 1} more"
+                    },
+                    modifier = Modifier.weight(1f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
             Text(
                 text = "₹${trimAmount(order.totalAmount)}",
                 fontSize = 18.sp,
@@ -586,12 +627,32 @@ fun OrderManagementCard(
                 if (items.isEmpty()) {
                     Text("Loading items…", fontSize = 12.sp, color = TextLight)
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         items.forEach { item ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val imageUrl = item.product?.images()?.firstOrNull()
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(RoundedCornerShape(7.dp))
+                                        .background(SurfaceMuted),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (imageUrl != null) {
+                                        AsyncImage(
+                                            model = imageUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier.fillMaxSize().padding(3.dp),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.ShoppingBag, null, tint = TextLight, modifier = Modifier.size(12.dp))
+                                    }
+                                }
+                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = "${item.product?.name ?: "Item"} ×${item.quantity}",
                                     modifier = Modifier.weight(1f).padding(end = 8.dp),

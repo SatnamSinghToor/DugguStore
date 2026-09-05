@@ -533,6 +533,7 @@ fun AppNavGraph(
             val remindersContext = LocalContext.current
             OrderListScreen(
                 orders = orderState.customerOrders,
+                itemsByOrderId = orderState.orderItemsByOrderId,
                 onOrderClick = { orderId ->
                     navController.navigate(Screen.CustomerOrderTracking.createRoute(orderId))
                 },
@@ -544,6 +545,14 @@ fun AppNavGraph(
 
             LaunchedEffect(Unit) {
                 authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
+            }
+
+            // The list used to show only an order number and total — no clue
+            // what was actually ordered until tapping in. Loading each order's
+            // items as soon as the list is known lets every card show the
+            // product name and photo straight away.
+            LaunchedEffect(orderState.customerOrders) {
+                orderState.customerOrders.forEach { orderViewModel.loadOrderItems(it.id) }
             }
 
             // Otherwise a seller accepting or a rider updating an order while
@@ -778,6 +787,17 @@ fun AppNavGraph(
                         sellerViewModel.consumeOrderAlerts()
                     }
 
+                    // Items were only ever fetched once a card was expanded, so
+                    // an order's own list showed nothing about what was in it —
+                    // an opaque order number instead of the product, and no
+                    // photo — until the seller tapped in. Loading them as soon
+                    // as the orders themselves are known lets the card show a
+                    // real summary straight away; loadOrderItems already skips
+                    // any order it has already fetched.
+                    LaunchedEffect(sellerState.orders) {
+                        sellerState.orders.forEach { orderViewModel.loadOrderItems(it.id) }
+                    }
+
                     SellerDashboard(
                         selectedTab = dashboardTab,
                         products = sellerState.products,
@@ -858,6 +878,13 @@ fun AppNavGraph(
                     }
                 }
                 partnerStatus == VerificationStatus.APPROVED -> {
+                    // Same reasoning as the seller dashboard: fetch each visible
+                    // order's items up front instead of only once expanded.
+                    LaunchedEffect(deliveryState.availableOrders, deliveryState.activeOrders, deliveryState.completedOrders) {
+                        (deliveryState.availableOrders + deliveryState.activeOrders + deliveryState.completedOrders)
+                            .forEach { orderViewModel.loadOrderItems(it.id) }
+                    }
+
                     DeliveryDashboard(
                         selectedTab = dashboardTab,
                         availableOrders = deliveryState.availableOrders,
