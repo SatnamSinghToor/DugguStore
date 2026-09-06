@@ -46,6 +46,7 @@ import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.repository.ProductRepository
 import com.duggustore.app.platform.BackgroundRemover
 import com.duggustore.app.ui.components.AuthField
+import com.duggustore.app.ui.components.StoreProductCard
 import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -86,6 +87,24 @@ fun AddEditProductScreen(
     val discountValue = discountPrice.takeIf { it.isNotBlank() }?.toDoubleOrNull()
     val selectedCategory = categories.firstOrNull { it.id == categoryId }
     val shownError = localError ?: error
+
+    // Same shape the save button builds, kept live so the card below reflects
+    // every field as the seller edits it rather than only the saved photo.
+    val previewProduct = Product(
+        id = product?.id ?: "",
+        sellerId = product?.sellerId?.takeIf { it.isNotBlank() } ?: sellerId,
+        categoryId = categoryId,
+        name = name.trim().ifBlank { "Product name" },
+        description = description.trim(),
+        price = priceValue ?: 0.0,
+        discountPrice = discountValue,
+        imageUrl = photos.firstOrNull(),
+        imageUrls = photos,
+        stock = stock.toIntOrNull() ?: 0,
+        unit = unit.trim().ifBlank { "pcs" },
+        isActive = isActive,
+        isVeg = isVeg
+    )
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -218,9 +237,28 @@ fun AddEditProductScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            PrimaryImagePreview(imageUrl = photos.firstOrNull())
+            Text(
+                "Customer preview",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
+            Spacer(Modifier.height(8.dp))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                StoreProductCard(
+                    product = previewProduct,
+                    quantityInCart = 0,
+                    isFavorite = false,
+                    onAdd = {},
+                    onIncrease = {},
+                    onDecrease = {},
+                    onToggleFavorite = {},
+                    onClick = {},
+                    modifier = Modifier.width(180.dp)
+                )
+            }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
             ProductPhotosPicker(
                 photos = photos,
@@ -479,39 +517,6 @@ fun AddEditProductScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-/** The cover photo, shown large above the thumbnail row so the seller can confirm it before saving. */
-@Composable
-private fun PrimaryImagePreview(imageUrl: String?) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(180.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceMuted),
-        contentAlignment = Alignment.Center
-    ) {
-        if (imageUrl.isNullOrBlank()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.Image,
-                    contentDescription = null,
-                    tint = TextLight,
-                    modifier = Modifier.size(40.dp)
-                )
-                Spacer(Modifier.height(6.dp))
-                Text("No image set", fontSize = 13.sp, color = TextLight)
-            }
-        } else {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Product cover photo",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
         }
     }
 }
