@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.duggustore.app.data.local.AppPrefs
 import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.delay
+import com.duggustore.app.platform.PushNotifications
 import com.duggustore.app.platform.RiderLocationPublisher
 import com.duggustore.app.platform.rememberOrderAnnouncer
 import com.duggustore.app.platform.rememberRiderPosition
@@ -231,6 +232,10 @@ fun AppNavGraph(
         authState.user?.let { user ->
             cartViewModel.setCustomer(user.id)
             addressViewModel.setUser(user.id)
+            // onNewToken alone only fires when a token is first generated or
+            // rotates, not on every app start — a token issued before this
+            // login would otherwise never get associated with this user.
+            PushNotifications.registerCurrentToken(user.id)
         }
     }
 

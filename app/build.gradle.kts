@@ -4,6 +4,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.gms.google-services")
 }
 
 val localProps = Properties().apply {
@@ -152,6 +153,12 @@ dependencies {
 
     // SLF4J nop (runtime dependency)
     implementation("org.slf4j:slf4j-nop:2.0.9")
+
+    // Push notifications — delivered even while the app is closed, unlike
+    // the in-app DB-backed notifications above which only surface while
+    // the app is open to fetch them.
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")

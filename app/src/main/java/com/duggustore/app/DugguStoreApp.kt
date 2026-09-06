@@ -3,6 +3,7 @@ package com.duggustore.app
 import android.app.Application
 import com.duggustore.app.data.local.AppPrefs
 import com.duggustore.app.data.remote.SessionManager
+import com.duggustore.app.platform.PushNotifications
 import org.osmdroid.config.Configuration
 import java.io.File
 import java.io.PrintWriter
@@ -17,6 +18,7 @@ class DugguStoreApp : Application() {
         SessionManager.init(this)
         AppPrefs.init(this)
         installCrashLogger()
+        PushNotifications.ensureChannel(this)
 
         // osmdroid's tile server rejects requests with no identifying user
         // agent, and defaults to writing its cache somewhere that needs a

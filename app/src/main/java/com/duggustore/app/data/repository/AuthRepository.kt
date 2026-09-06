@@ -4,6 +4,7 @@ import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.remote.SupabaseException
 import com.duggustore.app.data.remote.SupabaseService
+import com.duggustore.app.platform.PushNotifications
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -401,6 +402,17 @@ class AuthRepository {
     suspend fun signOut(): Result<Unit> {
         return try {
             SessionManager.getAccessToken()?.let {
+                try {
+                    // Before the session is cleared, so this device's token is
+                    // deleted while the request can still authenticate as the
+                    // user it belongs to — otherwise the next person signing
+                    // in on this device would keep receiving this one's pushes.
+                    PushNotifications.currentFcmToken()?.let { fcmToken ->
+                        DeviceTokenRepository().deleteToken(fcmToken)
+                    }
+                } catch (_: Exception) {
+                    // Best effort — a stale token is a minor annoyance, not worth failing sign-out over.
+                }
                 try {
                     SupabaseService.signOut(it)
                 } catch (_: Exception) {

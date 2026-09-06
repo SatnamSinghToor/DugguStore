@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
+    <!-- Push notifications (order/store updates delivered even while the app is closed). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!--
         Package visibility: from API 30 an app cannot see other packages unless it
@@ -78,5 +80,16 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Receives a push even while the app is closed or killed; data-only
+             payloads (no top-level "notification" block) so this always
+             handles displaying it, rather than the OS doing it inconsistently. -->
+        <service
+            android:name=".platform.DugguFcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

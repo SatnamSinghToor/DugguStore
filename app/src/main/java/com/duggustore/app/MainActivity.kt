@@ -1,11 +1,16 @@
 package com.duggustore.app
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -14,11 +19,14 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.duggustore.app.data.remote.AuthDeepLinkParser
 import com.duggustore.app.platform.withAppLanguage
@@ -46,6 +54,22 @@ class MainActivity : ComponentActivity() {
         handleAuthDeepLink(intent)
         setContent {
             DugguStoreTheme {
+                // Below Android 13 a notification just shows, no permission
+                // asked; from 13 on it's a normal runtime permission like
+                // camera or location, so it needs the same launcher pattern.
+                val context = LocalContext.current
+                val notificationPermission = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { }
+                LaunchedEffect(Unit) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                        PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+
                 // enableEdgeToEdge() stops the window resizing itself for the
                 // keyboard, so adjustResize in the manifest no longer moves
                 // anything on its own: the IME inset is handed to Compose and
