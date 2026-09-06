@@ -17,43 +17,54 @@ data class StoreNotification(
     enum class Kind { Placed, Confirmed, Preparing, ReadyForPickup, OutForDelivery, Delivered, Cancelled }
 }
 
-fun Order.toNotification(): StoreNotification {
+/**
+ * [items] is optional because it's fetched separately from the order itself
+ * (see OrderViewModel.loadOrderItems) and may not have arrived yet — the
+ * order number is what a notification falls back to until then, same as an
+ * OrderCard falls back to "1 item" / "Item" before its own items load.
+ */
+fun Order.toNotification(items: List<OrderItem> = emptyList()): StoreNotification {
     val short = "#${id.takeLast(8).uppercase()}"
+    val subject = when {
+        items.isEmpty() -> short
+        items.size == 1 -> items[0].product?.name ?: short
+        else -> "${items[0].product?.name ?: short} +${items.size - 1} more"
+    }
     val (kind, title, body) = when (orderStatus()) {
         OrderStatus.PENDING -> Triple(
             StoreNotification.Kind.Placed,
             "Order placed",
-            "$short is with the seller and waiting to be accepted."
+            "$subject is with the seller and waiting to be accepted."
         )
         OrderStatus.CONFIRMED -> Triple(
             StoreNotification.Kind.Confirmed,
             "Order confirmed",
-            "$short has been accepted and will be prepared shortly."
+            "$subject has been accepted and will be prepared shortly."
         )
         OrderStatus.PREPARING -> Triple(
             StoreNotification.Kind.Preparing,
             "Being prepared",
-            "$short is being packed for you."
+            "$subject is being packed for you."
         )
         OrderStatus.READY_FOR_PICKUP -> Triple(
             StoreNotification.Kind.ReadyForPickup,
             "Ready for pickup",
-            "$short is packed and waiting for a rider to pick it up."
+            "$subject is packed and waiting for a rider to pick it up."
         )
         OrderStatus.OUT_FOR_DELIVERY -> Triple(
             StoreNotification.Kind.OutForDelivery,
             "Out for delivery",
-            "$short is on its way to you."
+            "$subject is on its way to you."
         )
         OrderStatus.DELIVERED -> Triple(
             StoreNotification.Kind.Delivered,
             "Delivered",
-            "$short was delivered. Thanks for shopping with us."
+            "$subject was delivered. Thanks for shopping with us."
         )
         OrderStatus.CANCELLED -> Triple(
             StoreNotification.Kind.Cancelled,
             "Order cancelled",
-            "$short was cancelled and will not be delivered."
+            "$subject was cancelled and will not be delivered."
         )
     }
     return StoreNotification(

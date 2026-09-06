@@ -386,7 +386,9 @@ fun AppNavGraph(
             val notifications = if (orderState.dbNotifications.isNotEmpty())
                 orderState.dbNotifications
             else
-                orderState.customerOrders.map { it.toNotification() }
+                orderState.customerOrders.map {
+                    it.toNotification(orderState.orderItemsByOrderId[it.id] ?: emptyList())
+                }
 
             val readIds = if (orderState.dbNotifications.isNotEmpty())
                 orderState.readNotificationIds
@@ -426,6 +428,11 @@ fun AppNavGraph(
                     orderViewModel.loadCustomerOrders(it.id)
                     orderViewModel.loadNotifications(it.id)
                 }
+            }
+            // Only the fallback list needs these — the DB-backed rows already
+            // carry their message text as written by the server-side trigger.
+            LaunchedEffect(orderState.customerOrders) {
+                orderState.customerOrders.forEach { orderViewModel.loadOrderItems(it.id) }
             }
         }
 
