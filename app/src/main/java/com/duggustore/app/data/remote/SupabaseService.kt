@@ -297,6 +297,14 @@ object SupabaseService {
         eqFilters: Map<String, String> = emptyMap(),
         /** Matched with PostgREST's `ilike`, wrapped in "%…%" — a substring search, not an exact one. */
         containsFilters: Map<String, String> = emptyMap(),
+        /**
+         * A substring match against any one of [orContainsColumns] — PostgREST's
+         * `or=(col1.ilike.%v%,col2.ilike.%v%,…)` composite filter. Skipped
+         * entirely when the value is blank or no columns are given, rather
+         * than sending an empty/degenerate `or=()`.
+         */
+        orContainsColumns: List<String> = emptyList(),
+        orContainsValue: String? = null,
         orderBy: String? = null,
         limit: Int? = null,
         offset: Int? = null
@@ -304,6 +312,10 @@ object SupabaseService {
         val parts = mutableListOf("select=${encode(select)}")
         eqFilters.forEach { (column, value) -> parts += "$column=eq.${encode(value)}" }
         containsFilters.forEach { (column, value) -> parts += "$column=ilike.${encode("%$value%")}" }
+        if (orContainsColumns.isNotEmpty() && !orContainsValue.isNullOrBlank()) {
+            val clause = orContainsColumns.joinToString(",") { "$it.ilike.%$orContainsValue%" }
+            parts += "or=${encode("($clause)")}"
+        }
         orderBy?.let { parts += "order=${encode(it)}" }
         limit?.let { parts += "limit=$it" }
         offset?.let { parts += "offset=$it" }

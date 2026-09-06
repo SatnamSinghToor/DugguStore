@@ -53,17 +53,29 @@ class ProductRepository {
     }
 
     /**
-     * One page of the active catalogue, newest first, for Home's own
-     * infinite-scroll feed — everything else (Categories, search, product
-     * lookups by id) still goes through [getAllProducts], which this
-     * deliberately doesn't touch or replace.
+     * One page of the active catalogue, server-side filtered and ordered —
+     * Home's default browse feed, a category selection, and a search all
+     * page through this same call rather than each having its own fetch
+     * (or, worse, filtering a fully-loaded list in memory). Categories'
+     * scroll-spy view and a direct product-by-id lookup still go through
+     * [getAllProducts] — genuinely different jobs, not something this
+     * should also try to serve.
      */
-    suspend fun getProductsPage(page: Int, pageSize: Int): Result<List<Product>> {
+    suspend fun getProductsPage(
+        page: Int,
+        pageSize: Int,
+        categoryId: String? = null,
+        search: String? = null
+    ): Result<List<Product>> {
         return try {
+            val eqFilters = mutableMapOf("is_active" to "true")
+            categoryId?.let { eqFilters["category_id"] = it }
             val list = SupabaseService.selectPage(
                 table = "products",
                 token = token(),
-                eqFilters = mapOf("is_active" to "true"),
+                eqFilters = eqFilters,
+                orContainsColumns = if (search.isNullOrBlank()) emptyList() else listOf("name", "description"),
+                orContainsValue = search,
                 orderBy = "created_at.desc",
                 limit = pageSize,
                 offset = page * pageSize

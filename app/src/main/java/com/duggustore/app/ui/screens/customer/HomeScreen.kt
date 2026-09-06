@@ -49,7 +49,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeScreen(
     categories: List<Category>,
-    filteredProducts: List<Product>,
     selectedCategoryId: String?,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
@@ -75,9 +74,9 @@ fun HomeScreen(
     error: String? = null,
     onRefresh: () -> Unit = {},
     onRetry: () -> Unit = {},
-    // The default browse feed is paginated independently of filteredProducts
-    // (which stays the full, in-memory-filtered list search and category
-    // selection already relied on) — only used while neither is active.
+    // Whichever view is active — the default browse feed, a category, or a
+    // search — pages through this same list; there's no separate in-memory
+    // "filtered" list any more, since filtering now happens server-side.
     feedProducts: List<Product> = emptyList(),
     hasMoreFeed: Boolean = false,
     isLoadingMoreFeed: Boolean = false,
@@ -238,9 +237,9 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .pullRefresh(pullRefreshState)
             ) {
-            if (error != null && !isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
+            if (error != null && !isLoading && categories.isEmpty() && feedProducts.isEmpty()) {
                 ErrorRetryBlock(message = error, onRetry = onRetry)
-            } else if (isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
+            } else if (isLoading && categories.isEmpty() && feedProducts.isEmpty()) {
                 // Fills the same weight(1f) area the list below would, so
                 // there is no jump in the page's overall height once real
                 // content replaces it. Shaped like the grid it's standing in
@@ -261,15 +260,6 @@ fun HomeScreen(
             // set of search results made it look like the results were
             // mixed in with the categories instead of being their own list.
             val isSearching = searchQuery.isNotBlank()
-
-            // Only the plain, unfiltered "Popular Deals" view is paginated —
-            // search and category selection still filter the full catalogue
-            // in filteredProducts, exactly as before this existed. Building
-            // "load more of a filtered/searched set" server-side is a bigger
-            // change than what was asked for here, so it's left as-is rather
-            // than half-built.
-            val isBrowsing = !isSearching && selectedCategoryId == null
-            val gridProducts = if (isBrowsing) feedProducts else filteredProducts
 
             if (offers.isNotEmpty() && !isSearching) {
                 item {
@@ -327,7 +317,7 @@ fun HomeScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            if (gridProducts.isEmpty()) {
+            if (feedProducts.isEmpty()) {
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -348,7 +338,7 @@ fun HomeScreen(
             } else {
                 // Two per row, built manually so the whole page stays one scrolling
                 // LazyColumn rather than nesting a grid inside it.
-                items(gridProducts.chunked(2)) { pair ->
+                items(feedProducts.chunked(2)) { pair ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -375,9 +365,9 @@ fun HomeScreen(
                 // viewport, so this only enters composition (and fires) once
                 // the user has actually scrolled close to the end of what's
                 // loaded so far.
-                if (isBrowsing && hasMoreFeed) {
+                if (hasMoreFeed) {
                     item {
-                        LaunchedEffect(gridProducts.size) { onLoadMoreFeed() }
+                        LaunchedEffect(feedProducts.size) { onLoadMoreFeed() }
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(20.dp),
                             contentAlignment = Alignment.Center

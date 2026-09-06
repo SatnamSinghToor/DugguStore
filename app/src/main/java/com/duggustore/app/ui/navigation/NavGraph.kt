@@ -459,7 +459,6 @@ fun AppNavGraph(
         composable(Screen.CustomerHome.route) {
             HomeScreen(
                 categories = homeState.categories,
-                filteredProducts = homeState.filteredProducts,
                 selectedCategoryId = homeState.selectedCategoryId,
                 searchQuery = homeState.searchQuery,
                 onSearchQueryChange = { homeViewModel.search(it) },

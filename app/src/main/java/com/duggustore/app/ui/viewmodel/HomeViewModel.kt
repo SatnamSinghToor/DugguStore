@@ -11,6 +11,8 @@ import com.duggustore.app.data.repository.ProductRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 data class HomeState(
@@ -18,16 +20,22 @@ data class HomeState(
     val categories: List<Category> = emptyList(),
     /** The store's active coupons, shown on the home carousel. */
     val offers: List<Coupon> = emptyList(),
-    /** The full active catalogue — what Categories, search and category
-     *  filtering all still work against, unpaginated. */
+    /**
+     * The full active catalogue — kept only for Categories' scroll-spy view
+     * (which genuinely needs every product across every category at once,
+     * a different job from anything paginated) and as a fallback for
+     * resolving a product by id from somewhere that isn't [feedProducts].
+     * Home's own grid never renders this directly.
+     */
     val products: List<Product> = emptyList(),
-    val filteredProducts: List<Product> = emptyList(),
     val selectedCategoryId: String? = null,
     val searchQuery: String = "",
     val error: String? = null,
-    /** The default "Popular Deals" browse feed — loaded a page at a time,
-     *  independent of [products]. Only rendered while neither searching
-     *  nor a category is selected. */
+    /**
+     * Whichever view is active — the default browse feed, a selected
+     * category, or a search — pages through this same list, loaded and
+     * filtered server-side rather than sliced out of [products] in memory.
+     */
     val feedProducts: List<Product> = emptyList(),
     val hasMoreFeed: Boolean = true,
     val isLoadingMoreFeed: Boolean = false
@@ -45,8 +53,19 @@ class HomeViewModel : ViewModel() {
      *  something the UI needs to recompose over. */
     private var feedPage = 0
 
+    /** Debounced separately from HomeState.searchQuery itself, so the text
+     *  field stays responsive to every keystroke while the network re-query
+     *  it drives waits until typing actually pauses. */
+    private val searchQueryChanges = MutableStateFlow("")
+
     init {
         loadData()
+        viewModelScope.launch {
+            searchQueryChanges
+                .debounce(350)
+                .distinctUntilChanged()
+                .collect { refreshFeed() }
+        }
     }
 
     fun loadData() {
@@ -62,7 +81,14 @@ class HomeViewModel : ViewModel() {
             val categoriesDeferred = async { categoryRepo.getAllCategories() }
             val productsDeferred = async { productRepo.getAllProducts() }
             val offersDeferred = async { offerRepo.getOffers() }
-            val feedDeferred = async { productRepo.getProductsPage(0, FEED_PAGE_SIZE) }
+            val feedDeferred = async {
+                productRepo.getProductsPage(
+                    page = 0,
+                    pageSize = FEED_PAGE_SIZE,
+                    categoryId = _state.value.selectedCategoryId,
+                    search = _state.value.searchQuery.takeIf { it.isNotBlank() }
+                )
+            }
 
             val categories = categoriesDeferred.await().getOrNull()
             val products = productsDeferred.await().getOrNull()?.filter { it.isActive }
@@ -75,7 +101,6 @@ class HomeViewModel : ViewModel() {
             _state.value = _state.value.copy(
                 categories = categories ?: _state.value.categories,
                 products = products ?: _state.value.products,
-                filteredProducts = products ?: _state.value.filteredProducts,
                 offers = offers ?: _state.value.offers,
                 feedProducts = feed ?: _state.value.feedProducts,
                 hasMoreFeed = feed?.let { it.size == FEED_PAGE_SIZE } ?: _state.value.hasMoreFeed,
@@ -85,11 +110,11 @@ class HomeViewModel : ViewModel() {
     }
 
     /**
-     * Appends the next page of the default browse feed. A no-op while a
-     * page is already in flight or the last one came back short of a full
-     * page (nothing further to ask for) — the caller (a LazyColumn item
-     * entering composition near the end of the list) can call this freely
-     * without its own guard.
+     * Appends the next page of whichever view is currently active. A no-op
+     * while a page is already in flight or the last one came back short of
+     * a full page (nothing further to ask for) — the caller (a LazyColumn
+     * item entering composition near the end of the list) can call this
+     * freely without its own guard.
      */
     fun loadMoreFeed() {
         val current = _state.value
@@ -98,48 +123,52 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingMoreFeed = true)
             val nextPage = feedPage + 1
-            productRepo.getProductsPage(nextPage, FEED_PAGE_SIZE)
-                .onSuccess { page ->
-                    feedPage = nextPage
-                    _state.value = _state.value.copy(
-                        feedProducts = _state.value.feedProducts + page,
-                        hasMoreFeed = page.size == FEED_PAGE_SIZE,
-                        isLoadingMoreFeed = false
-                    )
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(isLoadingMoreFeed = false)
-                }
+            productRepo.getProductsPage(
+                page = nextPage,
+                pageSize = FEED_PAGE_SIZE,
+                categoryId = current.selectedCategoryId,
+                search = current.searchQuery.takeIf { it.isNotBlank() }
+            ).onSuccess { page ->
+                feedPage = nextPage
+                _state.value = _state.value.copy(
+                    feedProducts = _state.value.feedProducts + page,
+                    hasMoreFeed = page.size == FEED_PAGE_SIZE,
+                    isLoadingMoreFeed = false
+                )
+            }.onFailure {
+                _state.value = _state.value.copy(isLoadingMoreFeed = false)
+            }
         }
     }
 
     fun selectCategory(categoryId: String?) {
         _state.value = _state.value.copy(selectedCategoryId = categoryId)
-        filterProducts()
+        // Not a rapid-fire event like typing, so no debounce needed —
+        // refetch as soon as the tap lands.
+        viewModelScope.launch { refreshFeed() }
     }
 
     fun search(query: String) {
         _state.value = _state.value.copy(searchQuery = query)
-        filterProducts()
+        searchQueryChanges.value = query
     }
 
-    private fun filterProducts() {
+    /** Replaces the feed from page 0 for whatever filter (category/search) is now current. */
+    private suspend fun refreshFeed() {
         val state = _state.value
-        var filtered = state.products
-
-        // A search looks across the whole catalogue, not just the category
-        // tile that happened to be selected before typing — the category
-        // row is hidden while searching, so narrowing by it here silently
-        // hid matches from every other category instead of showing them.
-        if (state.searchQuery.isNotEmpty()) {
-            filtered = filtered.filter {
-                it.name.contains(state.searchQuery, ignoreCase = true) ||
-                it.description.contains(state.searchQuery, ignoreCase = true)
-            }
-        } else if (state.selectedCategoryId != null) {
-            filtered = filtered.filter { it.categoryId == state.selectedCategoryId }
+        feedPage = 0
+        _state.value = state.copy(isLoadingMoreFeed = false)
+        productRepo.getProductsPage(
+            page = 0,
+            pageSize = FEED_PAGE_SIZE,
+            categoryId = state.selectedCategoryId,
+            search = state.searchQuery.takeIf { it.isNotBlank() }
+        ).onSuccess { page ->
+            _state.value = _state.value.copy(
+                feedProducts = page,
+                hasMoreFeed = page.size == FEED_PAGE_SIZE
+            )
         }
-        _state.value = _state.value.copy(filteredProducts = filtered)
     }
 
     private companion object {
