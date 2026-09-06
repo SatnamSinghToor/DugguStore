@@ -505,11 +505,11 @@ fun SectionHeader(
  * isn't food, and this composable always draws one or the other.
  */
 @Composable
-fun VegNonVegMark(isVeg: Boolean, modifier: Modifier = Modifier, size: Dp = 14.dp) {
+fun VegNonVegMark(isVeg: Boolean, modifier: Modifier = Modifier, boxSize: Dp = 14.dp) {
     val markColor = if (isVeg) VegGreen else NonVegBrown
     Box(
         modifier = modifier
-            .size(size)
+            .size(boxSize)
             .border(BorderStroke(1.dp, markColor), RoundedCornerShape(2.dp))
             .padding(2.dp),
         contentAlignment = Alignment.Center
@@ -522,16 +522,15 @@ fun VegNonVegMark(isVeg: Boolean, modifier: Modifier = Modifier, size: Dp = 14.d
                     .background(markColor)
             )
         } else {
+            // A same-named parameter on the enclosing composable (boxSize,
+            // renamed from `size` for exactly this reason) would otherwise
+            // shadow DrawScope's own `size: Size` here — using it unqualified
+            // reads fine but resolves to the wrong thing.
             Canvas(modifier = Modifier.fillMaxSize(0.75f)) {
-                // Captured as plain locals rather than read inside the
-                // Path.apply block below — that block's receiver is Path
-                // itself, which shadows DrawScope's own `size` property.
-                val w = size.width
-                val h = size.height
                 val path = Path().apply {
-                    moveTo(w / 2f, 0f)
-                    lineTo(w, h)
-                    lineTo(0f, h)
+                    moveTo(size.width / 2f, 0f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
                     close()
                 }
                 drawPath(path, color = markColor)

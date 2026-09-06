@@ -155,7 +155,7 @@ private fun ProductSheet(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             product.isVeg?.let { isVeg ->
-                VegNonVegMark(isVeg = isVeg, size = 16.dp, modifier = Modifier.padding(bottom = 6.dp))
+                VegNonVegMark(isVeg = isVeg, boxSize = 16.dp, modifier = Modifier.padding(bottom = 6.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
