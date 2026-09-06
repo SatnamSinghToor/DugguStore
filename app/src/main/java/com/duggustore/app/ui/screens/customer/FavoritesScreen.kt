@@ -32,7 +32,8 @@ fun FavoritesScreen(
     cartQuantities: Map<String, Int> = emptyMap(),
     onIncrease: (Product) -> Unit = {},
     onDecrease: (Product) -> Unit = {},
-    onRemoveFavorite: (Product) -> Unit = {}
+    onRemoveFavorite: (Product) -> Unit = {},
+    isLoading: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -67,7 +68,14 @@ fun FavoritesScreen(
             }
         }
 
-        if (favoriteProducts.isEmpty()) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Teal)
+            }
+        } else if (favoriteProducts.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,

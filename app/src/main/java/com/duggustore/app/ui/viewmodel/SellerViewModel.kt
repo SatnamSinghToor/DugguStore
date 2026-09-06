@@ -7,6 +7,7 @@ import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.repository.ProductRepository
 import com.duggustore.app.data.repository.OrderRepository
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -41,13 +42,14 @@ class SellerViewModel : ViewModel() {
     fun loadSellerData(sellerId: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
-            val products = productRepo.getProductsBySeller(sellerId)
-            val orders = orderRepo.getSellerOrders(sellerId)
 
-            products.onSuccess { prods ->
-                _state.value = _state.value.copy(products = prods)
-            }
-            orders.onSuccess { ords ->
+            try {
+                val productsDeferred = async { productRepo.getProductsBySeller(sellerId) }
+                val ordersDeferred = async { orderRepo.getSellerOrders(sellerId) }
+
+                val prods = productsDeferred.await().getOrThrow()
+                val ords = ordersDeferred.await().getOrThrow()
+
                 val alreadySeen = knownOrderIds
                 // Only orders still waiting on the seller are worth calling
                 // out; one that arrived already accepted needs no reaction.
@@ -59,13 +61,16 @@ class SellerViewModel : ViewModel() {
                 knownOrderIds = ords.map { it.id }.toSet()
 
                 _state.value = _state.value.copy(
+                    isLoading = false,
+                    products = prods,
                     orders = ords,
                     totalOrders = ords.size,
                     totalRevenue = ords.filter { it.status == "delivered" }.sumOf { it.totalAmount },
                     newOrderAlerts = _state.value.newOrderAlerts + arrived
                 )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to load seller data")
             }
-            _state.value = _state.value.copy(isLoading = false)
         }
     }
 

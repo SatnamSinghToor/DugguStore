@@ -12,6 +12,7 @@ import com.duggustore.app.data.repository.CategoryRepository
 import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.OrderRepository
 import com.duggustore.app.data.repository.ProductRepository
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -44,36 +45,36 @@ class AdminViewModel : ViewModel() {
 
     fun loadDashboard() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
+            _state.value = _state.value.copy(isLoading = true, error = null)
 
-            val usersResult = authRepo.getAllUsers()
-            val ordersResult = orderRepo.getAllOrders()
-            val productsResult = productRepo.getAllProducts()
-            val categoriesResult = categoryRepo.getAllCategories()
-            val couponsResult = offerRepo.getAllCoupons()
+            try {
+                val usersDeferred = async { authRepo.getAllUsers() }
+                val ordersDeferred = async { orderRepo.getAllOrders() }
+                val productsDeferred = async { productRepo.getAllProducts() }
+                val categoriesDeferred = async { categoryRepo.getAllCategories() }
+                val couponsDeferred = async { offerRepo.getAllCoupons() }
 
-            usersResult.onSuccess { users ->
-                _state.value = _state.value.copy(users = users, totalUsers = users.size)
-            }
-            ordersResult.onSuccess { orders ->
+                val users = usersDeferred.await().getOrThrow()
+                val orders = ordersDeferred.await().getOrThrow()
+                val products = productsDeferred.await().getOrThrow()
+                val categories = categoriesDeferred.await().getOrThrow()
+                val coupons = couponsDeferred.await().getOrThrow()
+
                 _state.value = _state.value.copy(
+                    isLoading = false,
+                    users = users,
+                    totalUsers = users.size,
                     orders = orders,
                     totalOrders = orders.size,
                     totalRevenue = orders.filter { it.status == "delivered" }.sumOf { it.totalAmount },
-                    totalDeliveries = orders.count { it.status == "delivered" }
+                    totalDeliveries = orders.count { it.status == "delivered" },
+                    products = products,
+                    categories = categories,
+                    coupons = coupons
                 )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to load dashboard")
             }
-            productsResult.onSuccess { products ->
-                _state.value = _state.value.copy(products = products)
-            }
-            categoriesResult.onSuccess { categories ->
-                _state.value = _state.value.copy(categories = categories)
-            }
-            couponsResult.onSuccess { coupons ->
-                _state.value = _state.value.copy(coupons = coupons)
-            }
-
-            _state.value = _state.value.copy(isLoading = false)
         }
     }
 

@@ -5,11 +5,20 @@ import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.CartItem
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.remote.SessionManager
+import com.duggustore.app.data.remote.SupabaseService
+import com.duggustore.app.data.remote.SupabaseException
 import com.duggustore.app.data.repository.CartRepository
-import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.OrderRepository
+import com.duggustore.app.data.repository.ProductRepository
 import com.duggustore.app.data.repository.WalletRepository
 import com.duggustore.app.data.repository.walletBalance
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -66,8 +75,8 @@ data class CartState(
 class CartViewModel : ViewModel() {
     private val cartRepo = CartRepository()
     private val orderRepo = OrderRepository()
-    private val offerRepo = OfferRepository()
     private val walletRepo = WalletRepository()
+    private val productRepo = ProductRepository()
 
     private val _state = MutableStateFlow(CartState())
     val state: StateFlow<CartState> = _state
@@ -131,45 +140,82 @@ class CartViewModel : ViewModel() {
     }
 
     /**
-     * Checks the typed code against the store's real coupons (the same rows
-     * the home carousel shows) instead of a fixed local list, so a code that
-     * was never actually issued — or one that has since been turned off —
-     * is rejected rather than silently accepted.
+     * Validates the coupon code via the `use_coupon` Postgres RPC which atomically:
+     *  1. Checks the code exists and is active
+     *  2. Checks the subtotal meets the minimum order value
+     *  3. Checks this customer hasn't already used the code
+     *  4. Inserts a row in `coupon_usages` to lock the redemption
+     *
+     * The RPC raises typed exceptions (`INVALID_COUPON`, `MIN_ORDER:<value>`,
+     * `ALREADY_USED`) that are parsed here into friendly error strings.
+     * The discount is calculated client-side from the values the RPC returns.
+     *
+     * Note: the RPC records the usage immediately on Apply, before the order is
+     * placed. If the user closes the app without placing the order the usage row
+     * stays — this is intentional and mirrors how most real coupon systems work.
      */
     fun applyCoupon(code: String) {
         val trimmed = code.trim()
         if (trimmed.isEmpty()) return
 
+        val customerId = _state.value.customerId
+        if (customerId.isEmpty()) {
+            _state.value = _state.value.copy(couponError = "Sign in to apply a coupon")
+            return
+        }
+
         viewModelScope.launch {
-            val coupons = offerRepo.getOffers().getOrElse {
+            val subtotal = _state.value.subtotal
+
+            try {
+                val body = kotlinx.serialization.json.buildJsonObject {
+                    put("p_coupon_code", trimmed)
+                    put("p_user_id", customerId)
+                    put("p_subtotal", subtotal)
+                }.toString()
+
+                val raw = SupabaseService.rpc("use_coupon", body, SessionManager.getAccessToken())
+
+                // RPC returns [{coupon_id, discount_percent, max_discount}]
+                val row = Json.parseToJsonElement(raw).jsonArray.firstOrNull()?.jsonObject
+                    ?: throw Exception("Empty response from coupon validation")
+
+                val discountPercent = row["discount_percent"]?.jsonPrimitive?.int ?: 0
+                val maxDiscount = row["max_discount"]?.jsonPrimitive?.int ?: 0
+
+                val discount = minOf(subtotal * discountPercent / 100.0, maxDiscount.toDouble())
+
                 _state.value = _state.value.copy(
+                    couponCode = trimmed,
+                    couponApplied = true,
+                    couponDiscount = discount,
+                    couponError = null
+                )
+            } catch (e: SupabaseException) {
+                val msg = e.message ?: ""
+                val friendlyError = when {
+                    msg.contains("INVALID_COUPON", ignoreCase = true) ->
+                        "That code isn't valid"
+                    msg.contains("MIN_ORDER:", ignoreCase = true) -> {
+                        val minVal = msg.substringAfter("MIN_ORDER:").trim().split(" ").firstOrNull() ?: ""
+                        "Minimum order of ₹$minVal needed for this code"
+                    }
+                    msg.contains("ALREADY_USED", ignoreCase = true) ->
+                        "You've already used this code"
+                    else -> "Couldn't apply that code — try again"
+                }
+                _state.value = _state.value.copy(
+                    couponCode = trimmed,
+                    couponApplied = false,
+                    couponDiscount = 0.0,
+                    couponError = friendlyError
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    couponCode = trimmed,
                     couponApplied = false,
                     couponDiscount = 0.0,
                     couponError = "Couldn't check that code — try again"
-                )
-                return@launch
-            }
-            val match = coupons.firstOrNull { it.code.equals(trimmed, ignoreCase = true) }
-            val subtotal = _state.value.subtotal
-
-            _state.value = when {
-                match == null || !match.isActive -> _state.value.copy(
-                    couponCode = trimmed,
-                    couponApplied = false,
-                    couponDiscount = 0.0,
-                    couponError = "That code isn't valid"
-                )
-                subtotal < match.minOrderValue -> _state.value.copy(
-                    couponCode = trimmed,
-                    couponApplied = false,
-                    couponDiscount = 0.0,
-                    couponError = "Minimum order of ₹${match.minOrderValue} needed for this code"
-                )
-                else -> _state.value.copy(
-                    couponCode = trimmed,
-                    couponApplied = true,
-                    couponDiscount = minOf(subtotal * match.discountPercent / 100.0, match.maxDiscount.toDouble()),
-                    couponError = null
                 )
             }
         }
@@ -242,11 +288,18 @@ class CartViewModel : ViewModel() {
                 if (walletUsed > 0) {
                     walletRepo.debit(customerId, walletUsed, "Used on order #${orderId.takeLast(8).uppercase()}")
                 }
+                // Atomically reduce stock for each purchased item via the
+                // decrement_stock RPC. Failure is intentionally swallowed:
+                // the order is already placed and the seller can correct
+                // stock manually — no need to surface a confusing error.
+                val stockItems = orderItems.map { it.productId to it.quantity }
+                productRepo.decrementStock(stockItems)
                 _state.value = _state.value.copy(
                     isLoading = false,
                     orderPlaced = true,
                     cartItems = emptyList(),
                     isCartOpen = false,
+                    couponCode = "",
                     couponApplied = false,
                     couponDiscount = 0.0,
                     couponError = null,

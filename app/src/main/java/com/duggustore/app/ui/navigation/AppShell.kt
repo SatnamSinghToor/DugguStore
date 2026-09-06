@@ -62,7 +62,8 @@ object BottomNav {
         Screen.CustomerFavorites.route,
         Screen.CustomerAccount.route,
         Screen.CustomerOrders.route,
-        Screen.CustomerCart.route
+        Screen.CustomerCart.route,
+        Screen.ForgotPassword.route
     )
 
     private val DASHBOARD_ROUTES = setOf(

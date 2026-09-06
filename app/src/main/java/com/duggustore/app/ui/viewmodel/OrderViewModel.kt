@@ -7,7 +7,9 @@ import com.duggustore.app.data.model.OrderIssue
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Review
+import com.duggustore.app.data.model.StoreNotification
 import com.duggustore.app.data.model.WalletTransaction
+import com.duggustore.app.data.repository.NotificationsRepository
 import com.duggustore.app.data.repository.OrderIssueRepository
 import com.duggustore.app.data.repository.OrderRepository
 import com.duggustore.app.data.repository.ReviewRepository
@@ -37,7 +39,11 @@ data class OrderState(
     /** This customer's own issue reports, keyed by order id, so "report a problem" can show it was already sent. */
     val myIssuesByOrderId: Map<String, List<OrderIssue>> = emptyMap(),
     /** Open issues on a seller's (or, for an admin, every) order, for the resolve screen. */
-    val issuesForReview: List<OrderIssue> = emptyList()
+    val issuesForReview: List<OrderIssue> = emptyList(),
+    /** Real-time DB-backed notifications for the current customer, newest first. */
+    val dbNotifications: List<StoreNotification> = emptyList(),
+    /** IDs of DB notification rows already marked as read. */
+    val readNotificationIds: Set<String> = emptySet()
 ) {
     val walletBalance: Int get() = walletTransactions.walletBalance()
 }
@@ -48,6 +54,7 @@ class OrderViewModel : ViewModel() {
     private val reviewRepo = ReviewRepository()
     private val walletRepo = WalletRepository()
     private val issueRepo = OrderIssueRepository()
+    private val notificationsRepo = NotificationsRepository()
 
     private val _state = MutableStateFlow(OrderState())
     val state: StateFlow<OrderState> = _state
@@ -212,8 +219,11 @@ class OrderViewModel : ViewModel() {
 
     fun loadWallet(userId: String) {
         viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
             walletRepo.getTransactions(userId).onSuccess { txns ->
-                _state.value = _state.value.copy(walletTransactions = txns)
+                _state.value = _state.value.copy(walletTransactions = txns, isLoading = false)
+            }.onFailure {
+                _state.value = _state.value.copy(isLoading = false, error = it.message)
             }
         }
     }
@@ -221,10 +231,12 @@ class OrderViewModel : ViewModel() {
     fun loadMyIssues(userId: String, orderId: String) {
         if (_state.value.myIssuesByOrderId.containsKey(orderId)) return
         viewModelScope.launch {
-            issueRepo.getMyIssues(userId).onSuccess { issues ->
+            issueRepo.getIssuesForOrder(userId, orderId).onSuccess { issues ->
                 _state.value = _state.value.copy(
-                    myIssuesByOrderId = issues.groupBy { it.orderId }
+                    myIssuesByOrderId = _state.value.myIssuesByOrderId + (orderId to issues)
                 )
+            }.onFailure {
+                _state.value = _state.value.copy(error = it.message)
             }
         }
     }
@@ -250,6 +262,48 @@ class OrderViewModel : ViewModel() {
         viewModelScope.launch {
             issueRepo.resolveIssue(issueId, approve, refundAmount).onSuccess {
                 loadIssuesForReview()
+            }
+        }
+    }
+
+    // ---- DB-backed notifications ----------------------------------------
+
+    /**
+     * Loads the customer's notifications from the `notifications` table.
+     * The trigger `trg_order_status_notify` writes a row whenever a seller
+     * or rider updates an order status, so these are real server-side events
+     * rather than client-derived order states.
+     */
+    fun loadNotifications(userId: String) {
+        viewModelScope.launch {
+            notificationsRepo.getNotifications(userId).onSuccess { rows ->
+                with(notificationsRepo) {
+                    _state.value = _state.value.copy(
+                        dbNotifications = rows.map { it.toStoreNotification() },
+                        readNotificationIds = rows.filter { it.isRead }.map { it.id }.toSet()
+                    )
+                }
+            }
+        }
+    }
+
+    /** Marks a single notification as read in the DB and updates local state. */
+    fun markNotificationRead(notificationId: String) {
+        viewModelScope.launch {
+            notificationsRepo.markRead(notificationId)
+            _state.value = _state.value.copy(
+                readNotificationIds = _state.value.readNotificationIds + notificationId
+            )
+        }
+    }
+
+    /** Marks all notifications as read in the DB and refreshes local state. */
+    fun markAllNotificationsRead(userId: String) {
+        viewModelScope.launch {
+            notificationsRepo.markAllRead(userId).onSuccess {
+                _state.value = _state.value.copy(
+                    readNotificationIds = _state.value.dbNotifications.map { it.id }.toSet()
+                )
             }
         }
     }

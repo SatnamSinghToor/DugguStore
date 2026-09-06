@@ -26,13 +26,14 @@ import androidx.compose.ui.unit.sp
 import com.duggustore.app.data.model.Address
 import com.duggustore.app.ui.components.AuthField
 import com.duggustore.app.ui.components.DashboardEmpty
+import com.duggustore.app.ui.components.LocationPickerField
 import com.duggustore.app.ui.theme.*
 
 @Composable
 fun AddressesScreen(
     addresses: List<Address>,
     isLoading: Boolean,
-    onSaveAddress: (label: String, fullAddress: String, isDefault: Boolean, existingId: String) -> Unit,
+    onSaveAddress: (label: String, fullAddress: String, isDefault: Boolean, existingId: String, latitude: Double, longitude: Double) -> Unit,
     onDeleteAddress: (String) -> Unit,
     onSetDefault: (String) -> Unit,
     onBack: () -> Unit,
@@ -136,8 +137,8 @@ fun AddressesScreen(
         AddressDialog(
             existing = editing,
             onDismiss = { showSheet = false; editing = null },
-            onSave = { label, full, isDefault ->
-                onSaveAddress(label, full, isDefault, editing?.id ?: "")
+            onSave = { label, full, isDefault, lat, lng ->
+                onSaveAddress(label, full, isDefault, editing?.id ?: "", lat, lng)
                 showSheet = false
                 editing = null
             }
@@ -224,11 +225,13 @@ private fun AddressCard(
 private fun AddressDialog(
     existing: Address?,
     onDismiss: () -> Unit,
-    onSave: (label: String, fullAddress: String, isDefault: Boolean) -> Unit
+    onSave: (label: String, fullAddress: String, isDefault: Boolean, latitude: Double, longitude: Double) -> Unit
 ) {
     var label by remember { mutableStateOf(existing?.label ?: "Home") }
     var fullAddress by remember { mutableStateOf(existing?.fullAddress ?: "") }
     var isDefault by remember { mutableStateOf(existing?.isDefault ?: false) }
+    var latitude by remember { mutableStateOf(existing?.latitude ?: 0.0) }
+    var longitude by remember { mutableStateOf(existing?.longitude ?: 0.0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -251,11 +254,19 @@ private fun AddressDialog(
                     placeholder = "Home, Work…"
                 )
                 Spacer(Modifier.height(14.dp))
-                AuthField(
-                    value = fullAddress,
-                    onValueChange = { fullAddress = it },
-                    label = "Full address",
-                    placeholder = "House, street, area, pincode"
+                // LocationPickerField handles both typed entry and the GPS/map picker.
+                // When the user picks via GPS or map the address text AND coordinates
+                // are updated together; if they type manually, coordinates stay at 0.0
+                // which is handled gracefully downstream (rider just won't have nav).
+                LocationPickerField(
+                    address = fullAddress,
+                    onAddressChange = { fullAddress = it },
+                    onLocationPicked = { addr, lat, lng ->
+                        fullAddress = addr
+                        latitude = lat
+                        longitude = lng
+                    },
+                    label = "Full address"
                 )
                 Spacer(Modifier.height(6.dp))
                 Row(
@@ -273,7 +284,7 @@ private fun AddressDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(label, fullAddress, isDefault) },
+                onClick = { onSave(label, fullAddress, isDefault, latitude, longitude) },
                 enabled = fullAddress.isNotBlank()
             ) {
                 Text("Save", color = Teal, fontWeight = FontWeight.Bold)

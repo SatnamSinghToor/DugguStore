@@ -43,6 +43,19 @@ class OrderIssueRepository {
         }
     }
 
+    suspend fun getIssuesForOrder(userId: String, orderId: String): Result<List<OrderIssue>> {
+        return try {
+            val list = SupabaseService.select(
+                "order_issues",
+                token(),
+                mapOf("user_id" to userId, "order_id" to orderId)
+            )
+            Result.success(list.map { json.decodeFromString(OrderIssue.serializer(), it.toString()) })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /** RLS already narrows the rows to the caller's own orders (seller) or everything (admin). */
     suspend fun getIssuesForReview(): Result<List<OrderIssue>> {
         return try {

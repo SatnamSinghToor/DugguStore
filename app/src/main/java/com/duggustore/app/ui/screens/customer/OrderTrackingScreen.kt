@@ -2,11 +2,17 @@ package com.duggustore.app.ui.screens.customer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
@@ -17,6 +23,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
@@ -42,6 +49,7 @@ import com.duggustore.app.data.model.OrderIssue
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Review
+import com.duggustore.app.ui.components.ErrorRetryBlock
 import com.duggustore.app.ui.components.RiderLocationCard
 import com.duggustore.app.ui.components.StatusBadge
 import com.duggustore.app.ui.components.trimAmount
@@ -49,14 +57,52 @@ import com.duggustore.app.ui.theme.*
 
 private val ISSUE_REASONS = listOf("Missing item", "Damaged item", "Wrong item", "Quality issue", "Other")
 
+private val ACTIVE_STATUSES = setOf(
+    OrderStatus.PENDING.value,
+    OrderStatus.CONFIRMED.value,
+    OrderStatus.PREPARING.value,
+    OrderStatus.READY_FOR_PICKUP.value,
+    OrderStatus.OUT_FOR_DELIVERY.value
+)
+
+private val ORDER_STATUS_FILTERS = listOf("All", "Active", "Delivered", "Cancelled")
+
+private fun Order.matchesStatusFilter(filter: String): Boolean = when (filter) {
+    "Active" -> status in ACTIVE_STATUSES
+    "Delivered" -> status == OrderStatus.DELIVERED.value
+    "Cancelled" -> status == OrderStatus.CANCELLED.value
+    else -> true
+}
+
+@OptIn(ExperimentalMaterialApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun OrderListScreen(
     orders: List<Order>,
     itemsByOrderId: Map<String, List<OrderItem>> = emptyMap(),
     onOrderClick: (String) -> Unit,
     onBack: () -> Unit,
-    dueReminderOrderIds: Set<String> = emptySet()
+    dueReminderOrderIds: Set<String> = emptySet(),
+    isLoading: Boolean = false,
+    error: String? = null,
+    onRefresh: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    selectedStatus: String = "All",
+    onStatusSelected: (String) -> Unit = {}
 ) {
+    val filteredOrders = remember(orders, searchQuery, selectedStatus, itemsByOrderId) {
+        orders.filter { order ->
+            val matchesStatus = order.matchesStatusFilter(selectedStatus)
+            val matchesSearch = searchQuery.isBlank() || (itemsByOrderId[order.id] ?: emptyList()).any {
+                it.product?.name?.contains(searchQuery, ignoreCase = true) == true
+            }
+            matchesStatus && matchesSearch
+        }
+    }
+
+    val pullRefreshState = rememberPullRefreshState(refreshing = isLoading, onRefresh = onRefresh)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,6 +113,51 @@ fun OrderListScreen(
             caption = if (orders.size == 1) "1 order" else "${orders.size} orders",
             onBack = onBack
         )
+
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            placeholder = { Text("Search orders by product name") },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Teal,
+                unfocusedBorderColor = BorderGray
+            )
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ORDER_STATUS_FILTERS.forEach { filter ->
+                FilterChip(
+                    selected = selectedStatus == filter,
+                    onClick = { onStatusSelected(filter) },
+                    label = { Text(filter) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = TealSurface,
+                        selectedLabelColor = TealDark
+                    )
+                )
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        if (isLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = Teal
+            )
+        }
 
         val dueOrder = orders.firstOrNull { it.id in dueReminderOrderIds }
         if (dueOrder != null) {
@@ -93,50 +184,78 @@ fun OrderListScreen(
             }
         }
 
-        if (orders.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .clip(CircleShape)
-                        .background(TealSurface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Receipt,
-                        contentDescription = null,
-                        tint = Teal,
-                        modifier = Modifier.size(46.dp)
-                    )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .pullRefresh(pullRefreshState)
+        ) {
+            when {
+                error != null && !isLoading && orders.isEmpty() -> {
+                    ErrorRetryBlock(message = error, onRetry = onRetry)
                 }
-                Spacer(Modifier.height(18.dp))
-                Text("No orders yet", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "Your orders will show up here once you place one",
-                    modifier = Modifier.padding(horizontal = 40.dp),
-                    fontSize = 14.sp,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(orders, key = { it.id }) { order ->
-                    OrderCard(
-                        order = order,
-                        items = itemsByOrderId[order.id] ?: emptyList(),
-                        onClick = { onOrderClick(order.id) }
-                    )
+                filteredOrders.isEmpty() -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(CircleShape)
+                                .background(TealSurface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Receipt,
+                                contentDescription = null,
+                                tint = Teal,
+                                modifier = Modifier.size(46.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        Text(
+                            text = if (orders.isEmpty()) "No orders yet" else "No matching orders",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = if (orders.isEmpty())
+                                "Your orders will show up here once you place one"
+                            else
+                                "Try a different search or filter",
+                            modifier = Modifier.padding(horizontal = 40.dp),
+                            fontSize = 14.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(filteredOrders, key = { it.id }) { order ->
+                            OrderCard(
+                                order = order,
+                                items = itemsByOrderId[order.id] ?: emptyList(),
+                                onClick = { onOrderClick(order.id) }
+                            )
+                        }
+                    }
                 }
             }
+
+            PullRefreshIndicator(
+                refreshing = isLoading,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+                contentColor = Teal
+            )
         }
     }
 }

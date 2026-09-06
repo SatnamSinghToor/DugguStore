@@ -41,6 +41,7 @@ class AuthViewModel : ViewModel() {
 
     private fun checkCurrentUser() {
         viewModelScope.launch {
+            _state.value = _state.value.copy(error = null)
             if (!SessionManager.isLoggedIn()) {
                 _state.value = _state.value.copy(isRestoringSession = false)
                 return@launch
@@ -365,6 +366,26 @@ class AuthViewModel : ViewModel() {
             result.onFailure {
                 _state.value = _state.value.copy(isLoading = false, error = it.message)
             }
+        }
+    }
+
+    /**
+     * Picks up the image bytes from the UI, uploads to the `avatars` bucket,
+     * then refreshes the in-memory user profile with the new avatar_url so
+     * every composable that reads [AuthState.user.avatarUrl] recomposes
+     * immediately — no manual reload required.
+     */
+    fun uploadAvatar(bytes: ByteArray, mimeType: String) {
+        val userId = _state.value.user?.id ?: return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            repository.uploadAvatar(userId, bytes, mimeType)
+                .onSuccess { updated ->
+                    _state.value = _state.value.copy(isLoading = false, user = updated)
+                }
+                .onFailure {
+                    _state.value = _state.value.copy(isLoading = false, error = it.message)
+                }
         }
     }
 }
