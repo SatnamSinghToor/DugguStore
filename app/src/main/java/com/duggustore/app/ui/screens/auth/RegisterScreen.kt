@@ -192,13 +192,7 @@ fun RegisterScreen(
 
             AnimatedContent(
                 targetState = step,
-                transitionSpec = {
-                    if (movingForward) {
-                        (slideInHorizontally { it } + fadeIn()) togetherWith (slideOutHorizontally { -it } + fadeOut())
-                    } else {
-                        (slideInHorizontally { -it } + fadeIn()) togetherWith (slideOutHorizontally { it } + fadeOut())
-                    }
-                },
+                transitionSpec = slideStepTransition(movingForward),
                 label = "signup-step"
             ) { s ->
                 Column {

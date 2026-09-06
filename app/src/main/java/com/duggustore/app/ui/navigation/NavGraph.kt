@@ -25,6 +25,7 @@ import com.duggustore.app.data.local.AppPrefs
 import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.delay
 import com.duggustore.app.platform.PushNotifications
+import com.duggustore.app.ui.theme.AppSlideDurationMs
 import com.duggustore.app.platform.RiderLocationPublisher
 import com.duggustore.app.platform.rememberOrderAnnouncer
 import com.duggustore.app.platform.rememberRiderPosition
@@ -302,10 +303,10 @@ fun AppNavGraph(
             .consumeWindowInsets(PaddingValues(bottom = barSpace)),
         navController = navController,
         startDestination = startDestination,
-        enterTransition = { fadeIn(tween(300)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300)) },
-        exitTransition = { fadeOut(tween(300)) },
-        popEnterTransition = { fadeIn(tween(300)) },
-        popExitTransition = { fadeOut(tween(300)) }
+        enterTransition = { fadeIn(tween(AppSlideDurationMs)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(AppSlideDurationMs)) },
+        exitTransition = { fadeOut(tween(AppSlideDurationMs)) },
+        popEnterTransition = { fadeIn(tween(AppSlideDurationMs)) },
+        popExitTransition = { fadeOut(tween(AppSlideDurationMs)) }
     ) {
         composable(Screen.Welcome.route) {
             // Marked seen on the way out of the slides, whichever exit is

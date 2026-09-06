@@ -124,13 +124,7 @@ fun WelcomeScreen(
         ) {
             AnimatedContent(
                 targetState = index,
-                transitionSpec = {
-                    if (movingForward) {
-                        (slideInHorizontally { it } + fadeIn()) togetherWith (slideOutHorizontally { -it } + fadeOut())
-                    } else {
-                        (slideInHorizontally { -it } + fadeIn()) togetherWith (slideOutHorizontally { it } + fadeOut())
-                    }
-                },
+                transitionSpec = slideStepTransition(movingForward),
                 label = "welcome-slide"
             ) { i ->
                 val slide = slides[i]

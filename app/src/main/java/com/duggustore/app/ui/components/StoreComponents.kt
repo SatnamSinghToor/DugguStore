@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -62,7 +61,7 @@ fun LocationBar(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+            .dugguClickable { onClick() }
             .padding(vertical = 6.dp)
             // Matches the search bar's own end inset directly below, so the
             // reload icon here and the mic icon there land on the same
@@ -237,7 +236,7 @@ fun CategoryTile(
             // Translucent rather than a solid or lightened fill, so
             // whatever sits behind the tile shows through a little.
             .background(color.copy(alpha = 0.55f))
-            .clickable { onClick() }
+            .dugguClickable { onClick() }
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
@@ -374,7 +373,7 @@ fun StoreProductCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth().clickable { onClick() },
+        modifier = modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).dugguClickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         // Slightly translucent rather than flat white, with a hairline no
         // heavier than a chat input box's — a boundary, not a shadow.
@@ -532,7 +531,7 @@ private fun AddToCartButton(onAdd: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .clickable { onAdd() }
+            .dugguClickable { onAdd() }
             .border(1.5.dp, Orange, RoundedCornerShape(10.dp)),
         color = Color.Transparent
     ) {
@@ -578,7 +577,7 @@ private fun StepperSquare(icon: ImageVector, color: Color, label: String, onClic
             .size(width = 46.dp, height = 34.dp)
             .clip(RoundedCornerShape(9.dp))
             .background(color)
-            .clickable { onClick() },
+            .dugguClickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Icon(icon, label, tint = Color.White, modifier = Modifier.size(19.dp))

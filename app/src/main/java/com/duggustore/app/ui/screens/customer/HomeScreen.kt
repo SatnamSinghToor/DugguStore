@@ -3,7 +3,6 @@ package com.duggustore.app.ui.screens.customer
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -276,7 +275,7 @@ fun HomeScreen(
                                 .size(40.dp)
                                 .clip(CircleShape)
                                 .background(SurfaceMuted)
-                                .clickable { onNotificationsClick() },
+                                .dugguClickable { onNotificationsClick() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -557,7 +556,7 @@ private fun RecentSearchesRow(
                 fontSize = 12.sp,
                 color = Teal,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable { onClear() }
+                modifier = Modifier.dugguClickable { onClear() }
             )
         }
         Spacer(Modifier.height(8.dp))
