@@ -404,18 +404,25 @@ data class Campaign(
 )
 
 /**
- * A seller-paid placement on the home rail — requested by the seller, only
- * live once an admin approves it. [startsAt]/[endsAt] are null until then:
- * the window is stamped at approval time so review delay never eats into
- * the [durationDays] the seller asked for.
+ * A seller-paid placement on the home rail, promoting one specific product
+ * the seller already lists — requested by the seller, only live once an
+ * admin approves it. [startsAt]/[endsAt] are null until then: the window is
+ * stamped at approval time so review delay never eats into the
+ * [durationDays] the seller asked for. [feeAmount] is quoted and frozen at
+ * request time, so it stays what both sides agreed even if the per-day
+ * rate changes later.
  */
 @Serializable
 data class SponsoredSlot(
     val id: String = "",
     @SerialName("seller_id") val sellerId: String = "",
+    @SerialName("product_id") val productId: String = "",
+    /** Embedded via a PostgREST select — the product being promoted. */
+    val product: Product? = null,
+    /** An optional short note from the seller shown alongside the product. */
     val headline: String = "",
-    val message: String = "",
     @SerialName("duration_days") val durationDays: Int = 7,
+    @SerialName("fee_amount") val feeAmount: Int = 0,
     @SerialName("starts_at") val startsAt: String? = null,
     @SerialName("ends_at") val endsAt: String? = null,
     val status: String = "PENDING",

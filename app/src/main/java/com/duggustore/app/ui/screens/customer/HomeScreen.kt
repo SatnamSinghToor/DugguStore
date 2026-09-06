@@ -156,20 +156,20 @@ fun HomeScreen(
                 )
             }
 
-            // A seller's paid placement, standing in for a storefront the
-            // app doesn't have yet — it opens one of their own products
-            // instead. Skipped entirely if that seller currently has
-            // nothing active to show, rather than opening a dead end.
+            // A seller paid to feature this exact product — the one they
+            // picked when requesting the slot, embedded on the row itself.
+            // Skipped if that product is no longer around to show (deleted
+            // after the slot was approved) rather than guessing at another one.
             sponsoredSlots.forEach { slot ->
-                val product = allProducts.firstOrNull { it.sellerId == slot.sellerId && it.isActive } ?: return@forEach
+                val product = slot.product ?: return@forEach
                 add(
                     PromoBanner(
                         id = "sponsored:${slot.id}",
                         tint = TextSecondary,
                         eyebrowIcon = Icons.Default.Campaign,
                         eyebrow = "",
-                        headline = slot.headline,
-                        subtitle = slot.message,
+                        headline = product.name,
+                        subtitle = slot.headline.ifBlank { product.description },
                         cornerTag = "SPONSORED",
                         featuredProduct = product,
                         onClick = { onProductClick(product) }

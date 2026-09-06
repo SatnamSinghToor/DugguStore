@@ -141,11 +141,14 @@ class SellerViewModel : ViewModel() {
         _state.value = _state.value.copy(productSaved = false)
     }
 
-    /** Pricing and payment happen outside the app for now — this just files the request; an admin approving it is what puts it live. */
-    fun requestSponsoredSlot(sellerId: String, headline: String, message: String, durationDays: Int) {
+    /** A preview total to show before submitting — the row's real fee always comes back from the database's own generated column. */
+    fun quoteSlotFee(durationDays: Int): Int = sponsoredSlotRepo.quoteFee(durationDays)
+
+    /** Collecting the quoted fee happens outside the app for now — this just files the request; an admin approving it is what puts it live. */
+    fun requestSponsoredSlot(sellerId: String, productId: String, durationDays: Int, note: String = "") {
         viewModelScope.launch {
             _state.value = _state.value.copy(isRequestingSlot = true, slotRequestError = null)
-            val result = sponsoredSlotRepo.requestSlot(sellerId, headline, message, durationDays)
+            val result = sponsoredSlotRepo.requestSlot(sellerId, productId, durationDays, note)
             result.onSuccess {
                 sponsoredSlotRepo.getMySlots(sellerId).onSuccess { slots ->
                     _state.value = _state.value.copy(sponsoredSlots = slots)

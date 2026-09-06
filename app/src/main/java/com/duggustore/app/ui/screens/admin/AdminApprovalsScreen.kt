@@ -344,10 +344,11 @@ private fun DeliveryApplicationCard(
 }
 
 /**
- * No documents or expand/collapse here — a sponsored slot request is just an
- * ad's copy and a duration, so everything worth reviewing already fits on
- * the card. Pricing and payment are handled outside the app; approving here
- * is only the content/legitimacy check before it goes live.
+ * No documents or expand/collapse here — a sponsored slot request is just
+ * one of the seller's own products, a duration and a fee, so everything
+ * worth reviewing already fits on the card. Collecting the fee happens
+ * outside the app; approving here is only the content/legitimacy check
+ * before it goes live.
  */
 @Composable
 private fun SponsoredSlotCard(
@@ -360,14 +361,19 @@ private fun SponsoredSlotCard(
 
     DashboardPanel {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(slot.headline, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            if (slot.message.isNotBlank()) {
+            Text(
+                slot.product?.name ?: "Product no longer available",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            if (slot.headline.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text(slot.message, fontSize = 13.sp, color = TextSecondary)
+                Text(slot.headline, fontSize = 13.sp, color = TextSecondary)
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                "Requested to run for ${slot.durationDays} days once approved",
+                "₹${slot.feeAmount} for ${slot.durationDays} days, starting once approved",
                 fontSize = 11.sp,
                 color = TextLight
             )

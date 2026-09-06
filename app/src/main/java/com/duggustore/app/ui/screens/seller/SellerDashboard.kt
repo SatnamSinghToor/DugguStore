@@ -120,7 +120,9 @@ fun SellerDashboard(
     voiceAlertsEnabled: Boolean = true,
     onToggleVoiceAlerts: () -> Unit = {},
     sponsoredSlots: List<SponsoredSlot> = emptyList(),
-    onRequestSponsoredSlot: (String, String, Int) -> Unit = { _, _, _ -> },
+    // productId, durationDays, an optional short note.
+    onRequestSponsoredSlot: (String, Int, String) -> Unit = { _, _, _ -> },
+    quoteSlotFee: (Int) -> Int = { it * 5 },
     isRequestingSlot: Boolean = false,
     slotRequestError: String? = null,
     onClearSlotRequestError: () -> Unit = {},
@@ -259,12 +261,14 @@ fun SellerDashboard(
 
     if (showSlotRequestDialog) {
         SponsoredSlotRequestDialog(
+            products = products,
+            quoteFee = quoteSlotFee,
             isSaving = isRequestingSlot,
             error = slotRequestError,
             onDismissError = onClearSlotRequestError,
             onDismiss = { showSlotRequestDialog = false },
-            onSubmit = { headline, message, days ->
-                onRequestSponsoredSlot(headline, message, days)
+            onSubmit = { productId, days, note ->
+                onRequestSponsoredSlot(productId, days, note)
                 showSlotRequestDialog = false
             }
         )
@@ -272,15 +276,19 @@ fun SellerDashboard(
 }
 
 /**
- * Shows the seller's own most recent sponsored-slot request and its state,
- * or a plain call to action when they've never asked for one. Pricing and
- * payment are handled outside the app for now — this only files the
- * request; an admin approving it is what actually puts it live.
+ * Shows the seller's own most recent sponsored-slot request — which product
+ * it promotes and its state — or a plain call to action when they've never
+ * asked for one. Collecting the quoted fee happens outside the app for
+ * now; this only files the request, and an admin approving it is what
+ * actually puts it live.
  */
 @Composable
 private fun PromoteStoreBanner(latestSlot: SponsoredSlot?, onRequest: () -> Unit) {
     val (bg, fg, statusLine) = when (latestSlot?.status) {
-        "PENDING" -> Triple(OrangeSurface, OrangeDark, "Waiting on admin review · ${latestSlot.durationDays} days once approved")
+        "PENDING" -> Triple(
+            OrangeSurface, OrangeDark,
+            "Waiting on admin review · ₹${latestSlot.feeAmount} for ${latestSlot.durationDays} days once approved"
+        )
         "APPROVED" -> Triple(TealSurface, TealDark, "Live until ${latestSlot.endsAt.orEmpty().take(10)}")
         "REJECTED" -> Triple(CoralSurface, CoralDark, "Last request was rejected" +
             (latestSlot.rejectionReason?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""))
@@ -300,7 +308,8 @@ private fun PromoteStoreBanner(latestSlot: SponsoredSlot?, onRequest: () -> Unit
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = latestSlot?.headline?.takeIf { latestSlot.status != "REJECTED" } ?: "Promote your store",
+                    text = latestSlot?.product?.name?.takeIf { latestSlot.status != "REJECTED" }
+                        ?: "Promote a product",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = fg
@@ -308,7 +317,7 @@ private fun PromoteStoreBanner(latestSlot: SponsoredSlot?, onRequest: () -> Unit
                 if (statusLine != null) {
                     Text(statusLine, fontSize = 11.sp, color = fg)
                 } else {
-                    Text("Get a featured spot on the customer home screen", fontSize = 11.sp, color = TextSecondary)
+                    Text("Feature one of your products on the customer home screen", fontSize = 11.sp, color = TextSecondary)
                 }
             }
             // A new request is always allowed — even with one already live or
@@ -326,23 +335,27 @@ private fun PromoteStoreBanner(latestSlot: SponsoredSlot?, onRequest: () -> Unit
 
 @Composable
 private fun SponsoredSlotRequestDialog(
+    products: List<Product>,
+    quoteFee: (Int) -> Int,
     isSaving: Boolean,
     error: String?,
     onDismissError: () -> Unit,
     onDismiss: () -> Unit,
-    onSubmit: (headline: String, message: String, durationDays: Int) -> Unit
+    onSubmit: (productId: String, durationDays: Int, note: String) -> Unit
 ) {
-    var headline by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf("") }
+    var selectedProduct by remember { mutableStateOf(products.firstOrNull()) }
+    var showProductMenu by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
     var durationDays by remember { mutableStateOf("7") }
+    val days = durationDays.toIntOrNull() ?: 0
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Request a sponsored slot") },
+        title = { Text("Promote a product") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "Shown to customers on the home screen if an admin approves it. Pricing is arranged outside the app.",
+                    "Featured on the customer home screen once an admin approves it. Nominal fee while the app is new — arranged outside the app.",
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
@@ -360,17 +373,32 @@ private fun SponsoredSlotRequestDialog(
                         }
                     }
                 }
+                Box {
+                    OutlinedTextField(
+                        value = selectedProduct?.name ?: "Choose a product",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Product") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    // OutlinedTextField doesn't take a click when readOnly, so
+                    // a transparent catcher on top opens the menu instead.
+                    Box(modifier = Modifier.matchParentSize().clickable { showProductMenu = true })
+                    DropdownMenu(expanded = showProductMenu, onDismissRequest = { showProductMenu = false }) {
+                        products.forEach { product ->
+                            DropdownMenuItem(
+                                text = { Text(product.name) },
+                                onClick = { selectedProduct = product; showProductMenu = false }
+                            )
+                        }
+                    }
+                }
                 OutlinedTextField(
-                    value = headline,
-                    onValueChange = { headline = it },
-                    label = { Text("Headline, e.g. your store's name") },
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text("Short note (optional)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = message,
-                    onValueChange = { message = it },
-                    label = { Text("Message shown under it") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -381,12 +409,15 @@ private fun SponsoredSlotRequestDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (days > 0) {
+                    Text("Fee: ₹${quoteFee(days)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TealDark)
+                }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = headline.isNotBlank() && (durationDays.toIntOrNull() ?: 0) > 0 && !isSaving,
-                onClick = { onSubmit(headline.trim(), message.trim(), durationDays.toIntOrNull() ?: 7) }
+                enabled = selectedProduct != null && days > 0 && !isSaving,
+                onClick = { selectedProduct?.let { onSubmit(it.id, days, note.trim()) } }
             ) {
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Teal)

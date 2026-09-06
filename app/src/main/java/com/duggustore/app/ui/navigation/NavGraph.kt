@@ -909,9 +909,10 @@ fun AppNavGraph(
                             AppPrefs.setOrderAlertEnabled(context, voiceAlertsEnabled)
                         },
                         sponsoredSlots = sellerState.sponsoredSlots,
-                        onRequestSponsoredSlot = { headline, message, days ->
-                            authState.user?.let { sellerViewModel.requestSponsoredSlot(it.id, headline, message, days) }
+                        onRequestSponsoredSlot = { productId, days, note ->
+                            authState.user?.let { sellerViewModel.requestSponsoredSlot(it.id, productId, days, note) }
                         },
+                        quoteSlotFee = { days -> sellerViewModel.quoteSlotFee(days) },
                         isRequestingSlot = sellerState.isRequestingSlot,
                         slotRequestError = sellerState.slotRequestError,
                         onClearSlotRequestError = { sellerViewModel.clearSlotRequestError() },
