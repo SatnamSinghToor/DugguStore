@@ -460,8 +460,13 @@ fun HomeScreen(
                 }
             } else {
                 // Two per row, built manually so the whole page stays one scrolling
-                // LazyColumn rather than nesting a grid inside it.
-                items(feedProducts.chunked(2)) { pair ->
+                // LazyColumn rather than nesting a grid inside it. Keyed on the
+                // pair's own product ids — without a key, Compose can only
+                // diff this list by position, so an insert/removal/reorder
+                // anywhere in a 50-100 product feed reuses every row after it
+                // for the wrong pair instead of recomposing just the one that
+                // actually changed.
+                items(feedProducts.chunked(2), key = { pair -> pair.joinToString("-") { it.id } }) { pair ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -561,7 +566,7 @@ private fun RecentSearchesRow(
         }
         Spacer(Modifier.height(8.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(terms) { term ->
+            items(terms, key = { it }) { term ->
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = SurfaceMuted,

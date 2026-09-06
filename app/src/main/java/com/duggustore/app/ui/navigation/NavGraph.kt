@@ -265,6 +265,20 @@ fun AppNavGraph(
         }
     }
 
+    // Computed once and reused by every screen that needs them (Home,
+    // Categories, Favourites, product detail) rather than each one rebuilding
+    // its own fresh Map/Set inline — a plain `cartState.cartItems.associate{}`
+    // in a composable's parameter list allocates a brand-new instance on
+    // every recomposition of this whole function, and since Map/Set aren't
+    // structurally skippable, that alone was enough to force every product
+    // card's row to recompose whenever anything unrelated changed here.
+    val cartQuantities = remember(cartState.cartItems) {
+        cartState.cartItems.associate { it.productId to it.quantity }
+    }
+    val favoriteIds = remember(favState.favorites) {
+        favState.favorites.map { it.productId }.toSet()
+    }
+
     // The bar is part of the shell rather than of any one screen, so every
     // top-level destination gets it and the selected item always matches where
     // the user actually is.
@@ -463,8 +477,8 @@ fun AppNavGraph(
             CategoriesScreen(
                 categories = homeState.categories,
                 products = homeState.products,
-                cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
-                favoriteIds = favState.favorites.map { it.productId }.toSet(),
+                cartQuantities = cartQuantities,
+                favoriteIds = favoriteIds,
                 onAddToCart = ::addToCartOrPromptLogin,
                 onIncrease = ::addToCartOrPromptLogin,
                 onDecrease = { product ->
@@ -493,8 +507,8 @@ fun AppNavGraph(
                     ?: stringResource(R.string.home_set_address),
                 // Lets a card show a stepper instead of "Add to cart" once the
                 // product is already in the cart, as in the design.
-                cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
-                favoriteIds = favState.favorites.map { it.productId }.toSet(),
+                cartQuantities = cartQuantities,
+                favoriteIds = favoriteIds,
                 onIncrease = ::addToCartOrPromptLogin,
                 onDecrease = { product ->
                     cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
@@ -768,7 +782,7 @@ fun AppNavGraph(
                 onAddToCart = ::addToCartOrPromptLogin,
                 onBack = { navController.popBackStack() },
                 onProductClick = { navController.navigate(Screen.ProductDetail.createRoute(it.id)) },
-                cartQuantities = cartState.cartItems.associate { it.productId to it.quantity },
+                cartQuantities = cartQuantities,
                 onIncrease = ::addToCartOrPromptLogin,
                 onDecrease = { product ->
                     cartState.cartItems.firstOrNull { it.productId == product.id }?.let { item ->
