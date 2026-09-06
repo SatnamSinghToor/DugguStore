@@ -565,10 +565,10 @@ fun AppNavGraph(
                 onRetry = { cartViewModel.loadCart() }
             )
 
-            LaunchedEffect(Unit) {
-                cartViewModel.loadCart()
-            }
-
+            // Not reloaded on every visit here — Home's own LaunchedEffect
+            // already loads the cart once per login, and every in-app cart
+            // action (add/remove/update) already updates this state itself
+            // rather than relying on a re-fetch to see its own result.
             if (cartState.orderPlaced) {
                 AlertDialog(
                     onDismissRequest = { cartViewModel.resetOrderPlaced() },
@@ -615,10 +615,9 @@ fun AppNavGraph(
                 onStatusSelected = { ordersSelectedStatus = it }
             )
 
-            LaunchedEffect(Unit) {
-                authState.user?.let { orderViewModel.loadCustomerOrders(it.id) }
-            }
-
+            // Not reloaded on entry here — Home's own LaunchedEffect already
+            // loads it once per login, and the poll below keeps it fresh for
+            // as long as this screen stays open.
             // The list used to show only an order number and total — no clue
             // what was actually ordered until tapping in. Loading each order's
             // items as soon as the list is known lets every card show the
@@ -750,9 +749,9 @@ fun AppNavGraph(
                 isLoading = favState.isLoading
             )
 
-            LaunchedEffect(Unit) {
-                authState.user?.let { favoriteViewModel.loadFavorites(it.id) }
-            }
+            // Not reloaded on entry here — Home's own LaunchedEffect already
+            // loads it once per login, and toggling a favourite already
+            // updates this state itself rather than needing a re-fetch.
         }
 
         composable(Screen.CustomerAccount.route) {
