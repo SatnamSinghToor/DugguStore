@@ -80,6 +80,89 @@
     <string name="auth_err_phone">कृपया अपना मोबाइल नंबर लिखें</string>
     <string name="auth_err_password_short">पासवर्ड कम से कम 6 अक्षर का होना चाहिए</string>
     <string name="auth_err_password_match">दोनों पासवर्ड मेल नहीं खाते</string>
+    <string name="auth_err_email_invalid">यह ईमेल पता सही नहीं लग रहा</string>
+    <string name="auth_err_phone_invalid">10 अंकों का मोबाइल नंबर डालें</string>
+    <string name="auth_step_of">चरण %1$d / %2$d</string>
+    <string name="auth_next">आगे</string>
+    <string name="auth_back">वापस</string>
+    <string name="auth_welcome_title">Duggu में आपका स्वागत है</string>
+
+    <!-- Register: step headings -->
+    <string name="auth_step_name_title">आपका नाम क्या है?</string>
+    <string name="auth_step_name_body">यह वही नाम है जो विक्रेता और डिलीवरी पार्टनर आपके ऑर्डर पर देखेंगे।</string>
+    <string name="auth_step_name_illustration">थोड़ी सी अपनी पहचान हर ऑर्डर को खास बना देती है।</string>
+    <string name="auth_step_email_title">आपका ईमेल क्या है?</string>
+    <string name="auth_step_email_body">आप इसी से साइन इन करेंगे, और हम ऑर्डर अपडेट यहीं भेजेंगे।</string>
+    <string name="auth_step_email_illustration">हम कभी स्पैम नहीं भेजेंगे — सिर्फ ऑर्डर अपडेट और रसीदें।</string>
+    <string name="auth_step_phone_title">आपका मोबाइल नंबर</string>
+    <string name="auth_step_phone_body">अगर डिलीवरी पार्टनर या दुकान आपको ढूँढ न पाए, तो इसी नंबर पर कॉल करेंगे।</string>
+    <string name="auth_step_phone_illustration">सिर्फ तभी उपयोग होगा जब डिलीवरी पार्टनर या दुकान को आपसे किसी ऑर्डर के बारे में बात करनी हो।</string>
+    <string name="auth_phone_progress">%1$d / 10 अंक</string>
+    <string name="auth_step_role_title">आप Duggu Store का उपयोग कैसे करेंगे?</string>
+    <string name="auth_step_role_body">जो आप पर लागू हो वह चुनें — विक्रेता और डिलीवरी पार्टनर को इसके बाद एक छोटी वेरिफिकेशन प्रक्रिया से गुज़रना होगा।</string>
+    <string name="auth_role_shop_blurb">डिलीवरी के लिए किराना और ज़रूरी सामान ऑर्डर करें।</string>
+    <string name="auth_role_sell_blurb">अपनी दुकान के उत्पाद सूचीबद्ध करें और ऑर्डर लें।</string>
+    <string name="auth_role_deliver_blurb">आस-पास के ऑर्डर उठाएँ और प्रति डिलीवरी कमाएँ।</string>
+    <string name="auth_step_password_title">पासवर्ड बनाएँ</string>
+    <string name="auth_step_password_body">हर बार साइन इन करते समय आप इसे अपने ईमेल के साथ उपयोग करेंगे।</string>
+    <string name="auth_step_password_illustration">कुछ ऐसा चुनें जिसका अंदाज़ा सिर्फ आप ही लगा सकें।</string>
+    <string name="auth_requirement_password_length">कम से कम 6 अक्षर</string>
+    <string name="auth_requirement_password_match">दोनों पासवर्ड मेल खाते हैं</string>
+    <string name="auth_step_referral_title">कोई रेफरल कोड है?</string>
+    <string name="auth_step_referral_body">वैकल्पिक। अगर किसी दोस्त ने अपना कोड शेयर किया है, तो आप दोनों को वॉलेट क्रेडिट मिलेगा।</string>
+    <string name="auth_referral_code_label">रेफरल कोड</string>
+    <string name="auth_referral_code_hint">अगर आपके पास कोड नहीं है तो खाली छोड़ दें</string>
+    <string name="auth_summary_title">आपका विवरण</string>
+    <string name="auth_summary_name">नाम</string>
+    <string name="auth_summary_email">ईमेल</string>
+    <string name="auth_summary_phone">मोबाइल</string>
+    <string name="auth_summary_role">इस रूप में जुड़ रहे हैं</string>
+    <string name="auth_summary_edit_hint">कुछ गलत है? ठीक करने के लिए वापस जाएँ।</string>
+
+    <!-- Register: terms acknowledgement -->
+    <string name="auth_terms_prefix">मैं सहमत हूँ</string>
+    <string name="auth_terms_link">नियम एवं गोपनीयता नीति से</string>
+    <string name="auth_err_terms">जारी रखने के लिए नियम एवं गोपनीयता नीति स्वीकार करें</string>
+    <string name="auth_terms_dialog_body">Duggu Store का उपयोग करके आप ज़िम्मेदारी से ऑर्डर करने और सही डिलीवरी विवरण देने के लिए सहमत होते हैं। विक्रेता और डिलीवरी पार्टनर, प्लेटफ़ॉर्म पर काम शुरू करने से पहले वेरिफाई किए जाते हैं।\n\nहम आपका नाम, मोबाइल नंबर, पते और ऑर्डर इतिहास आपके ऑर्डर पूरे करने के लिए रखते हैं, और आपका लोकेशन सिर्फ ऑर्डर देते समय, या विक्रेताओं/डिलीवरी पार्टनर के लिए पिकअप और डिलीवरी रूट करने के लिए इस्तेमाल करते हैं। यह डेटा कभी किसी तीसरे पक्ष को नहीं बेचा जाता।</string>
+    <string name="dialog_close">बंद करें</string>
+
+    <!-- Forgot password -->
+    <string name="auth_forgot_title">अपना Duggu पासवर्ड रीसेट करें</string>
+    <string name="auth_forgot_sent_title">अपना ईमेल देखें</string>
+    <string name="auth_forgot_sent_subtitle">लिंक आपके रास्ते में है</string>
+    <string name="auth_forgot_sent_body">अगर उस ईमेल से कोई खाता मौजूद है, तो हमने नया पासवर्ड सेट करने के लिए एक लिंक भेज दिया है। इसी फ़ोन पर लिंक खोलें और ऐप आपको अगले चरण पर ले जाएगा।</string>
+    <string name="auth_send_reset_link">रीसेट लिंक भेजें</string>
+    <string name="auth_back_to_sign_in">साइन इन पर वापस जाएँ</string>
+
+    <!-- Reset password -->
+    <string name="auth_reset_title">नया पासवर्ड</string>
+    <string name="auth_reset_subtitle">इसके तुरंत बाद आप साइन इन हो जाएँगे</string>
+    <string name="auth_new_password">नया पासवर्ड</string>
+    <string name="auth_confirm_new_password">नया पासवर्ड दोबारा</string>
+    <string name="auth_save_password">पासवर्ड सेव करें</string>
+    <string name="auth_cancel">रद्द करें</string>
+
+    <!-- Verify email -->
+    <string name="auth_verify_title">अपना ईमेल वेरिफाई करें</string>
+    <string name="auth_verify_subtitle">हमने भेजा गया 6 अंकों का कोड डालें</string>
+    <string name="auth_sent_to">भेजा गया</string>
+    <string name="auth_verify_button">वेरिफाई करें</string>
+    <string name="auth_resend_success">नया कोड भेज दिया गया है। अपना इनबॉक्स देखें।</string>
+    <string name="auth_resend_code">कोड फिर से भेजें</string>
+    <string name="auth_resend_cooldown">%1$d सेकंड में फिर से भेजें</string>
+
+    <!-- Welcome / onboarding slides -->
+    <string name="welcome_slide1_title">मिनटों में किराना</string>
+    <string name="welcome_slide1_body">आपके आस-पास की दुकानों से फल, दूध, स्नैक्स और रोज़मर्रा का सामान — कुछ टैप में ऑर्डर करें, मिनटों में दरवाज़े पर पाएँ।</string>
+    <string name="welcome_slide2_title">हर ऑर्डर को लाइव फॉलो करें</string>
+    <string name="welcome_slide2_body">देखें कब दुकान पैकिंग शुरू करती है, कब डिलीवरी पार्टनर उसे उठाता है, और वह मैप पर कहाँ है, जब तक ऑर्डर पहुँच न जाए।</string>
+    <string name="welcome_slide3_title">या हमारे साथ कमाएँ</string>
+    <string name="welcome_slide3_body">अपनी दुकान के उत्पाद सूचीबद्ध करने के लिए विक्रेता बनें, या अपने इलाके में ऑर्डर लेने के लिए डिलीवरी पार्टनर बनें। हम आपको पूरी प्रक्रिया समझाएँगे।</string>
+    <string name="welcome_skip">छोड़ें</string>
+    <string name="welcome_next">आगे</string>
+    <string name="welcome_get_started">शुरू करें</string>
+    <string name="welcome_have_account">पहले से खाता है?</string>
+    <string name="welcome_log_in">साइन इन</string>
 
     <string name="account_my_orders">मेरे ऑर्डर</string>
     <string name="account_my_orders_sub">पुराने ऑर्डर देखें और ट्रैक करें</string>

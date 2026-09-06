@@ -38,7 +38,7 @@ fun LoginScreen(
     var emailTouched by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
-    val emailLooksWrong = emailTouched && email.isNotBlank() && !email.contains("@")
+    val emailLooksWrong = emailTouched && email.isNotBlank() && !isValidEmail(email)
     val canSubmit = email.isNotBlank() && password.isNotBlank() && !emailLooksWrong
 
     fun submit() {
@@ -48,7 +48,7 @@ fun LoginScreen(
     }
 
     AuthScaffold(
-        title = "Welcome to Duggu",
+        title = stringResource(R.string.auth_welcome_title),
         subtitle = null,
         showLogoName = false,
         footer = {
@@ -99,6 +99,7 @@ fun LoginScreen(
             placeholder = stringResource(R.string.auth_password_hint),
             leadingIcon = Icons.Default.Lock,
             leadingIconTint = Violet,
+            keyboardType = KeyboardType.Password,
             isPassword = true,
             imeAction = ImeAction.Done,
             onImeAction = { submit() }

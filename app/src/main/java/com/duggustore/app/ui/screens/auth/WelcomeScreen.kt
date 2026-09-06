@@ -20,10 +20,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.R
 import com.duggustore.app.ui.components.AppLogo
 import com.duggustore.app.ui.theme.*
 
@@ -49,20 +51,20 @@ fun WelcomeScreen(
         WelcomeSlide(
             icon = Icons.Default.ShoppingBasket,
             accent = Teal,
-            title = "Groceries in minutes",
-            body = "Fruit, milk, snacks and daily essentials from stores near you — ordered in a few taps, at your door in minutes."
+            title = stringResource(R.string.welcome_slide1_title),
+            body = stringResource(R.string.welcome_slide1_body)
         ),
         WelcomeSlide(
             icon = Icons.Default.LocalShipping,
             accent = Orange,
-            title = "Follow every order live",
-            body = "See when the store starts packing, when a rider picks it up, and exactly where they are on the map until it arrives."
+            title = stringResource(R.string.welcome_slide2_title),
+            body = stringResource(R.string.welcome_slide2_body)
         ),
         WelcomeSlide(
             icon = Icons.Default.Storefront,
             accent = Violet,
-            title = "Or earn with us",
-            body = "Sign up as a seller to list your store's products, or as a delivery partner to take orders in your area. We'll walk you through it."
+            title = stringResource(R.string.welcome_slide3_title),
+            body = stringResource(R.string.welcome_slide3_body)
         )
     )
 
@@ -93,7 +95,7 @@ fun WelcomeScreen(
             Spacer(Modifier.weight(1f))
             if (!isLast) {
                 Text(
-                    text = "Skip",
+                    text = stringResource(R.string.welcome_skip),
                     modifier = Modifier.clickable { onFinish() },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -198,7 +200,7 @@ fun WelcomeScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = Teal)
             ) {
                 Text(
-                    text = if (isLast) "Get started" else "Next",
+                    text = if (isLast) stringResource(R.string.welcome_get_started) else stringResource(R.string.welcome_next),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -209,10 +211,10 @@ fun WelcomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text("Already have an account?", fontSize = 14.sp, color = TextSecondary)
+                Text(stringResource(R.string.welcome_have_account), fontSize = 14.sp, color = TextSecondary)
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = "Log in",
+                    text = stringResource(R.string.welcome_log_in),
                     modifier = Modifier.clickable { onLogIn() },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,

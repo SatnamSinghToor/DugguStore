@@ -94,6 +94,84 @@
     <string name="auth_step_of">Step %1$d of %2$d</string>
     <string name="auth_next">Next</string>
     <string name="auth_back">Back</string>
+    <string name="auth_welcome_title">Welcome to Duggu</string>
+
+    <!-- Register: step headings -->
+    <string name="auth_step_name_title">What\'s your name?</string>
+    <string name="auth_step_name_body">This is the name sellers and riders will see on your orders.</string>
+    <string name="auth_step_name_illustration">A little personal touch makes every order feel right.</string>
+    <string name="auth_step_email_title">What\'s your email?</string>
+    <string name="auth_step_email_body">You\'ll sign in with this, and we\'ll send order updates here.</string>
+    <string name="auth_step_email_illustration">We\'ll never spam you — just order updates and receipts.</string>
+    <string name="auth_step_phone_title">Your phone number</string>
+    <string name="auth_step_phone_body">A rider or the store calls this number if they can\'t find you.</string>
+    <string name="auth_step_phone_illustration">Only used if a rider or store needs to reach you about an order.</string>
+    <string name="auth_phone_progress">%1$d of 10 digits</string>
+    <string name="auth_step_role_title">How will you use Duggu Store?</string>
+    <string name="auth_step_role_body">Pick the one that fits — sellers and riders get a short verification after this.</string>
+    <string name="auth_role_shop_blurb">Order groceries and essentials for delivery.</string>
+    <string name="auth_role_sell_blurb">List your store\'s products and take orders.</string>
+    <string name="auth_role_deliver_blurb">Pick up orders nearby and earn per delivery.</string>
+    <string name="auth_step_password_title">Create a password</string>
+    <string name="auth_step_password_body">You\'ll use this with your email every time you sign in.</string>
+    <string name="auth_step_password_illustration">Choose something only you would guess.</string>
+    <string name="auth_requirement_password_length">At least 6 characters</string>
+    <string name="auth_requirement_password_match">Both passwords match</string>
+    <string name="auth_step_referral_title">Got a referral code?</string>
+    <string name="auth_step_referral_body">Optional. If a friend shared their code, you both get wallet credit.</string>
+    <string name="auth_referral_code_label">Referral code</string>
+    <string name="auth_referral_code_hint">Leave empty if you don\'t have one</string>
+    <string name="auth_summary_title">Your details</string>
+    <string name="auth_summary_name">Name</string>
+    <string name="auth_summary_email">Email</string>
+    <string name="auth_summary_phone">Phone</string>
+    <string name="auth_summary_role">Joining as</string>
+    <string name="auth_summary_edit_hint">Something wrong? Tap back to fix it.</string>
+
+    <!-- Register: terms acknowledgement -->
+    <string name="auth_terms_prefix">I agree to the</string>
+    <string name="auth_terms_link">Terms &amp; Privacy Policy</string>
+    <string name="auth_err_terms">Please accept the Terms &amp; Privacy Policy to continue</string>
+    <string name="auth_terms_dialog_body">By using Duggu Store you agree to order responsibly and provide accurate delivery details. Sellers and riders are verified before they can operate on the platform.\n\nWe store your name, phone number, addresses and order history to fulfil your orders, and your location only while placing an order or, for sellers and riders, to route pickups and deliveries. This data is never sold to third parties.</string>
+    <string name="dialog_close">Close</string>
+
+    <!-- Forgot password -->
+    <string name="auth_forgot_title">Reset Your Duggu Password</string>
+    <string name="auth_forgot_sent_title">Check your email</string>
+    <string name="auth_forgot_sent_subtitle">The link is on its way</string>
+    <string name="auth_forgot_sent_body">If an account exists for that address, we\'ve sent it a link to set a new password. Open it on this phone and the app will take you to the next step.</string>
+    <string name="auth_send_reset_link">Send reset link</string>
+    <string name="auth_back_to_sign_in">Back to sign in</string>
+
+    <!-- Reset password -->
+    <string name="auth_reset_title">New password</string>
+    <string name="auth_reset_subtitle">You\'ll be signed in straight after</string>
+    <string name="auth_new_password">New password</string>
+    <string name="auth_confirm_new_password">Confirm new password</string>
+    <string name="auth_save_password">Save password</string>
+    <string name="auth_cancel">Cancel</string>
+
+    <!-- Verify email -->
+    <string name="auth_verify_title">Verify your email</string>
+    <string name="auth_verify_subtitle">Enter the 6-digit code we sent you</string>
+    <string name="auth_sent_to">Sent to</string>
+    <string name="auth_verify_button">Verify</string>
+    <string name="auth_resend_success">New code sent. Check your inbox.</string>
+    <string name="auth_resend_code">Resend code</string>
+    <string name="auth_resend_cooldown">Resend in %1$ds</string>
+
+    <!-- Welcome / onboarding slides -->
+    <string name="welcome_slide1_title">Groceries in minutes</string>
+    <string name="welcome_slide1_body">Fruit, milk, snacks and daily essentials from stores near you — ordered in a few taps, at your door in minutes.</string>
+    <string name="welcome_slide2_title">Follow every order live</string>
+    <string name="welcome_slide2_body">See when the store starts packing, when a rider picks it up, and exactly where they are on the map until it arrives.</string>
+    <string name="welcome_slide3_title">Or earn with us</string>
+    <string name="welcome_slide3_body">Sign up as a seller to list your store\'s products, or as a delivery partner to take orders in your area. We\'ll walk you through it.</string>
+    <string name="welcome_skip">Skip</string>
+    <string name="welcome_next">Next</string>
+    <string name="welcome_get_started">Get started</string>
+    <string name="welcome_have_account">Already have an account?</string>
+    <string name="welcome_log_in">Log in</string>
 
     <!-- Account -->
     <string name="account_my_orders">My orders</string>

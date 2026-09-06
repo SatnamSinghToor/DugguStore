@@ -74,6 +74,8 @@ fun RegisterScreen(
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var referralCode by rememberSaveable { mutableStateOf("") }
     var selectedRole by rememberSaveable { mutableStateOf("customer") }
+    var termsAccepted by rememberSaveable { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
 
     val focusManager = LocalFocusManager.current
@@ -81,15 +83,15 @@ fun RegisterScreen(
     val roles = listOf(
         RoleChoice(
             "customer", stringResource(R.string.auth_role_shop),
-            "Order groceries and essentials for delivery.", Icons.Default.ShoppingBag, Teal
+            stringResource(R.string.auth_role_shop_blurb), Icons.Default.ShoppingBag, Teal
         ),
         RoleChoice(
             "seller", stringResource(R.string.auth_role_sell),
-            "List your store's products and take orders.", Icons.Default.Storefront, Orange
+            stringResource(R.string.auth_role_sell_blurb), Icons.Default.Storefront, Orange
         ),
         RoleChoice(
             "delivery", stringResource(R.string.auth_role_deliver),
-            "Pick up orders nearby and earn per delivery.", Icons.Default.LocalShipping, Violet
+            stringResource(R.string.auth_role_deliver_blurb), Icons.Default.LocalShipping, Violet
         )
     )
 
@@ -103,6 +105,7 @@ fun RegisterScreen(
     val errNoPhone = stringResource(R.string.auth_err_phone)
     val errShortPassword = stringResource(R.string.auth_err_password_short)
     val errPasswordMatch = stringResource(R.string.auth_err_password_match)
+    val errTerms = stringResource(R.string.auth_err_terms)
 
     val passwordLongEnough = password.length >= 6
     val passwordsMatch = password.isNotBlank() && password == confirmPassword
@@ -114,7 +117,7 @@ fun RegisterScreen(
         STEP_NAME -> if (fullName.isBlank()) errNoName else null
         STEP_EMAIL -> when {
             email.isBlank() -> errNoEmail
-            !email.contains("@") || !email.contains(".") -> errBadEmail
+            !isValidEmail(email) -> errBadEmail
             else -> null
         }
         STEP_PHONE -> if (phone.filter { it.isDigit() }.length < 10) errNoPhone else null
@@ -123,6 +126,7 @@ fun RegisterScreen(
             !passwordsMatch -> errPasswordMatch
             else -> null
         }
+        STEP_REFERRAL -> if (!termsAccepted) errTerms else null
         else -> null
     }
 
@@ -198,7 +202,10 @@ fun RegisterScreen(
                 Column {
                     when (s) {
                         STEP_NAME -> {
-                            StepHeading("What's your name?", "This is the name sellers and riders will see on your orders.")
+                            StepHeading(
+                                stringResource(R.string.auth_step_name_title),
+                                stringResource(R.string.auth_step_name_body)
+                            )
                             AuthField(
                                 value = fullName,
                                 onValueChange = { fullName = it; localError = null; onClearError() },
@@ -209,10 +216,13 @@ fun RegisterScreen(
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
-                            StepIllustration(Icons.Default.Person, Teal, "A little personal touch makes every order feel right.")
+                            StepIllustration(Icons.Default.Person, Teal, stringResource(R.string.auth_step_name_illustration))
                         }
                         STEP_EMAIL -> {
-                            StepHeading("What's your email?", "You'll sign in with this, and we'll send order updates here.")
+                            StepHeading(
+                                stringResource(R.string.auth_step_email_title),
+                                stringResource(R.string.auth_step_email_body)
+                            )
                             AuthField(
                                 value = email,
                                 onValueChange = { email = it; localError = null; onClearError() },
@@ -226,10 +236,13 @@ fun RegisterScreen(
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
-                            StepIllustration(Icons.Default.Email, Orange, "We'll never spam you — just order updates and receipts.")
+                            StepIllustration(Icons.Default.Email, Orange, stringResource(R.string.auth_step_email_illustration))
                         }
                         STEP_PHONE -> {
-                            StepHeading("Your phone number", "A rider or the store calls this number if they can't find you.")
+                            StepHeading(
+                                stringResource(R.string.auth_step_phone_title),
+                                stringResource(R.string.auth_step_phone_body)
+                            )
                             AuthField(
                                 value = phone,
                                 onValueChange = { input ->
@@ -242,14 +255,17 @@ fun RegisterScreen(
                                 leadingIcon = Icons.Default.Phone,
                                 leadingIconTint = Coral,
                                 keyboardType = KeyboardType.Phone,
-                                helper = if (phone.length < 10) "${phone.length} of 10 digits" else null,
+                                helper = if (phone.length < 10) stringResource(R.string.auth_phone_progress, phone.length) else null,
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
-                            StepIllustration(Icons.Default.LocalShipping, Coral, "Only used if a rider or store needs to reach you about an order.")
+                            StepIllustration(Icons.Default.LocalShipping, Coral, stringResource(R.string.auth_step_phone_illustration))
                         }
                         STEP_ROLE -> {
-                            StepHeading("How will you use Duggu Store?", "Pick the one that fits — sellers and riders get a short verification after this.")
+                            StepHeading(
+                                stringResource(R.string.auth_step_role_title),
+                                stringResource(R.string.auth_step_role_body)
+                            )
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 roles.forEach { choice ->
                                     RoleCard(
@@ -261,7 +277,10 @@ fun RegisterScreen(
                             }
                         }
                         STEP_PASSWORD -> {
-                            StepHeading("Create a password", "You'll use this with your email every time you sign in.")
+                            StepHeading(
+                                stringResource(R.string.auth_step_password_title),
+                                stringResource(R.string.auth_step_password_body)
+                            )
                             AuthField(
                                 value = password,
                                 onValueChange = { password = it; localError = null; onClearError() },
@@ -269,6 +288,7 @@ fun RegisterScreen(
                                 placeholder = stringResource(R.string.auth_password_min_hint),
                                 leadingIcon = Icons.Default.Lock,
                                 leadingIconTint = Teal,
+                                keyboardType = KeyboardType.Password,
                                 isPassword = true,
                                 imeAction = ImeAction.Next,
                                 onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
@@ -281,22 +301,26 @@ fun RegisterScreen(
                                 placeholder = stringResource(R.string.auth_confirm_password_hint),
                                 leadingIcon = Icons.Default.Lock,
                                 leadingIconTint = Orange,
+                                keyboardType = KeyboardType.Password,
                                 isPassword = true,
                                 imeAction = ImeAction.Done,
                                 onImeAction = { goNext() }
                             )
                             Spacer(Modifier.height(6.dp))
-                            AuthRequirementRow("At least 6 characters", passwordLongEnough)
-                            AuthRequirementRow("Both passwords match", passwordsMatch)
-                            StepIllustration(Icons.Default.Lock, Violet, "Choose something only you would guess.")
+                            AuthRequirementRow(stringResource(R.string.auth_requirement_password_length), passwordLongEnough)
+                            AuthRequirementRow(stringResource(R.string.auth_requirement_password_match), passwordsMatch)
+                            StepIllustration(Icons.Default.Lock, Violet, stringResource(R.string.auth_step_password_illustration))
                         }
                         else -> {
-                            StepHeading("Got a referral code?", "Optional. If a friend shared their code, you both get wallet credit.")
+                            StepHeading(
+                                stringResource(R.string.auth_step_referral_title),
+                                stringResource(R.string.auth_step_referral_body)
+                            )
                             AuthField(
                                 value = referralCode,
                                 onValueChange = { referralCode = it.uppercase(); localError = null; onClearError() },
-                                label = "Referral code",
-                                placeholder = "Leave empty if you don't have one",
+                                label = stringResource(R.string.auth_referral_code_label),
+                                placeholder = stringResource(R.string.auth_referral_code_hint),
                                 leadingIcon = Icons.Default.CardGiftcard,
                                 leadingIconTint = Violet,
                                 imeAction = ImeAction.Done,
@@ -308,6 +332,12 @@ fun RegisterScreen(
                                 email = email,
                                 phone = phone,
                                 role = roles.firstOrNull { it.value == selectedRole }?.label.orEmpty()
+                            )
+                            Spacer(Modifier.height(18.dp))
+                            TermsAcceptanceRow(
+                                checked = termsAccepted,
+                                onCheckedChange = { termsAccepted = it; localError = null; onClearError() },
+                                onLinkClick = { showTermsDialog = true }
                             )
                         }
                     }
@@ -343,6 +373,63 @@ fun RegisterScreen(
             }
         }
     }
+
+    if (showTermsDialog) {
+        TermsPrivacyDialog(onDismiss = { showTermsDialog = false })
+    }
+}
+
+/** A tap target big enough to actually hit, rather than just the checkbox's own small square. */
+@Composable
+private fun TermsAcceptanceRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onLinkClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(checkedColor = Teal)
+        )
+        Spacer(Modifier.width(2.dp))
+        Text(stringResource(R.string.auth_terms_prefix), fontSize = 13.sp, color = TextSecondary)
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = stringResource(R.string.auth_terms_link),
+            modifier = Modifier.clickable { onLinkClick() },
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = Teal
+        )
+    }
+}
+
+@Composable
+private fun TermsPrivacyDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.auth_terms_link)) },
+        text = {
+            Text(
+                stringResource(R.string.auth_terms_dialog_body),
+                fontSize = 13.sp,
+                color = TextSecondary,
+                lineHeight = 19.sp,
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_close), fontWeight = FontWeight.Bold, color = Teal)
+            }
+        }
+    )
 }
 
 private data class RoleChoice(
@@ -397,15 +484,15 @@ private fun SummaryCard(name: String, email: String, phone: String, role: String
         color = SurfaceMuted
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Your details", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(stringResource(R.string.auth_summary_title), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
             Spacer(Modifier.height(10.dp))
-            SummaryRow("Name", name)
-            SummaryRow("Email", email)
-            SummaryRow("Phone", phone)
-            SummaryRow("Joining as", role)
+            SummaryRow(stringResource(R.string.auth_summary_name), name)
+            SummaryRow(stringResource(R.string.auth_summary_email), email)
+            SummaryRow(stringResource(R.string.auth_summary_phone), phone)
+            SummaryRow(stringResource(R.string.auth_summary_role), role)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Something wrong? Tap back to fix it.",
+                stringResource(R.string.auth_summary_edit_hint),
                 fontSize = 11.sp,
                 color = TextLight
             )

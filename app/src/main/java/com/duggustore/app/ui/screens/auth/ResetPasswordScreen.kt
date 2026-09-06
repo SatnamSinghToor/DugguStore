@@ -6,10 +6,16 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.R
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
@@ -23,10 +29,22 @@ fun ResetPasswordScreen(
 ) {
     var password by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
+
+    val passwordLongEnough = password.length >= 6
+    val passwordsMatch = password.isNotBlank() && password == confirm
+    val canSubmit = passwordLongEnough && passwordsMatch
+
+    fun submit() {
+        if (!canSubmit) return
+        focusManager.clearFocus()
+        onClearError()
+        onSubmit(password, confirm)
+    }
 
     AuthScaffold(
-        title = "New password",
-        subtitle = "You'll be signed in straight after"
+        title = stringResource(R.string.auth_reset_title),
+        subtitle = stringResource(R.string.auth_reset_subtitle)
     ) {
         if (error != null) {
             AuthErrorBanner(message = error, onDismiss = onClearError)
@@ -36,10 +54,13 @@ fun ResetPasswordScreen(
         AuthField(
             value = password,
             onValueChange = { password = it; onClearError() },
-            label = "New password",
-            placeholder = "At least 6 characters",
+            label = stringResource(R.string.auth_new_password),
+            placeholder = stringResource(R.string.auth_password_min_hint),
             leadingIcon = Icons.Default.Lock,
-            isPassword = true
+            keyboardType = KeyboardType.Password,
+            isPassword = true,
+            imeAction = ImeAction.Next,
+            onImeAction = { focusManager.moveFocus(FocusDirection.Down) }
         )
 
         Spacer(Modifier.height(16.dp))
@@ -47,25 +68,32 @@ fun ResetPasswordScreen(
         AuthField(
             value = confirm,
             onValueChange = { confirm = it; onClearError() },
-            label = "Confirm new password",
-            placeholder = "Repeat the password",
+            label = stringResource(R.string.auth_confirm_new_password),
+            placeholder = stringResource(R.string.auth_confirm_password_hint),
             leadingIcon = Icons.Default.Lock,
-            isPassword = true
+            keyboardType = KeyboardType.Password,
+            isPassword = true,
+            imeAction = ImeAction.Done,
+            onImeAction = { submit() }
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(6.dp))
+        AuthRequirementRow(stringResource(R.string.auth_requirement_password_length), passwordLongEnough)
+        AuthRequirementRow(stringResource(R.string.auth_requirement_password_match), passwordsMatch)
+
+        Spacer(Modifier.height(18.dp))
 
         AuthPrimaryButton(
-            text = "Save password",
-            onClick = { onClearError(); onSubmit(password, confirm) },
+            text = stringResource(R.string.auth_save_password),
+            onClick = { submit() },
             isLoading = isLoading,
-            enabled = password.isNotBlank() && confirm.isNotBlank()
+            enabled = canSubmit
         )
 
         Spacer(Modifier.height(18.dp))
 
         Text(
-            text = "Cancel",
+            text = stringResource(R.string.auth_cancel),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickableText { onClearError(); onCancel() },

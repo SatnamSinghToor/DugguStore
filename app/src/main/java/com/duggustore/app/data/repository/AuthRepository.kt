@@ -175,8 +175,10 @@ class AuthRepository {
             code == "signup_disabled" -> "Sign ups are currently disabled for this app."
             code == "over_email_send_rate_limit" || code == "429" ->
                 "Too many attempts. Please wait a moment and try again."
-            msg.isBlank() -> "Signup failed. Please try again."
-            else -> msg
+            // An unmapped code/message could be a raw Postgrest or validation
+            // string not meant for a user to read — a generic message beats
+            // leaking it verbatim.
+            else -> "Signup failed. Please try again."
         }
     }
 
@@ -218,8 +220,7 @@ class AuthRepository {
                 "Invalid email or password."
             code == "over_request_rate_limit" || code == "429" ->
                 "Too many attempts. Please wait a moment and try again."
-            msg.isBlank() -> "Login failed. Please try again."
-            else -> msg
+            else -> "Login failed. Please try again."
         }
     }
 
@@ -267,8 +268,7 @@ class AuthRepository {
                 "That code is not correct. Please check and try again."
             code == "over_email_send_rate_limit" || code == "429" ->
                 "Too many attempts. Please wait a moment and try again."
-            msg.isBlank() -> "Verification failed. Please try again."
-            else -> msg
+            else -> "Verification failed. Please try again."
         }
     }
 
@@ -284,8 +284,7 @@ class AuthRepository {
                     Result.failure(Exception("This email is already verified. Try signing in."))
                 code == "over_email_send_rate_limit" || code == "429" ->
                     Result.failure(Exception("Too many requests. Please wait a moment and try again."))
-                msg.isBlank() -> Result.failure(Exception("Failed to resend verification email."))
-                else -> Result.failure(Exception(msg))
+                else -> Result.failure(Exception("Failed to resend verification email."))
             }
         }
     }
@@ -301,8 +300,7 @@ class AuthRepository {
                 code == "not_configured" || code == "network_error" -> Result.failure(Exception(msg))
                 code == "over_email_send_rate_limit" || code == "429" ->
                     Result.failure(Exception("Too many requests. Please wait a moment and try again."))
-                msg.isBlank() -> Result.failure(Exception("Could not send the reset email."))
-                else -> Result.failure(Exception(msg))
+                else -> Result.failure(Exception("Could not send the reset email."))
             }
         }
     }
@@ -351,8 +349,7 @@ class AuthRepository {
                         code == "not_configured" || code == "network_error" -> msg
                         msg.contains("expired", ignoreCase = true) ->
                             "That link has expired. Sign in, or request a new email."
-                        msg.isBlank() -> "Could not finish signing in from that link."
-                        else -> msg
+                        else -> "Could not finish signing in from that link."
                     }
                 )
             )
@@ -392,8 +389,7 @@ class AuthRepository {
                     "Password must be at least 6 characters."
                 code == "same_password" ->
                     "That is already your current password. Choose a different one."
-                msg.isBlank() -> "Could not update the password."
-                else -> msg
+                else -> "Could not update the password."
             }
             Result.failure(Exception(friendly))
         }

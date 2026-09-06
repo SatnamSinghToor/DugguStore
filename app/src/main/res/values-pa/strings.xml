@@ -80,6 +80,89 @@
     <string name="auth_err_phone">ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਮੋਬਾਈਲ ਨੰਬਰ ਲਿਖੋ</string>
     <string name="auth_err_password_short">ਪਾਸਵਰਡ ਘੱਟੋ-ਘੱਟ 6 ਅੱਖਰਾਂ ਦਾ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ</string>
     <string name="auth_err_password_match">ਦੋਵੇਂ ਪਾਸਵਰਡ ਮੇਲ ਨਹੀਂ ਖਾਂਦੇ</string>
+    <string name="auth_err_email_invalid">ਇਹ ਈਮੇਲ ਪਤਾ ਸਹੀ ਨਹੀਂ ਲੱਗ ਰਿਹਾ</string>
+    <string name="auth_err_phone_invalid">10 ਅੰਕਾਂ ਦਾ ਮੋਬਾਈਲ ਨੰਬਰ ਦਿਓ</string>
+    <string name="auth_step_of">ਕਦਮ %1$d / %2$d</string>
+    <string name="auth_next">ਅੱਗੇ</string>
+    <string name="auth_back">ਪਿੱਛੇ</string>
+    <string name="auth_welcome_title">Duggu ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ</string>
+
+    <!-- Register: step headings -->
+    <string name="auth_step_name_title">ਤੁਹਾਡਾ ਨਾਂ ਕੀ ਹੈ?</string>
+    <string name="auth_step_name_body">ਇਹੀ ਨਾਂ ਵਿਕਰੇਤਾ ਅਤੇ ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ ਤੁਹਾਡੇ ਆਰਡਰ ਉੱਤੇ ਦੇਖਣਗੇ।</string>
+    <string name="auth_step_name_illustration">ਥੋੜ੍ਹੀ ਜਿਹੀ ਆਪਣੀ ਪਛਾਣ ਹਰ ਆਰਡਰ ਨੂੰ ਖਾਸ ਬਣਾ ਦਿੰਦੀ ਹੈ।</string>
+    <string name="auth_step_email_title">ਤੁਹਾਡੀ ਈਮੇਲ ਕੀ ਹੈ?</string>
+    <string name="auth_step_email_body">ਤੁਸੀਂ ਇਸੇ ਨਾਲ ਸਾਈਨ ਇਨ ਕਰੋਗੇ, ਅਤੇ ਅਸੀਂ ਆਰਡਰ ਅਪਡੇਟ ਇੱਥੇ ਹੀ ਭੇਜਾਂਗੇ।</string>
+    <string name="auth_step_email_illustration">ਅਸੀਂ ਕਦੇ ਸਪੈਮ ਨਹੀਂ ਭੇਜਾਂਗੇ — ਸਿਰਫ਼ ਆਰਡਰ ਅਪਡੇਟ ਅਤੇ ਰਸੀਦਾਂ।</string>
+    <string name="auth_step_phone_title">ਤੁਹਾਡਾ ਮੋਬਾਈਲ ਨੰਬਰ</string>
+    <string name="auth_step_phone_body">ਜੇ ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ ਜਾਂ ਦੁਕਾਨ ਤੁਹਾਨੂੰ ਲੱਭ ਨਾ ਸਕੇ, ਤਾਂ ਇਸੇ ਨੰਬਰ ਉੱਤੇ ਕਾਲ ਕਰਨਗੇ।</string>
+    <string name="auth_step_phone_illustration">ਸਿਰਫ਼ ਉਦੋਂ ਵਰਤਿਆ ਜਾਵੇਗਾ ਜਦੋਂ ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ ਜਾਂ ਦੁਕਾਨ ਨੂੰ ਤੁਹਾਡੇ ਨਾਲ ਕਿਸੇ ਆਰਡਰ ਬਾਰੇ ਗੱਲ ਕਰਨੀ ਹੋਵੇ।</string>
+    <string name="auth_phone_progress">%1$d / 10 ਅੰਕ</string>
+    <string name="auth_step_role_title">ਤੁਸੀਂ Duggu Store ਦੀ ਵਰਤੋਂ ਕਿਵੇਂ ਕਰੋਗੇ?</string>
+    <string name="auth_step_role_body">ਜੋ ਤੁਹਾਡੇ ਉੱਤੇ ਢੁਕਦਾ ਹੈ ਉਹ ਚੁਣੋ — ਵਿਕਰੇਤਾ ਅਤੇ ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ ਨੂੰ ਇਸ ਤੋਂ ਬਾਅਦ ਇੱਕ ਛੋਟੀ ਤਸਦੀਕ ਪ੍ਰਕਿਰਿਆ ਵਿੱਚੋਂ ਲੰਘਣਾ ਪਵੇਗਾ।</string>
+    <string name="auth_role_shop_blurb">ਡਿਲੀਵਰੀ ਲਈ ਕਰਿਆਨਾ ਅਤੇ ਜ਼ਰੂਰੀ ਸਮਾਨ ਆਰਡਰ ਕਰੋ।</string>
+    <string name="auth_role_sell_blurb">ਆਪਣੀ ਦੁਕਾਨ ਦੇ ਉਤਪਾਦ ਸੂਚੀਬੱਧ ਕਰੋ ਅਤੇ ਆਰਡਰ ਲਓ।</string>
+    <string name="auth_role_deliver_blurb">ਨੇੜਲੇ ਆਰਡਰ ਚੁੱਕੋ ਅਤੇ ਹਰ ਡਿਲੀਵਰੀ ਉੱਤੇ ਕਮਾਓ।</string>
+    <string name="auth_step_password_title">ਪਾਸਵਰਡ ਬਣਾਓ</string>
+    <string name="auth_step_password_body">ਹਰ ਵਾਰ ਸਾਈਨ ਇਨ ਕਰਦੇ ਸਮੇਂ ਤੁਸੀਂ ਇਸਨੂੰ ਆਪਣੀ ਈਮੇਲ ਨਾਲ ਵਰਤੋਗੇ।</string>
+    <string name="auth_step_password_illustration">ਕੁਝ ਅਜਿਹਾ ਚੁਣੋ ਜਿਸਦਾ ਅੰਦਾਜ਼ਾ ਸਿਰਫ਼ ਤੁਸੀਂ ਹੀ ਲਗਾ ਸਕੋ।</string>
+    <string name="auth_requirement_password_length">ਘੱਟੋ-ਘੱਟ 6 ਅੱਖਰ</string>
+    <string name="auth_requirement_password_match">ਦੋਵੇਂ ਪਾਸਵਰਡ ਮੇਲ ਖਾਂਦੇ ਹਨ</string>
+    <string name="auth_step_referral_title">ਕੋਈ ਰੈਫ਼ਰਲ ਕੋਡ ਹੈ?</string>
+    <string name="auth_step_referral_body">ਵਿਕਲਪਿਕ। ਜੇ ਕਿਸੇ ਦੋਸਤ ਨੇ ਆਪਣਾ ਕੋਡ ਸਾਂਝਾ ਕੀਤਾ ਹੈ, ਤਾਂ ਤੁਹਾਨੂੰ ਦੋਵਾਂ ਨੂੰ ਵਾਲਿਟ ਕ੍ਰੈਡਿਟ ਮਿਲੇਗਾ।</string>
+    <string name="auth_referral_code_label">ਰੈਫ਼ਰਲ ਕੋਡ</string>
+    <string name="auth_referral_code_hint">ਜੇ ਤੁਹਾਡੇ ਕੋਲ ਕੋਡ ਨਹੀਂ ਹੈ ਤਾਂ ਖਾਲੀ ਛੱਡ ਦਿਓ</string>
+    <string name="auth_summary_title">ਤੁਹਾਡਾ ਵੇਰਵਾ</string>
+    <string name="auth_summary_name">ਨਾਂ</string>
+    <string name="auth_summary_email">ਈਮੇਲ</string>
+    <string name="auth_summary_phone">ਮੋਬਾਈਲ</string>
+    <string name="auth_summary_role">ਇਸ ਰੂਪ ਵਿੱਚ ਜੁੜ ਰਹੇ ਹੋ</string>
+    <string name="auth_summary_edit_hint">ਕੁਝ ਗਲਤ ਹੈ? ਠੀਕ ਕਰਨ ਲਈ ਪਿੱਛੇ ਜਾਓ।</string>
+
+    <!-- Register: terms acknowledgement -->
+    <string name="auth_terms_prefix">ਮੈਂ ਸਹਿਮਤ ਹਾਂ</string>
+    <string name="auth_terms_link">ਨਿਯਮ ਅਤੇ ਗੋਪਨੀਯਤਾ ਨੀਤੀ ਨਾਲ</string>
+    <string name="auth_err_terms">ਜਾਰੀ ਰੱਖਣ ਲਈ ਨਿਯਮ ਅਤੇ ਗੋਪਨੀਯਤਾ ਨੀਤੀ ਸਵੀਕਾਰ ਕਰੋ</string>
+    <string name="auth_terms_dialog_body">Duggu Store ਵਰਤ ਕੇ ਤੁਸੀਂ ਜ਼ਿੰਮੇਵਾਰੀ ਨਾਲ ਆਰਡਰ ਕਰਨ ਅਤੇ ਸਹੀ ਡਿਲੀਵਰੀ ਵੇਰਵੇ ਦੇਣ ਲਈ ਸਹਿਮਤ ਹੁੰਦੇ ਹੋ। ਵਿਕਰੇਤਾ ਅਤੇ ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ, ਪਲੇਟਫਾਰਮ ਉੱਤੇ ਕੰਮ ਸ਼ੁਰੂ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਤਸਦੀਕ ਕੀਤੇ ਜਾਂਦੇ ਹਨ।\n\nਅਸੀਂ ਤੁਹਾਡਾ ਨਾਂ, ਮੋਬਾਈਲ ਨੰਬਰ, ਪਤੇ ਅਤੇ ਆਰਡਰ ਇਤਿਹਾਸ ਤੁਹਾਡੇ ਆਰਡਰ ਪੂਰੇ ਕਰਨ ਲਈ ਰੱਖਦੇ ਹਾਂ, ਅਤੇ ਤੁਹਾਡਾ ਟਿਕਾਣਾ ਸਿਰਫ਼ ਆਰਡਰ ਦਿੰਦੇ ਸਮੇਂ, ਜਾਂ ਵਿਕਰੇਤਾਵਾਂ/ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ ਲਈ ਪਿੱਕਅੱਪ ਅਤੇ ਡਿਲੀਵਰੀ ਰੂਟ ਕਰਨ ਲਈ ਵਰਤਦੇ ਹਾਂ। ਇਹ ਡਾਟਾ ਕਦੇ ਕਿਸੇ ਤੀਜੀ ਧਿਰ ਨੂੰ ਨਹੀਂ ਵੇਚਿਆ ਜਾਂਦਾ।</string>
+    <string name="dialog_close">ਬੰਦ ਕਰੋ</string>
+
+    <!-- Forgot password -->
+    <string name="auth_forgot_title">ਆਪਣਾ Duggu ਪਾਸਵਰਡ ਰੀਸੈੱਟ ਕਰੋ</string>
+    <string name="auth_forgot_sent_title">ਆਪਣੀ ਈਮੇਲ ਦੇਖੋ</string>
+    <string name="auth_forgot_sent_subtitle">ਲਿੰਕ ਤੁਹਾਡੇ ਰਸਤੇ ਵਿੱਚ ਹੈ</string>
+    <string name="auth_forgot_sent_body">ਜੇ ਉਸ ਈਮੇਲ ਨਾਲ ਕੋਈ ਖਾਤਾ ਮੌਜੂਦ ਹੈ, ਤਾਂ ਅਸੀਂ ਨਵਾਂ ਪਾਸਵਰਡ ਸੈੱਟ ਕਰਨ ਲਈ ਇੱਕ ਲਿੰਕ ਭੇਜ ਦਿੱਤਾ ਹੈ। ਇਸੇ ਫ਼ੋਨ ਉੱਤੇ ਲਿੰਕ ਖੋਲ੍ਹੋ ਅਤੇ ਐਪ ਤੁਹਾਨੂੰ ਅਗਲੇ ਕਦਮ ਉੱਤੇ ਲੈ ਜਾਵੇਗੀ।</string>
+    <string name="auth_send_reset_link">ਰੀਸੈੱਟ ਲਿੰਕ ਭੇਜੋ</string>
+    <string name="auth_back_to_sign_in">ਸਾਈਨ ਇਨ ਉੱਤੇ ਵਾਪਸ ਜਾਓ</string>
+
+    <!-- Reset password -->
+    <string name="auth_reset_title">ਨਵਾਂ ਪਾਸਵਰਡ</string>
+    <string name="auth_reset_subtitle">ਇਸ ਤੋਂ ਤੁਰੰਤ ਬਾਅਦ ਤੁਸੀਂ ਸਾਈਨ ਇਨ ਹੋ ਜਾਓਗੇ</string>
+    <string name="auth_new_password">ਨਵਾਂ ਪਾਸਵਰਡ</string>
+    <string name="auth_confirm_new_password">ਨਵਾਂ ਪਾਸਵਰਡ ਦੁਬਾਰਾ</string>
+    <string name="auth_save_password">ਪਾਸਵਰਡ ਸੇਵ ਕਰੋ</string>
+    <string name="auth_cancel">ਰੱਦ ਕਰੋ</string>
+
+    <!-- Verify email -->
+    <string name="auth_verify_title">ਆਪਣੀ ਈਮੇਲ ਤਸਦੀਕ ਕਰੋ</string>
+    <string name="auth_verify_subtitle">ਸਾਡੇ ਵੱਲੋਂ ਭੇਜਿਆ 6 ਅੰਕਾਂ ਦਾ ਕੋਡ ਦਿਓ</string>
+    <string name="auth_sent_to">ਭੇਜਿਆ ਗਿਆ</string>
+    <string name="auth_verify_button">ਤਸਦੀਕ ਕਰੋ</string>
+    <string name="auth_resend_success">ਨਵਾਂ ਕੋਡ ਭੇਜ ਦਿੱਤਾ ਗਿਆ ਹੈ। ਆਪਣਾ ਇਨਬਾਕਸ ਦੇਖੋ।</string>
+    <string name="auth_resend_code">ਕੋਡ ਦੁਬਾਰਾ ਭੇਜੋ</string>
+    <string name="auth_resend_cooldown">%1$d ਸਕਿੰਟਾਂ ਵਿੱਚ ਦੁਬਾਰਾ ਭੇਜੋ</string>
+
+    <!-- Welcome / onboarding slides -->
+    <string name="welcome_slide1_title">ਮਿੰਟਾਂ ਵਿੱਚ ਕਰਿਆਨਾ</string>
+    <string name="welcome_slide1_body">ਤੁਹਾਡੇ ਨੇੜੇ ਦੀਆਂ ਦੁਕਾਨਾਂ ਤੋਂ ਫਲ, ਦੁੱਧ, ਸਨੈਕਸ ਅਤੇ ਰੋਜ਼ਾਨਾ ਦਾ ਸਮਾਨ — ਕੁਝ ਟੈਪਾਂ ਵਿੱਚ ਆਰਡਰ ਕਰੋ, ਮਿੰਟਾਂ ਵਿੱਚ ਦਰਵਾਜ਼ੇ ਉੱਤੇ ਪਾਓ।</string>
+    <string name="welcome_slide2_title">ਹਰ ਆਰਡਰ ਨੂੰ ਲਾਈਵ ਫਾਲੋ ਕਰੋ</string>
+    <string name="welcome_slide2_body">ਦੇਖੋ ਕਦੋਂ ਦੁਕਾਨ ਪੈਕਿੰਗ ਸ਼ੁਰੂ ਕਰਦੀ ਹੈ, ਕਦੋਂ ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ ਇਸਨੂੰ ਚੁੱਕਦਾ ਹੈ, ਅਤੇ ਉਹ ਨਕਸ਼ੇ ਉੱਤੇ ਕਿੱਥੇ ਹੈ, ਜਦੋਂ ਤੱਕ ਆਰਡਰ ਪਹੁੰਚ ਨਹੀਂ ਜਾਂਦਾ।</string>
+    <string name="welcome_slide3_title">ਜਾਂ ਸਾਡੇ ਨਾਲ ਕਮਾਓ</string>
+    <string name="welcome_slide3_body">ਆਪਣੀ ਦੁਕਾਨ ਦੇ ਉਤਪਾਦ ਸੂਚੀਬੱਧ ਕਰਨ ਲਈ ਵਿਕਰੇਤਾ ਬਣੋ, ਜਾਂ ਆਪਣੇ ਇਲਾਕੇ ਵਿੱਚ ਆਰਡਰ ਲੈਣ ਲਈ ਡਿਲੀਵਰੀ ਪਾਰਟਨਰ ਬਣੋ। ਅਸੀਂ ਤੁਹਾਨੂੰ ਪੂਰੀ ਪ੍ਰਕਿਰਿਆ ਸਮਝਾਵਾਂਗੇ।</string>
+    <string name="welcome_skip">ਛੱਡੋ</string>
+    <string name="welcome_next">ਅੱਗੇ</string>
+    <string name="welcome_get_started">ਸ਼ੁਰੂ ਕਰੋ</string>
+    <string name="welcome_have_account">ਪਹਿਲਾਂ ਤੋਂ ਖਾਤਾ ਹੈ?</string>
+    <string name="welcome_log_in">ਸਾਈਨ ਇਨ</string>
 
     <string name="account_my_orders">ਮੇਰੇ ਆਰਡਰ</string>
     <string name="account_my_orders_sub">ਪੁਰਾਣੇ ਆਰਡਰ ਵੇਖੋ ਅਤੇ ਟਰੈਕ ਕਰੋ</string>

@@ -16,16 +16,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.R
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
+import kotlinx.coroutines.delay
 
 private const val CODE_LENGTH = 6
+private const val RESEND_COOLDOWN_SECONDS = 30
 
 @Composable
 fun VerifyEmailScreen(
@@ -39,10 +43,22 @@ fun VerifyEmailScreen(
     onClearError: () -> Unit
 ) {
     var code by remember { mutableStateOf("") }
+    // Started the moment the person taps resend, not just after it succeeds —
+    // otherwise nothing stopped them tapping it again immediately and hitting
+    // Supabase's own rate limit, which only ever showed up as an error after
+    // the fact.
+    var cooldownSeconds by remember { mutableStateOf(0) }
+
+    LaunchedEffect(cooldownSeconds) {
+        if (cooldownSeconds > 0) {
+            delay(1000)
+            cooldownSeconds -= 1
+        }
+    }
 
     AuthScaffold(
-        title = "Verify your email",
-        subtitle = "Enter the 6-digit code we sent you"
+        title = stringResource(R.string.auth_verify_title),
+        subtitle = stringResource(R.string.auth_verify_subtitle)
     ) {
         Box(
             modifier = Modifier
@@ -63,7 +79,7 @@ fun VerifyEmailScreen(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            text = "Sent to",
+            text = stringResource(R.string.auth_sent_to),
             modifier = Modifier.fillMaxWidth(),
             fontSize = 13.sp,
             color = TextSecondary,
@@ -94,7 +110,7 @@ fun VerifyEmailScreen(
         Spacer(Modifier.height(22.dp))
 
         AuthPrimaryButton(
-            text = "Verify",
+            text = stringResource(R.string.auth_verify_button),
             onClick = { onClearError(); onVerifyCode(code) },
             isLoading = isLoading,
             enabled = code.length == CODE_LENGTH
@@ -102,7 +118,7 @@ fun VerifyEmailScreen(
 
         if (verificationResent) {
             Spacer(Modifier.height(16.dp))
-            AuthInfoBanner(message = "New code sent. Check your inbox.")
+            AuthInfoBanner(message = stringResource(R.string.auth_resend_success))
         }
 
         if (error != null) {
@@ -113,23 +129,33 @@ fun VerifyEmailScreen(
         Spacer(Modifier.height(16.dp))
 
         OutlinedButton(
-            onClick = { onClearError(); onResendEmail() },
+            onClick = {
+                onClearError()
+                onResendEmail()
+                cooldownSeconds = RESEND_COOLDOWN_SECONDS
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            enabled = !isLoading,
+            enabled = !isLoading && cooldownSeconds == 0,
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Teal)
         ) {
             Icon(Icons.Default.Refresh, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Resend code", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = if (cooldownSeconds > 0)
+                    stringResource(R.string.auth_resend_cooldown, cooldownSeconds)
+                else stringResource(R.string.auth_resend_code),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         }
 
         Spacer(Modifier.height(18.dp))
 
         Text(
-            text = "Back to sign in",
+            text = stringResource(R.string.auth_back_to_sign_in),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickableText { onClearError(); onBackToLogin() },

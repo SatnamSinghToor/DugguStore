@@ -12,11 +12,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.duggustore.app.R
 import com.duggustore.app.ui.components.*
 import com.duggustore.app.ui.theme.*
 
@@ -30,10 +34,23 @@ fun ForgotPasswordScreen(
     onClearError: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
+    // Only complain once the field has actually been touched, matching Login/Register.
+    var emailTouched by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    val emailLooksWrong = emailTouched && email.isNotBlank() && !isValidEmail(email)
+    val canSubmit = email.isNotBlank() && !emailLooksWrong
+
+    fun submit() {
+        if (!canSubmit) return
+        focusManager.clearFocus()
+        onClearError()
+        onSendReset(email.trim())
+    }
 
     AuthScaffold(
-        title = if (resetSent) "Check your email" else "Reset Your Duggu Password",
-        subtitle = if (resetSent) "The link is on its way" else null,
+        title = if (resetSent) stringResource(R.string.auth_forgot_sent_title) else stringResource(R.string.auth_forgot_title),
+        subtitle = if (resetSent) stringResource(R.string.auth_forgot_sent_subtitle) else null,
         showLogoName = false
     ) {
         if (resetSent) {
@@ -56,9 +73,7 @@ fun ForgotPasswordScreen(
             Spacer(Modifier.height(20.dp))
 
             Text(
-                text = "If an account exists for that address, we've sent it a link " +
-                       "to set a new password. Open it on this phone and the app will " +
-                       "take you to the next step.",
+                text = stringResource(R.string.auth_forgot_sent_body),
                 modifier = Modifier.fillMaxWidth(),
                 fontSize = 14.sp,
                 color = TextSecondary,
@@ -73,27 +88,31 @@ fun ForgotPasswordScreen(
 
             AuthField(
                 value = email,
-                onValueChange = { email = it; onClearError() },
-                label = "Email",
-                placeholder = "you@example.com",
+                onValueChange = { email = it; emailTouched = true; onClearError() },
+                label = stringResource(R.string.auth_email),
+                placeholder = stringResource(R.string.auth_email_hint),
                 leadingIcon = Icons.Default.Email,
-                keyboardType = KeyboardType.Email
+                keyboardType = KeyboardType.Email,
+                helper = if (emailLooksWrong) stringResource(R.string.auth_err_email_invalid) else null,
+                isError = emailLooksWrong,
+                imeAction = ImeAction.Done,
+                onImeAction = { submit() }
             )
 
             Spacer(Modifier.height(24.dp))
 
             AuthPrimaryButton(
-                text = "Send reset link",
-                onClick = { onClearError(); onSendReset(email) },
+                text = stringResource(R.string.auth_send_reset_link),
+                onClick = { submit() },
                 isLoading = isLoading,
-                enabled = email.isNotBlank()
+                enabled = canSubmit
             )
         }
 
         Spacer(Modifier.height(20.dp))
 
         Text(
-            text = "Back to sign in",
+            text = stringResource(R.string.auth_back_to_sign_in),
             modifier = Modifier
                 .fillMaxWidth()
                 .clickableText { onClearError(); onBackToLogin() },
