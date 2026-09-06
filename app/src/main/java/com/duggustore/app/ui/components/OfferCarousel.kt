@@ -1,7 +1,10 @@
 package com.duggustore.app.ui.components
 
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,16 +22,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.platform.BackgroundRemover
 import com.duggustore.app.ui.theme.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 /** How long each offer holds before the carousel moves on. */
@@ -183,54 +192,52 @@ private fun OfferCard(
             // empty band under the text instead of a snug banner.
             .height(186.dp)
             .clip(RoundedCornerShape(20.dp))
+            // A light wash of the card's colour rather than the colour itself:
+            // the reference banner is a pale tint with dark type on it, and a
+            // fully saturated panel reads far heavier than the rest of the page.
+            .background(color.copy(alpha = 0.14f))
             .clickable { onClick() }
     ) {
         if (featuredImageUrl != null) {
-            // The product's own photo as the card's backdrop, filling it
-            // edge to edge — not a floating cutout beside a flat tint, the
-            // tint itself is glass sitting directly over the product.
-            AsyncImage(
-                model = featuredImageUrl,
+            // The matched product's photo, background cut out on-device so
+            // it doesn't carry a visible white rectangle from the original
+            // shot — sitting under the two decorative discs, not filling
+            // the whole card.
+            CutoutProductImage(
+                imageUrl = featuredImageUrl,
                 contentDescription = featuredProduct?.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            // A wash of the card's colour over the photo rather than beside
-            // it — translucent enough that the product underneath still
-            // reads, opaque enough that the type on top of it still does too.
-            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(color.copy(alpha = 0.55f))
-            )
-        } else {
-            // No matching product: the flat tinted card as before, with two
-            // soft discs bleeding off the right edge so it still has some
-            // depth without needing artwork per offer.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(color.copy(alpha = 0.14f))
-            )
-            Box(
-                modifier = Modifier
-                    .size(112.dp)
-                    .offset(x = 188.dp, y = (-50).dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.16f))
-            )
-            Box(
-                modifier = Modifier
-                    .size(82.dp)
-                    .offset(x = 212.dp, y = 91.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.12f))
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 8.dp, bottom = 4.dp)
+                    .size(128.dp)
             )
         }
 
+        // Two soft discs bleeding off the right edge, so a flat tint still has
+        // some depth without needing artwork per offer. Drawn after the photo
+        // so they sit visibly over it — same position and size regardless of
+        // whether a product is featured.
+        Box(
+            modifier = Modifier
+                .size(112.dp)
+                .offset(x = 188.dp, y = (-50).dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.16f))
+        )
+        Box(
+            modifier = Modifier
+                .size(82.dp)
+                .offset(x = 212.dp, y = 91.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.12f))
+        )
+
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                // Narrowed only when a featured product is actually taking
+                // up the right side — otherwise the text keeps the full
+                // width it always had.
+                .fillMaxWidth(if (featuredImageUrl != null) 0.62f else 1f)
                 .fillMaxHeight()
                 .padding(18.dp),
             verticalArrangement = Arrangement.Center
@@ -291,5 +298,53 @@ private fun OfferCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * Keeps a cutout from being re-segmented every time its card scrolls back
+ * into view — segmentation is on-device but not free, and the result for a
+ * given photo never changes for the lifetime of the app process.
+ */
+private val cutoutCache = mutableMapOf<String, Bitmap?>()
+
+/**
+ * A product photo with its own background cut out on-device (the same ML
+ * Kit subject segmenter used at upload time), so it doesn't carry a visible
+ * white rectangle from the original photo when it sits directly on the
+ * offer card's tint. Shows nothing while the cutout is being computed, and
+ * nothing at all if segmentation fails — a mismatched white box is worse
+ * than no photo.
+ */
+@Composable
+private fun CutoutProductImage(
+    imageUrl: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val cutout by produceState<Bitmap?>(initialValue = cutoutCache[imageUrl], key1 = imageUrl) {
+        if (cutoutCache.containsKey(imageUrl)) return@produceState
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                val request = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .allowHardware(false)
+                    .build()
+                val drawable = context.imageLoader.execute(request).drawable
+                (drawable as? BitmapDrawable)?.bitmap?.let { BackgroundRemover.removeBackground(it) }
+            }.getOrNull()
+        }
+        cutoutCache[imageUrl] = result
+        value = result
+    }
+
+    cutout?.let { bitmap ->
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Fit,
+            modifier = modifier
+        )
     }
 }
