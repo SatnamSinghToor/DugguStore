@@ -18,11 +18,19 @@ data class HomeState(
     val categories: List<Category> = emptyList(),
     /** The store's active coupons, shown on the home carousel. */
     val offers: List<Coupon> = emptyList(),
+    /** The full active catalogue — what Categories, search and category
+     *  filtering all still work against, unpaginated. */
     val products: List<Product> = emptyList(),
     val filteredProducts: List<Product> = emptyList(),
     val selectedCategoryId: String? = null,
     val searchQuery: String = "",
-    val error: String? = null
+    val error: String? = null,
+    /** The default "Popular Deals" browse feed — loaded a page at a time,
+     *  independent of [products]. Only rendered while neither searching
+     *  nor a category is selected. */
+    val feedProducts: List<Product> = emptyList(),
+    val hasMoreFeed: Boolean = true,
+    val isLoadingMoreFeed: Boolean = false
 )
 
 class HomeViewModel : ViewModel() {
@@ -33,6 +41,10 @@ class HomeViewModel : ViewModel() {
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state
 
+    /** Tracked here rather than in HomeState — advancing it isn't itself
+     *  something the UI needs to recompose over. */
+    private var feedPage = 0
+
     init {
         loadData()
     }
@@ -41,29 +53,63 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
 
-            // Fired together rather than awaited one after another — three
+            // Fired together rather than awaited one after another — four
             // sequential round trips left the screen sitting on its empty
             // state for roughly their combined latency, and then had the
             // carousel, categories and the whole product grid all pop in
             // at once, right below the search bar. Started concurrently,
-            // the wait is only as long as the slowest of the three.
+            // the wait is only as long as the slowest of the four.
             val categoriesDeferred = async { categoryRepo.getAllCategories() }
             val productsDeferred = async { productRepo.getAllProducts() }
             val offersDeferred = async { offerRepo.getOffers() }
+            val feedDeferred = async { productRepo.getProductsPage(0, FEED_PAGE_SIZE) }
 
             val categories = categoriesDeferred.await().getOrNull()
             val products = productsDeferred.await().getOrNull()?.filter { it.isActive }
             // A store with no coupons is a normal state, not an error worth
             // showing; the carousel simply does not render.
             val offers = offersDeferred.await().getOrNull()
+            val feed = feedDeferred.await().getOrNull()
 
+            feedPage = 0
             _state.value = _state.value.copy(
                 categories = categories ?: _state.value.categories,
                 products = products ?: _state.value.products,
                 filteredProducts = products ?: _state.value.filteredProducts,
                 offers = offers ?: _state.value.offers,
+                feedProducts = feed ?: _state.value.feedProducts,
+                hasMoreFeed = feed?.let { it.size == FEED_PAGE_SIZE } ?: _state.value.hasMoreFeed,
                 isLoading = false
             )
+        }
+    }
+
+    /**
+     * Appends the next page of the default browse feed. A no-op while a
+     * page is already in flight or the last one came back short of a full
+     * page (nothing further to ask for) — the caller (a LazyColumn item
+     * entering composition near the end of the list) can call this freely
+     * without its own guard.
+     */
+    fun loadMoreFeed() {
+        val current = _state.value
+        if (current.isLoadingMoreFeed || !current.hasMoreFeed) return
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoadingMoreFeed = true)
+            val nextPage = feedPage + 1
+            productRepo.getProductsPage(nextPage, FEED_PAGE_SIZE)
+                .onSuccess { page ->
+                    feedPage = nextPage
+                    _state.value = _state.value.copy(
+                        feedProducts = _state.value.feedProducts + page,
+                        hasMoreFeed = page.size == FEED_PAGE_SIZE,
+                        isLoadingMoreFeed = false
+                    )
+                }
+                .onFailure {
+                    _state.value = _state.value.copy(isLoadingMoreFeed = false)
+                }
         }
     }
 
@@ -94,5 +140,9 @@ class HomeViewModel : ViewModel() {
             filtered = filtered.filter { it.categoryId == state.selectedCategoryId }
         }
         _state.value = _state.value.copy(filteredProducts = filtered)
+    }
+
+    private companion object {
+        const val FEED_PAGE_SIZE = 20
     }
 }

@@ -52,6 +52,28 @@ class ProductRepository {
         }
     }
 
+    /**
+     * One page of the active catalogue, newest first, for Home's own
+     * infinite-scroll feed — everything else (Categories, search, product
+     * lookups by id) still goes through [getAllProducts], which this
+     * deliberately doesn't touch or replace.
+     */
+    suspend fun getProductsPage(page: Int, pageSize: Int): Result<List<Product>> {
+        return try {
+            val list = SupabaseService.selectPage(
+                table = "products",
+                token = token(),
+                eqFilters = mapOf("is_active" to "true"),
+                orderBy = "created_at.desc",
+                limit = pageSize,
+                offset = page * pageSize
+            )
+            Result.success(list.map { json.decodeFromString(Product.serializer(), it.toString()) })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getProductsByCategory(categoryId: String): Result<List<Product>> {
         return try {
             val list = SupabaseService.select("products", token(), mapOf("category_id" to categoryId))

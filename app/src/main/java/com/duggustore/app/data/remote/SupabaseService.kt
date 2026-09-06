@@ -283,6 +283,39 @@ object SupabaseService {
         return parseJsonArray(executeRequest(request))
     }
 
+    /**
+     * A windowed read, for a caller that wants one page of a table rather
+     * than everything at once. Each query-string piece is built and encoded
+     * on its own, then joined with plain "&"s — unlike [select]'s `select`
+     * parameter, nothing here risks encoding a literal "&" or "=" out of a
+     * structural separator and into an opaque value PostgREST can't parse.
+     */
+    suspend fun selectPage(
+        table: String,
+        token: String? = null,
+        select: String = "*",
+        eqFilters: Map<String, String> = emptyMap(),
+        /** Matched with PostgREST's `ilike`, wrapped in "%…%" — a substring search, not an exact one. */
+        containsFilters: Map<String, String> = emptyMap(),
+        orderBy: String? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): List<JsonObject> {
+        val parts = mutableListOf("select=${encode(select)}")
+        eqFilters.forEach { (column, value) -> parts += "$column=eq.${encode(value)}" }
+        containsFilters.forEach { (column, value) -> parts += "$column=ilike.${encode("%$value%")}" }
+        orderBy?.let { parts += "order=${encode(it)}" }
+        limit?.let { parts += "limit=$it" }
+        offset?.let { parts += "offset=$it" }
+
+        val request = Request.Builder()
+            .url("$BASE_URL/rest/v1/$table?${parts.joinToString("&")}")
+            .get()
+            .apply { headers(token).forEach { (k, v) -> addHeader(k, v) } }
+            .build()
+        return parseJsonArray(executeRequest(request))
+    }
+
     suspend fun insert(table: String, body: String, token: String? = null): JsonObject {
         val request = Request.Builder()
             .url("$BASE_URL/rest/v1/$table")

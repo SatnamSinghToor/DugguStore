@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
@@ -72,7 +74,14 @@ fun HomeScreen(
     isLoading: Boolean = false,
     error: String? = null,
     onRefresh: () -> Unit = {},
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
+    // The default browse feed is paginated independently of filteredProducts
+    // (which stays the full, in-memory-filtered list search and category
+    // selection already relied on) — only used while neither is active.
+    feedProducts: List<Product> = emptyList(),
+    hasMoreFeed: Boolean = false,
+    isLoadingMoreFeed: Boolean = false,
+    onLoadMoreFeed: () -> Unit = {}
 ) {
     // Both sheets are owned here so the header can stay a plain row of
     // controls and the sheets sit above the whole screen.
@@ -234,15 +243,12 @@ fun HomeScreen(
             } else if (isLoading && categories.isEmpty() && filteredProducts.isEmpty()) {
                 // Fills the same weight(1f) area the list below would, so
                 // there is no jump in the page's overall height once real
-                // content replaces it — a small "nothing here" block that
-                // then suddenly grows into a full page, right below the
-                // search bar, was the actual first-load stutter this
-                // screen used to show.
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Teal)
+                // content replaces it. Shaped like the grid it's standing in
+                // for, rather than a bare spinner, so the first frame already
+                // reads as "a product grid is coming" instead of a blank
+                // page with a wait icon in the middle of it.
+                Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    ProductGridSkeleton()
                 }
             } else {
             LazyColumn(
@@ -255,6 +261,15 @@ fun HomeScreen(
             // set of search results made it look like the results were
             // mixed in with the categories instead of being their own list.
             val isSearching = searchQuery.isNotBlank()
+
+            // Only the plain, unfiltered "Popular Deals" view is paginated —
+            // search and category selection still filter the full catalogue
+            // in filteredProducts, exactly as before this existed. Building
+            // "load more of a filtered/searched set" server-side is a bigger
+            // change than what was asked for here, so it's left as-is rather
+            // than half-built.
+            val isBrowsing = !isSearching && selectedCategoryId == null
+            val gridProducts = if (isBrowsing) feedProducts else filteredProducts
 
             if (offers.isNotEmpty() && !isSearching) {
                 item {
@@ -312,7 +327,7 @@ fun HomeScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            if (filteredProducts.isEmpty()) {
+            if (gridProducts.isEmpty()) {
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -333,7 +348,7 @@ fun HomeScreen(
             } else {
                 // Two per row, built manually so the whole page stays one scrolling
                 // LazyColumn rather than nesting a grid inside it.
-                items(filteredProducts.chunked(2)) { pair ->
+                items(gridProducts.chunked(2)) { pair ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -352,6 +367,25 @@ fun HomeScreen(
                             )
                         }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+
+                // A plain item at the tail of the feed rather than a scroll
+                // listener — LazyColumn only composes what's near the
+                // viewport, so this only enters composition (and fires) once
+                // the user has actually scrolled close to the end of what's
+                // loaded so far.
+                if (isBrowsing && hasMoreFeed) {
+                    item {
+                        LaunchedEffect(gridProducts.size) { onLoadMoreFeed() }
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isLoadingMoreFeed) {
+                                CircularProgressIndicator(color = Teal, modifier = Modifier.size(28.dp))
+                            }
+                        }
                     }
                 }
             }

@@ -523,7 +523,11 @@ fun AppNavGraph(
                 isLoading = homeState.isLoading,
                 error = homeState.error,
                 onRefresh = { homeViewModel.loadData() },
-                onRetry = { homeViewModel.loadData() }
+                onRetry = { homeViewModel.loadData() },
+                feedProducts = homeState.feedProducts,
+                hasMoreFeed = homeState.hasMoreFeed,
+                isLoadingMoreFeed = homeState.isLoadingMoreFeed,
+                onLoadMoreFeed = { homeViewModel.loadMoreFeed() }
             )
 
             LaunchedEffect(authState.user) {
