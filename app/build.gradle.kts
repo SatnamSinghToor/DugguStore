@@ -43,6 +43,19 @@ android {
                 keyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD")
             }
         }
+        // Committed rather than left to Gradle's own auto-generated one,
+        // which lives outside the repo (~/.android/debug.keystore) and is
+        // unique per machine — on a CI runner that's a fresh keystore every
+        // build, so each new debug APK has a different signature and won't
+        // install over the last one without an uninstall first, wiping all
+        // local app data. A shared, checked-in key keeps every debug build
+        // signature-compatible everywhere.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {

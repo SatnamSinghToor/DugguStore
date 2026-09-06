@@ -19,6 +19,12 @@ local.properties
 *.keystore
 /keystore/
 
+# ...except the debug keystore, which is deliberately shared (see the
+# comment on its signingConfig in app/build.gradle.kts) so every debug
+# build, on any machine or CI runner, carries the same signature and
+# installs over the last one instead of demanding an uninstall first.
+!app/debug.keystore
+
 # Environment variables — never commit secrets
 .env.local
 .env*.local
