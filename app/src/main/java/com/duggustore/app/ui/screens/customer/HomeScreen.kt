@@ -80,7 +80,10 @@ fun HomeScreen(
     feedProducts: List<Product> = emptyList(),
     hasMoreFeed: Boolean = false,
     isLoadingMoreFeed: Boolean = false,
-    onLoadMoreFeed: () -> Unit = {}
+    onLoadMoreFeed: () -> Unit = {},
+    // The full catalogue, separate from feedProducts above — used only to
+    // let the offer carousel feature a matching product on its own card.
+    allProducts: List<Product> = emptyList()
 ) {
     // Both sheets are owned here so the header can stay a plain row of
     // controls and the sheets sit above the whole screen.
@@ -266,7 +269,8 @@ fun HomeScreen(
                     Spacer(Modifier.height(10.dp))
                     OfferCarousel(
                         offers = offers,
-                        onOfferClick = onOfferClick
+                        onOfferClick = onOfferClick,
+                        products = allProducts
                     )
                 }
             }

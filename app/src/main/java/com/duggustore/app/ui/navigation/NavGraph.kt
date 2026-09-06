@@ -526,7 +526,8 @@ fun AppNavGraph(
                 feedProducts = homeState.feedProducts,
                 hasMoreFeed = homeState.hasMoreFeed,
                 isLoadingMoreFeed = homeState.isLoadingMoreFeed,
-                onLoadMoreFeed = { homeViewModel.loadMoreFeed() }
+                onLoadMoreFeed = { homeViewModel.loadMoreFeed() },
+                allProducts = homeState.products
             )
 
             LaunchedEffect(authState.user) {

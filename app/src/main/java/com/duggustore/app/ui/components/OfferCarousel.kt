@@ -19,11 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.duggustore.app.data.model.Coupon
+import com.duggustore.app.data.model.Product
 import com.duggustore.app.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -43,7 +46,11 @@ private const val AUTO_ADVANCE_MS = 4000L
 fun OfferCarousel(
     offers: List<Coupon>,
     onOfferClick: (Coupon) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // The full catalogue, not just whatever page of it Home currently has
+    // loaded — a discount worth featuring shouldn't depend on how far the
+    // customer happens to have scrolled.
+    products: List<Product> = emptyList()
 ) {
     if (offers.isEmpty()) return
 
@@ -84,6 +91,7 @@ fun OfferCarousel(
             OfferCard(
                 coupon = offers[page],
                 color = CategoryColors[page.mod(CategoryColors.size)],
+                products = products,
                 modifier = Modifier.scale(scale),
                 onClick = { onOfferClick(offers[page]) }
             )
@@ -121,8 +129,19 @@ private fun OfferCard(
     coupon: Coupon,
     color: Color,
     modifier: Modifier = Modifier,
+    products: List<Product> = emptyList(),
     onClick: () -> Unit
 ) {
+    // A product whose own discount meets or beats this offer's headline
+    // percentage stands in for it, so the card shows an actual item rather
+    // than only the discs below — picked once per offer (and re-picked only
+    // if the offer or the catalogue itself changes) rather than re-rolled on
+    // every recomposition, which would make it flicker between candidates.
+    val featuredProduct = remember(coupon.id, products) {
+        if (coupon.discountPercent <= 0) null
+        else products.filter { discountPercent(it) >= coupon.discountPercent }.randomOrNull()
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -140,7 +159,9 @@ private fun OfferCard(
     ) {
         // Two soft discs bleeding off the right edge, so a flat tint still has
         // some depth without needing artwork per offer. Scaled down to match
-        // the shorter card.
+        // the shorter card. Doubles as the backdrop a featured product sits
+        // on below, standing in for the plain white card it would otherwise
+        // show up on.
         Box(
             modifier = Modifier
                 .size(112.dp)
@@ -156,9 +177,25 @@ private fun OfferCard(
                 .background(color.copy(alpha = 0.12f))
         )
 
+        featuredProduct?.images()?.firstOrNull()?.let { imageUrl ->
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = featuredProduct.name,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 8.dp, bottom = 4.dp)
+                    .size(128.dp)
+            )
+        }
+
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                // Narrowed only when a featured product is actually taking
+                // up the right side — otherwise the text keeps the full
+                // width it always had.
+                .fillMaxWidth(if (featuredProduct != null) 0.62f else 1f)
+                .fillMaxHeight()
                 .padding(18.dp),
             verticalArrangement = Arrangement.Center
         ) {
