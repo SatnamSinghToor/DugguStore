@@ -303,9 +303,13 @@ fun AppNavGraph(
             .consumeWindowInsets(PaddingValues(bottom = barSpace)),
         navController = navController,
         startDestination = startDestination,
+        // Home's bottom-bar tap goes through popBackStack (see the onSelect
+        // handler below) rather than navigate() — pop and forward transitions
+        // are identical here so that reaching a screen never looks different
+        // depending on which of the two calls got it there.
         enterTransition = { fadeIn(tween(AppSlideDurationMs)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(AppSlideDurationMs)) },
         exitTransition = { fadeOut(tween(AppSlideDurationMs)) },
-        popEnterTransition = { fadeIn(tween(AppSlideDurationMs)) },
+        popEnterTransition = { fadeIn(tween(AppSlideDurationMs)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(AppSlideDurationMs)) },
         popExitTransition = { fadeOut(tween(AppSlideDurationMs)) }
     ) {
         composable(Screen.Welcome.route) {
