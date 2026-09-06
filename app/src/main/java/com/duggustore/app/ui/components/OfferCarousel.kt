@@ -7,7 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -186,30 +185,16 @@ private fun discColorsFor(tint: Color): List<Color> {
     return List(4) { candidates[(start + it) % candidates.size] }
 }
 
-/**
- * One disc in the decorative cluster, given a soap-bubble look — a thin
- * light rim and a small highlight near the top-left — rather than a flat
- * filled circle.
- */
+/** One flat, plain disc in the decorative cluster — no rim, no highlight. */
 @Composable
-private fun BubbleDisc(size: Dp, offsetX: Dp, offsetY: Dp, color: Color, alpha: Float) {
+private fun DecorativeDisc(size: Dp, offsetX: Dp, offsetY: Dp, color: Color, alpha: Float) {
     Box(
         modifier = Modifier
             .size(size)
             .offset(x = offsetX, y = offsetY)
             .clip(CircleShape)
             .background(color.copy(alpha = alpha))
-            .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-    ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(size * 0.14f)
-                .size(size * 0.26f)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.4f))
-        )
-    }
+    )
 }
 
 @Composable
@@ -246,19 +231,21 @@ private fun OfferCard(banner: PromoBanner, modifier: Modifier = Modifier) {
             )
         }
 
-        // A cluster of soft, bubble-like discs, in more than one colour so
-        // it reads as a little collage rather than one flat tint — and
-        // never in the card's own tint, so no disc just blends into the
-        // background it's sitting on. The largest anchors the top-right
-        // corner (bleeding off both edges); the other three sit lower and
-        // further left, squarely over the photo rather than only grazing
-        // its top. Drawn after the photo so they sit on top of it, same for
-        // every card regardless of whether a product is featured.
+        // A cluster of flat discs, in more than one colour so it reads as a
+        // little collage rather than one flat tint — and never in the
+        // card's own tint, so no disc just blends into the background it's
+        // sitting on. Each one is placed with enough of a gap from the
+        // others that the cluster reads as spread out rather than one blob
+        // in a single corner. The largest anchors the top-right corner
+        // (bleeding off both edges); the rest step diagonally down and
+        // left across the photo. Drawn after the photo so they sit on top
+        // of it, same for every card regardless of whether a product is
+        // featured.
         val discColors = remember(banner.tint) { discColorsFor(banner.tint) }
-        BubbleDisc(size = 160.dp, offsetX = 250.dp, offsetY = (-70).dp, color = discColors[0], alpha = 0.14f)
-        BubbleDisc(size = 130.dp, offsetX = 215.dp, offsetY = 70.dp, color = discColors[1], alpha = 0.16f)
-        BubbleDisc(size = 100.dp, offsetX = 228.dp, offsetY = 125.dp, color = discColors[2], alpha = 0.18f)
-        BubbleDisc(size = 70.dp, offsetX = 185.dp, offsetY = 150.dp, color = discColors[3], alpha = 0.16f)
+        DecorativeDisc(size = 150.dp, offsetX = 235.dp, offsetY = (-60).dp, color = discColors[0], alpha = 0.16f)
+        DecorativeDisc(size = 95.dp, offsetX = 155.dp, offsetY = 30.dp, color = discColors[1], alpha = 0.18f)
+        DecorativeDisc(size = 75.dp, offsetX = 245.dp, offsetY = 100.dp, color = discColors[2], alpha = 0.20f)
+        DecorativeDisc(size = 55.dp, offsetX = 185.dp, offsetY = 140.dp, color = discColors[3], alpha = 0.18f)
 
         banner.cornerTag?.let { tag ->
             Surface(
