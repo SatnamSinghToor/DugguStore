@@ -35,6 +35,14 @@ val TextSecondary = Color(0xFF6B7785)
 val TextLight = Color(0xFFA3ACB9)
 val BorderGray = Color(0xFFE8EBEF)
 
+// ── Veg / non-veg mark ───────────────────────────────────────────────────
+// The colours on the standard Indian food mark — a green square/dot for
+// veg, a brown/maroon square/triangle for non-veg — kept distinct from the
+// app's own brand and status colours so the mark reads as that convention
+// rather than as one more accent.
+val VegGreen = Color(0xFF0F8A3C)
+val NonVegBrown = Color(0xFF7B341E)
+
 // ── Status ───────────────────────────────────────────────────────────────
 val SuccessGreen = Color(0xFF22C55E)
 val WarningYellow = Color(0xFFF59E0B)

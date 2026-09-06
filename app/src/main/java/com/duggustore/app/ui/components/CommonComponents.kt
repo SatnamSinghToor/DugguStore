@@ -1,8 +1,12 @@
 package com.duggustore.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -13,12 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -487,6 +493,45 @@ fun SectionHeader(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
+            }
+        }
+    }
+}
+
+/**
+ * The standard Indian veg/non-veg mark: a square outline holding a green
+ * dot for veg or a brown/maroon triangle for non-veg. Callers decide
+ * whether to show it at all — [Product.isVeg] is null for anything that
+ * isn't food, and this composable always draws one or the other.
+ */
+@Composable
+fun VegNonVegMark(isVeg: Boolean, modifier: Modifier = Modifier, size: Dp = 14.dp) {
+    val markColor = if (isVeg) VegGreen else NonVegBrown
+    Box(
+        modifier = modifier
+            .size(size)
+            .border(BorderStroke(1.dp, markColor), RoundedCornerShape(2.dp))
+            .padding(2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isVeg) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(0.55f)
+                    .clip(CircleShape)
+                    .background(markColor)
+            )
+        } else {
+            Canvas(modifier = Modifier.fillMaxSize(0.75f)) {
+                // `size` here is the DrawScope's own canvas size (already in
+                // px) — not the outer badge-size parameter, which is a Dp.
+                val path = Path().apply {
+                    moveTo(size.width / 2f, 0f)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                    close()
+                }
+                drawPath(path, color = markColor)
             }
         }
     }

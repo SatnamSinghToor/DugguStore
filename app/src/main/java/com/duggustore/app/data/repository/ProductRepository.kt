@@ -5,6 +5,7 @@ import com.duggustore.app.data.remote.SessionManager
 import com.duggustore.app.data.remote.SupabaseService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -35,6 +36,11 @@ class ProductRepository {
         put("stock", product.stock)
         put("unit", product.unit)
         put("is_active", product.isActive)
+        // Sent explicitly, null included — unlike discount_price/image_url
+        // above, this one has a real "clear it back to not-applicable"
+        // state a seller can pick, and an omitted key would leave a PATCH
+        // unable to ever undo a previous true/false.
+        put("is_veg", product.isVeg?.let { JsonPrimitive(it) } ?: JsonNull)
     }
 
     suspend fun getAllProducts(): Result<List<Product>> {

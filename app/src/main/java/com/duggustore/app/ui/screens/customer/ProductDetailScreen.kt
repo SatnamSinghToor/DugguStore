@@ -34,6 +34,7 @@ import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Review
 import com.duggustore.app.ui.components.ProductImageCarousel
 import com.duggustore.app.ui.components.QuantityStepperRow
+import com.duggustore.app.ui.components.VegNonVegMark
 import com.duggustore.app.ui.components.discountPercent
 import com.duggustore.app.ui.components.trimAmount
 import com.duggustore.app.ui.theme.*
@@ -153,6 +154,9 @@ private fun ProductSheet(
         color = SurfaceWhite
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
+            product.isVeg?.let { isVeg ->
+                VegNonVegMark(isVeg = isVeg, size = 16.dp, modifier = Modifier.padding(bottom = 6.dp))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = product.name,

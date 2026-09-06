@@ -73,6 +73,9 @@ fun AddEditProductScreen(
     var photos by remember(product) { mutableStateOf(product?.images() ?: emptyList()) }
     var categoryId by remember(product) { mutableStateOf(product?.categoryId ?: "") }
     var isActive by remember(product) { mutableStateOf(product?.isActive ?: true) }
+    // Null ("not food") is the default — most grocery items don't need this
+    // mark at all, so nothing is pre-selected for a brand-new product.
+    var isVeg by remember(product) { mutableStateOf(product?.isVeg) }
     var localError by remember { mutableStateOf<String?>(null) }
     var uploadingImage by remember { mutableStateOf(false) }
     var showSourceMenu by remember { mutableStateOf(false) }
@@ -323,6 +326,38 @@ fun AddEditProductScreen(
 
             Spacer(Modifier.height(18.dp))
 
+            Text(
+                "Veg / non-veg",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                VegChoiceChip(
+                    label = "Not food",
+                    selected = isVeg == null,
+                    onClick = { isVeg = null },
+                    modifier = Modifier.weight(1f)
+                )
+                VegChoiceChip(
+                    label = "Veg",
+                    selected = isVeg == true,
+                    onClick = { isVeg = true },
+                    dotColor = VegGreen,
+                    modifier = Modifier.weight(1f)
+                )
+                VegChoiceChip(
+                    label = "Non-veg",
+                    selected = isVeg == false,
+                    onClick = { isVeg = false },
+                    dotColor = NonVegBrown,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(18.dp))
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -414,7 +449,8 @@ fun AddEditProductScreen(
                                     imageUrls = photos,
                                     stock = stock.toIntOrNull() ?: 0,
                                     unit = unit.trim().ifBlank { "pcs" },
-                                    isActive = isActive
+                                    isActive = isActive,
+                                    isVeg = isVeg
                                 )
                             )
                         }
@@ -693,6 +729,45 @@ private fun CategoryDropdown(
                     )
                 }
             }
+        }
+    }
+}
+
+/** One of the three veg/non-veg options — a plain pill when unselected, filled once picked. */
+@Composable
+private fun VegChoiceChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    dotColor: Color? = null
+) {
+    Surface(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) TealSurface else SurfaceWhite,
+        border = BorderStroke(1.dp, if (selected) Teal else BorderGray)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (dotColor != null) {
+                Box(
+                    modifier = Modifier
+                        .size(9.dp)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                )
+                Spacer(Modifier.width(6.dp))
+            }
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (selected) TealDark else TextSecondary
+            )
         }
     }
 }

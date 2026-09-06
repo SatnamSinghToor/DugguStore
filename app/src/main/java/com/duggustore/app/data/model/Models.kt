@@ -104,6 +104,10 @@ data class Product(
     val stock: Int = 0,
     val unit: String = "pcs",
     @SerialName("is_active") val isActive: Boolean = true,
+    // Null for anything that isn't food at all (a cleaning product, a
+    // shampoo) — the veg/non-veg mark only shows up once a seller has
+    // actually tagged a product one way or the other.
+    @SerialName("is_veg") val isVeg: Boolean? = null,
     @SerialName("created_at") val createdAt: String = ""
 ) {
     fun effectivePrice(): Double = discountPrice ?: price

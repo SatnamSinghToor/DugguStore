@@ -445,6 +445,9 @@ fun StoreProductCard(
             // added up across the card into real, visible dead space. Every
             // one now sets a lineHeight that actually matches its fontSize.
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp)) {
+                product.isVeg?.let { isVeg ->
+                    VegNonVegMark(isVeg = isVeg, modifier = Modifier.padding(bottom = 4.dp))
+                }
                 Text(
                     text = product.name,
                     fontSize = 15.sp,
