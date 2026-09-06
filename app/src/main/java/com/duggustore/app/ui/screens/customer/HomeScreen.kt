@@ -620,13 +620,15 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
             )
             .drawBehind {
                 // Both the curve and the label are inset from the row's edges
-                // by fixed amounts (8dp here, 18dp of padding below), so the
-                // raised segment always clears the top of the text instead of
-                // cutting through it — and stays clear at any font scale,
-                // which a height fraction wouldn't.
+                // by fixed amounts — the curve 8dp vertically and 20dp
+                // horizontally, the label 18dp/28dp — so the raised segment
+                // clears the label on all four sides instead of cutting
+                // through it. Fixed insets rather than fractions of the tab,
+                // so the gap holds for a label of any length and at any font
+                // scale; the fraction is only a floor for a degenerate width.
                 val bumpTopY = 8.dp.toPx()
                 val baselineY = size.height - 8.dp.toPx()
-                val curveRun = (size.width * 0.4f).coerceAtMost(30.dp.toPx())
+                val curveRun = 20.dp.toPx().coerceAtMost(size.width * 0.4f)
                 val path = Path().apply {
                     if (selected) {
                         moveTo(0f, baselineY)
@@ -652,7 +654,7 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
                     style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
-            .padding(horizontal = 16.dp, vertical = 18.dp)
+            .padding(horizontal = 28.dp, vertical = 18.dp)
     ) {
         Text(
             text = label.uppercase(),
