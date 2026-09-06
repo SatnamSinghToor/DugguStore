@@ -2,6 +2,7 @@ package com.duggustore.app.ui.screens.admin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.duggustore.app.data.model.Campaign
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.Product
@@ -41,14 +43,17 @@ import com.duggustore.app.ui.theme.*
 /**
  * Everything that shapes what customers browse: the product catalog itself
  * (moderation only — sellers own creation/editing), the categories it's
- * organised under, and the coupons that discount it. Three segments rather
- * than three bottom-bar tabs, same pattern as Approvals' seller/delivery split.
+ * organised under, the coupons that discount it, and the seasonal campaigns
+ * that point at a category without a discount attached. Four segments
+ * rather than four bottom-bar tabs, same pattern as Approvals' seller/
+ * delivery split.
  */
 @Composable
 fun AdminCatalogScreen(
     products: List<Product>,
     categories: List<Category>,
     coupons: List<Coupon>,
+    campaigns: List<Campaign>,
     isSaving: Boolean,
     catalogError: String?,
     onClearError: () -> Unit,
@@ -58,22 +63,31 @@ fun AdminCatalogScreen(
     onDeleteCategory: (String) -> Unit,
     onSaveCoupon: (Coupon) -> Unit,
     onToggleCouponActive: (Coupon) -> Unit,
-    onDeleteCoupon: (String) -> Unit
+    onDeleteCoupon: (String) -> Unit,
+    onSaveCampaign: (Campaign, Int) -> Unit,
+    onToggleCampaignActive: (Campaign) -> Unit,
+    onDeleteCampaign: (String) -> Unit
 ) {
     var tab by rememberSaveable { mutableStateOf(0) }
     var editingCategory by remember { mutableStateOf<Category?>(null) }
     var showCategoryForm by remember { mutableStateOf(false) }
     var editingCoupon by remember { mutableStateOf<Coupon?>(null) }
     var showCouponForm by remember { mutableStateOf(false) }
+    var editingCampaign by remember { mutableStateOf<Campaign?>(null) }
+    var showCampaignForm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             CatalogTabChip("Products (${products.size})", tab == 0) { tab = 0 }
             CatalogTabChip("Categories (${categories.size})", tab == 1) { tab = 1 }
             CatalogTabChip("Coupons (${coupons.size})", tab == 2) { tab = 2 }
+            CatalogTabChip("Campaigns (${campaigns.size})", tab == 3) { tab = 3 }
         }
 
         if (catalogError != null) {
@@ -144,7 +158,7 @@ fun AdminCatalogScreen(
                     AddFab(onClick = { editingCategory = null; showCategoryForm = true })
                 }
             }
-            else -> {
+            2 -> {
                 Box(modifier = Modifier.weight(1f)) {
                     if (coupons.isEmpty()) {
                         DashboardEmpty(
@@ -170,6 +184,33 @@ fun AdminCatalogScreen(
                     AddFab(onClick = { editingCoupon = null; showCouponForm = true })
                 }
             }
+            else -> {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (campaigns.isEmpty()) {
+                        DashboardEmpty(
+                            icon = Icons.Default.LocalOffer,
+                            title = "No campaigns",
+                            subtitle = "Add a seasonal push to point customers at a category"
+                        )
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(campaigns, key = { it.id }) { campaign ->
+                                AdminCampaignRow(
+                                    campaign = campaign,
+                                    categoryName = categories.firstOrNull { it.id == campaign.categoryId }?.name,
+                                    onEdit = { editingCampaign = campaign; showCampaignForm = true },
+                                    onToggleActive = { onToggleCampaignActive(campaign) },
+                                    onDelete = { onDeleteCampaign(campaign.id) }
+                                )
+                            }
+                        }
+                    }
+                    AddFab(onClick = { editingCampaign = null; showCampaignForm = true })
+                }
+            }
         }
     }
 
@@ -193,6 +234,19 @@ fun AdminCatalogScreen(
             onSave = { coupon ->
                 onSaveCoupon(coupon)
                 showCouponForm = false
+            }
+        )
+    }
+
+    if (showCampaignForm) {
+        CampaignFormDialog(
+            existing = editingCampaign,
+            categories = categories,
+            isSaving = isSaving,
+            onDismiss = { showCampaignForm = false },
+            onSave = { campaign, durationDays ->
+                onSaveCampaign(campaign, durationDays)
+                showCampaignForm = false
             }
         )
     }
@@ -342,6 +396,46 @@ private fun AdminCouponRow(
             if (coupon.expiryLabel.isNotBlank()) {
                 Text(coupon.expiryLabel, fontSize = 11.sp, color = TextLight)
             }
+        }
+    }
+}
+
+@Composable
+private fun AdminCampaignRow(
+    campaign: Campaign,
+    categoryName: String?,
+    onEdit: () -> Unit,
+    onToggleActive: () -> Unit,
+    onDelete: () -> Unit
+) {
+    DashboardPanel {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val tint = runCatching { Color(android.graphics.Color.parseColor(campaign.tintHex)) }.getOrDefault(Orange)
+                Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(tint))
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(campaign.label, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(categoryName ?: "No category linked", fontSize = 12.sp, color = TextSecondary)
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, "Edit", tint = TextSecondary, modifier = Modifier.size(19.dp))
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, "Delete", tint = Coral, modifier = Modifier.size(19.dp))
+                }
+                Switch(
+                    checked = campaign.isActive,
+                    onCheckedChange = { onToggleActive() },
+                    colors = SwitchDefaults.colors(checkedTrackColor = Teal)
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "\"${campaign.ctaLabel}\" · runs ${campaign.startsAt.take(10)} to ${campaign.endsAt.take(10)}",
+                fontSize = 12.sp,
+                color = TextLight
+            )
         }
     }
 }
@@ -512,6 +606,108 @@ private fun CouponFormDialog(
                             expiryLabel = expiryLabel.trim(),
                             isActive = existing?.isActive ?: true
                         )
+                    )
+                }
+            ) { Text("Save", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+/** [durationDays] always runs the campaign starting now — editing an existing one restarts its window rather than adjusting a fixed range, which keeps this form to one field instead of two date pickers the app has no component for anywhere else. */
+@Composable
+private fun CampaignFormDialog(
+    existing: Campaign?,
+    categories: List<Category>,
+    isSaving: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (Campaign, Int) -> Unit
+) {
+    var label by remember { mutableStateOf(existing?.label.orEmpty()) }
+    var tintHex by remember { mutableStateOf(existing?.tintHex ?: "#F5A623") }
+    var categoryId by remember { mutableStateOf(existing?.categoryId) }
+    var ctaLabel by remember { mutableStateOf(existing?.ctaLabel ?: "SHOP NOW") }
+    var durationDays by remember { mutableStateOf("7") }
+    var showCategoryMenu by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (existing == null) "Add campaign" else "Renew campaign") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    label = { Text("Label, e.g. \"Diwali Dhamaka\"") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = tintHex,
+                    onValueChange = { tintHex = it },
+                    label = { Text("Tint hex, e.g. #F5A623") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box {
+                    OutlinedTextField(
+                        value = categories.firstOrNull { it.id == categoryId }?.name ?: "No category",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().clickable { showCategoryMenu = true }
+                    )
+                    // A transparent click-catcher on top of the read-only field —
+                    // OutlinedTextField itself doesn't take a click when readOnly.
+                    Box(modifier = Modifier.matchParentSize().clickable { showCategoryMenu = true })
+                    DropdownMenu(expanded = showCategoryMenu, onDismissRequest = { showCategoryMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("No category") },
+                            onClick = { categoryId = null; showCategoryMenu = false }
+                        )
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name) },
+                                onClick = { categoryId = category.id; showCategoryMenu = false }
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = ctaLabel,
+                    onValueChange = { ctaLabel = it.uppercase() },
+                    label = { Text("Button text, e.g. SHOP NOW") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = durationDays,
+                    onValueChange = { input -> if (input.all { it.isDigit() }) durationDays = input },
+                    label = { Text("Runs for how many days, starting now") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = label.isNotBlank() && (durationDays.toIntOrNull() ?: 0) > 0 && !isSaving,
+                onClick = {
+                    onSave(
+                        Campaign(
+                            id = existing?.id.orEmpty(),
+                            label = label.trim(),
+                            tintHex = tintHex.trim().ifBlank { "#F5A623" },
+                            categoryId = categoryId,
+                            ctaLabel = ctaLabel.trim().ifBlank { "SHOP NOW" },
+                            isActive = existing?.isActive ?: true
+                        ),
+                        durationDays.toIntOrNull() ?: 7
                     )
                 }
             ) { Text("Save", fontWeight = FontWeight.Bold) }

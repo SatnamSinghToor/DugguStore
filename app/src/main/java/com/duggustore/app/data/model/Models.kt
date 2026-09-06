@@ -389,6 +389,40 @@ data class Coupon(
     @SerialName("is_active") val isActive: Boolean = true
 )
 
+/** An admin-run seasonal push (e.g. "Diwali Dhamaka") pointing at one category, running for a fixed window rather than tied to a discount. */
+@Serializable
+data class Campaign(
+    val id: String = "",
+    val label: String = "",
+    @SerialName("tint_hex") val tintHex: String = "#F5A623",
+    @SerialName("category_id") val categoryId: String? = null,
+    @SerialName("cta_label") val ctaLabel: String = "SHOP NOW",
+    @SerialName("starts_at") val startsAt: String = "",
+    @SerialName("ends_at") val endsAt: String = "",
+    @SerialName("is_active") val isActive: Boolean = true,
+    @SerialName("created_at") val createdAt: String = ""
+)
+
+/**
+ * A seller-paid placement on the home rail — requested by the seller, only
+ * live once an admin approves it. [startsAt]/[endsAt] are null until then:
+ * the window is stamped at approval time so review delay never eats into
+ * the [durationDays] the seller asked for.
+ */
+@Serializable
+data class SponsoredSlot(
+    val id: String = "",
+    @SerialName("seller_id") val sellerId: String = "",
+    val headline: String = "",
+    val message: String = "",
+    @SerialName("duration_days") val durationDays: Int = 7,
+    @SerialName("starts_at") val startsAt: String? = null,
+    @SerialName("ends_at") val endsAt: String? = null,
+    val status: String = "PENDING",
+    @SerialName("rejection_reason") val rejectionReason: String? = null,
+    @SerialName("created_at") val createdAt: String = ""
+)
+
 @Serializable
 data class ProductResponse(val products: List<Product> = emptyList())
 

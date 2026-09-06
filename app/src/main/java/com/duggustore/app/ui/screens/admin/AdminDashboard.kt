@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.duggustore.app.data.model.Campaign
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.DeliveryPartner
@@ -40,6 +41,7 @@ import com.duggustore.app.data.model.OrderIssue
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Seller
 import com.duggustore.app.data.model.SellerDocument
+import com.duggustore.app.data.model.SponsoredSlot
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.data.model.VerificationStatus
 import com.duggustore.app.ui.components.*
@@ -91,6 +93,7 @@ fun AdminDashboard(
     onResolveIssue: (issueId: String, approve: Boolean, refundAmount: Int) -> Unit,
     categories: List<Category>,
     coupons: List<Coupon>,
+    campaigns: List<Campaign>,
     isSavingCatalog: Boolean,
     catalogError: String?,
     onClearCatalogError: () -> Unit,
@@ -101,6 +104,14 @@ fun AdminDashboard(
     onSaveCoupon: (Coupon) -> Unit,
     onToggleCouponActive: (Coupon) -> Unit,
     onDeleteCoupon: (String) -> Unit,
+    onSaveCampaign: (Campaign, Int) -> Unit,
+    onToggleCampaignActive: (Campaign) -> Unit,
+    onDeleteCampaign: (String) -> Unit,
+    sponsoredSlots: List<SponsoredSlot>,
+    onReviewSponsoredSlot: (String, Boolean, String) -> Unit,
+    reviewingSlotId: String?,
+    slotReviewError: String?,
+    onClearSlotReviewError: () -> Unit,
     onSignOut: () -> Unit
 ) {
     Column(
@@ -141,6 +152,7 @@ fun AdminDashboard(
                     products = products,
                     categories = categories,
                     coupons = coupons,
+                    campaigns = campaigns,
                     isSaving = isSavingCatalog,
                     catalogError = catalogError,
                     onClearError = onClearCatalogError,
@@ -150,7 +162,10 @@ fun AdminDashboard(
                     onDeleteCategory = onDeleteCategory,
                     onSaveCoupon = onSaveCoupon,
                     onToggleCouponActive = onToggleCouponActive,
-                    onDeleteCoupon = onDeleteCoupon
+                    onDeleteCoupon = onDeleteCoupon,
+                    onSaveCampaign = onSaveCampaign,
+                    onToggleCampaignActive = onToggleCampaignActive,
+                    onDeleteCampaign = onDeleteCampaign
                 )
                 else -> AdminApprovalsScreen(
                     sellers = allSellers,
@@ -170,7 +185,12 @@ fun AdminDashboard(
                     onReviewPartner = onReviewPartner,
                     reviewingPartnerId = reviewingPartnerId,
                     partnerReviewError = partnerReviewError,
-                    onClearPartnerReviewError = onClearPartnerReviewError
+                    onClearPartnerReviewError = onClearPartnerReviewError,
+                    sponsoredSlots = sponsoredSlots,
+                    onReviewSponsoredSlot = onReviewSponsoredSlot,
+                    reviewingSlotId = reviewingSlotId,
+                    slotReviewError = slotReviewError,
+                    onClearSlotReviewError = onClearSlotReviewError
                 )
             }
         }

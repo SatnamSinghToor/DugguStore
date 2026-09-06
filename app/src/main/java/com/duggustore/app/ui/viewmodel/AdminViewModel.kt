@@ -2,16 +2,20 @@ package com.duggustore.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duggustore.app.data.model.Campaign
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Coupon
+import com.duggustore.app.data.model.SponsoredSlot
 import com.duggustore.app.data.model.UserProfile
 import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.repository.AuthRepository
+import com.duggustore.app.data.repository.CampaignRepository
 import com.duggustore.app.data.repository.CategoryRepository
 import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.OrderRepository
 import com.duggustore.app.data.repository.ProductRepository
+import com.duggustore.app.data.repository.SponsoredSlotRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,12 +28,16 @@ data class AdminState(
     val products: List<Product> = emptyList(),
     val categories: List<Category> = emptyList(),
     val coupons: List<Coupon> = emptyList(),
+    val campaigns: List<Campaign> = emptyList(),
+    val sponsoredSlots: List<SponsoredSlot> = emptyList(),
     val totalUsers: Int = 0,
     val totalOrders: Int = 0,
     val totalRevenue: Double = 0.0,
     val totalDeliveries: Int = 0,
     val isSavingCatalog: Boolean = false,
     val catalogError: String? = null,
+    val reviewingSlotId: String? = null,
+    val slotReviewError: String? = null,
     val error: String? = null
 )
 
@@ -39,6 +47,8 @@ class AdminViewModel : ViewModel() {
     private val productRepo = ProductRepository()
     private val categoryRepo = CategoryRepository()
     private val offerRepo = OfferRepository()
+    private val campaignRepo = CampaignRepository()
+    private val sponsoredSlotRepo = SponsoredSlotRepository()
 
     private val _state = MutableStateFlow(AdminState())
     val state: StateFlow<AdminState> = _state
@@ -53,12 +63,16 @@ class AdminViewModel : ViewModel() {
                 val productsDeferred = async { productRepo.getAllProducts() }
                 val categoriesDeferred = async { categoryRepo.getAllCategories() }
                 val couponsDeferred = async { offerRepo.getAllCoupons() }
+                val campaignsDeferred = async { campaignRepo.getAllCampaigns() }
+                val slotsDeferred = async { sponsoredSlotRepo.getAllSlots() }
 
                 val users = usersDeferred.await().getOrThrow()
                 val orders = ordersDeferred.await().getOrThrow()
                 val products = productsDeferred.await().getOrThrow()
                 val categories = categoriesDeferred.await().getOrThrow()
                 val coupons = couponsDeferred.await().getOrThrow()
+                val campaigns = campaignsDeferred.await().getOrThrow()
+                val slots = slotsDeferred.await().getOrThrow()
 
                 _state.value = _state.value.copy(
                     isLoading = false,
@@ -70,7 +84,9 @@ class AdminViewModel : ViewModel() {
                     totalDeliveries = orders.count { it.status == "delivered" },
                     products = products,
                     categories = categories,
-                    coupons = coupons
+                    coupons = coupons,
+                    campaigns = campaigns,
+                    sponsoredSlots = slots
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to load dashboard")
@@ -184,5 +200,67 @@ class AdminViewModel : ViewModel() {
 
     fun clearCatalogError() {
         _state.value = _state.value.copy(catalogError = null)
+    }
+
+    /** [durationDays] runs the campaign from right now, whether it's a new one or a renewal of an existing one. */
+    fun saveCampaign(campaign: Campaign, durationDays: Int, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isSavingCatalog = true, catalogError = null)
+            val result = if (campaign.id.isBlank()) {
+                campaignRepo.createCampaign(campaign, durationDays)
+            } else {
+                campaignRepo.updateCampaign(campaign, durationDays)
+            }
+            result.onSuccess {
+                campaignRepo.getAllCampaigns().onSuccess { campaigns ->
+                    _state.value = _state.value.copy(campaigns = campaigns)
+                }
+                onDone()
+            }
+            result.onFailure { _state.value = _state.value.copy(catalogError = it.message) }
+            _state.value = _state.value.copy(isSavingCatalog = false)
+        }
+    }
+
+    fun toggleCampaignActive(campaign: Campaign) {
+        viewModelScope.launch {
+            val result = campaignRepo.setActive(campaign, !campaign.isActive)
+            result.onSuccess {
+                _state.value = _state.value.copy(
+                    campaigns = _state.value.campaigns.map {
+                        if (it.id == campaign.id) it.copy(isActive = !campaign.isActive) else it
+                    }
+                )
+            }
+            result.onFailure { _state.value = _state.value.copy(catalogError = it.message) }
+        }
+    }
+
+    fun deleteCampaign(id: String) {
+        viewModelScope.launch {
+            val result = campaignRepo.deleteCampaign(id)
+            result.onSuccess {
+                _state.value = _state.value.copy(campaigns = _state.value.campaigns.filter { it.id != id })
+            }
+            result.onFailure { _state.value = _state.value.copy(catalogError = it.message) }
+        }
+    }
+
+    fun reviewSponsoredSlot(slotId: String, approve: Boolean, reason: String = "") {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(reviewingSlotId = slotId, slotReviewError = null)
+            val result = sponsoredSlotRepo.reviewSlot(slotId, approve, reason)
+            result.onSuccess {
+                sponsoredSlotRepo.getAllSlots().onSuccess { slots ->
+                    _state.value = _state.value.copy(sponsoredSlots = slots)
+                }
+            }
+            result.onFailure { _state.value = _state.value.copy(slotReviewError = it.message) }
+            _state.value = _state.value.copy(reviewingSlotId = null)
+        }
+    }
+
+    fun clearSlotReviewError() {
+        _state.value = _state.value.copy(slotReviewError = null)
     }
 }

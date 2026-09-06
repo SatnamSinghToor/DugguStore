@@ -10,9 +10,11 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
@@ -32,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +44,7 @@ import com.duggustore.app.data.model.Order
 import com.duggustore.app.data.model.OrderItem
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.model.SponsoredSlot
 import com.duggustore.app.platform.LocationState
 import com.duggustore.app.platform.openDialer
 import com.duggustore.app.platform.rememberDeviceLocation
@@ -115,9 +119,18 @@ fun SellerDashboard(
     onIssuesClick: () -> Unit = {},
     voiceAlertsEnabled: Boolean = true,
     onToggleVoiceAlerts: () -> Unit = {},
+    sponsoredSlots: List<SponsoredSlot> = emptyList(),
+    onRequestSponsoredSlot: (String, String, Int) -> Unit = { _, _, _ -> },
+    isRequestingSlot: Boolean = false,
+    slotRequestError: String? = null,
+    onClearSlotRequestError: () -> Unit = {},
     onSignOut: () -> Unit
 ) {
     val pendingCount = orders.count { it.status == OrderStatus.PENDING.value }
+    var showSlotRequestDialog by remember { mutableStateOf(false) }
+    // Newest first, so a rejected old request doesn't hide a fresher pending
+    // one — only the most recent request's state is worth showing.
+    val latestSlot = remember(sponsoredSlots) { sponsoredSlots.maxByOrNull { it.createdAt } }
 
     Column(
         modifier = Modifier
@@ -161,6 +174,12 @@ fun SellerDashboard(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        item {
+                            PromoteStoreBanner(
+                                latestSlot = latestSlot,
+                                onRequest = { showSlotRequestDialog = true }
+                            )
+                        }
                         if (lowStock > 0 || outOfStock > 0) {
                             item { LowStockBanner(lowStock = lowStock, outOfStock = outOfStock) }
                         }
@@ -237,6 +256,147 @@ fun SellerDashboard(
             }
         }
     }
+
+    if (showSlotRequestDialog) {
+        SponsoredSlotRequestDialog(
+            isSaving = isRequestingSlot,
+            error = slotRequestError,
+            onDismissError = onClearSlotRequestError,
+            onDismiss = { showSlotRequestDialog = false },
+            onSubmit = { headline, message, days ->
+                onRequestSponsoredSlot(headline, message, days)
+                showSlotRequestDialog = false
+            }
+        )
+    }
+}
+
+/**
+ * Shows the seller's own most recent sponsored-slot request and its state,
+ * or a plain call to action when they've never asked for one. Pricing and
+ * payment are handled outside the app for now — this only files the
+ * request; an admin approving it is what actually puts it live.
+ */
+@Composable
+private fun PromoteStoreBanner(latestSlot: SponsoredSlot?, onRequest: () -> Unit) {
+    val (bg, fg, statusLine) = when (latestSlot?.status) {
+        "PENDING" -> Triple(OrangeSurface, OrangeDark, "Waiting on admin review · ${latestSlot.durationDays} days once approved")
+        "APPROVED" -> Triple(TealSurface, TealDark, "Live until ${latestSlot.endsAt.orEmpty().take(10)}")
+        "REJECTED" -> Triple(CoralSurface, CoralDark, "Last request was rejected" +
+            (latestSlot.rejectionReason?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""))
+        else -> Triple(TealSurface, TealDark, null)
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = bg
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Campaign, null, tint = fg, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = latestSlot?.headline?.takeIf { latestSlot.status != "REJECTED" } ?: "Promote your store",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = fg
+                )
+                if (statusLine != null) {
+                    Text(statusLine, fontSize = 11.sp, color = fg)
+                } else {
+                    Text("Get a featured spot on the customer home screen", fontSize = 11.sp, color = TextSecondary)
+                }
+            }
+            // A new request is always allowed — even with one already live or
+            // pending, e.g. to line up the next one once the current ends.
+            Text(
+                text = if (latestSlot == null) "Request" else "Request again",
+                modifier = Modifier.clickable { onRequest() },
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = fg
+            )
+        }
+    }
+}
+
+@Composable
+private fun SponsoredSlotRequestDialog(
+    isSaving: Boolean,
+    error: String?,
+    onDismissError: () -> Unit,
+    onDismiss: () -> Unit,
+    onSubmit: (headline: String, message: String, durationDays: Int) -> Unit
+) {
+    var headline by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var durationDays by remember { mutableStateOf("7") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Request a sponsored slot") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Shown to customers on the home screen if an admin approves it. Pricing is arranged outside the app.",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+                if (error != null) {
+                    Surface(shape = RoundedCornerShape(10.dp), color = CoralSurface, modifier = Modifier.fillMaxWidth()) {
+                        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(error, modifier = Modifier.weight(1f), fontSize = 12.sp, color = CoralDark)
+                            Text(
+                                "Dismiss",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CoralDark,
+                                modifier = Modifier.clickable { onDismissError() }
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = headline,
+                    onValueChange = { headline = it },
+                    label = { Text("Headline, e.g. your store's name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    label = { Text("Message shown under it") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = durationDays,
+                    onValueChange = { input -> if (input.all { it.isDigit() }) durationDays = input },
+                    label = { Text("How many days, starting once approved") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = headline.isNotBlank() && (durationDays.toIntOrNull() ?: 0) > 0 && !isSaving,
+                onClick = { onSubmit(headline.trim(), message.trim(), durationDays.toIntOrNull() ?: 7) }
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Teal)
+                } else {
+                    Text("Send request", fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

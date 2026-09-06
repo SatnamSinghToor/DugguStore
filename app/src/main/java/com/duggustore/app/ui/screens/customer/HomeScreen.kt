@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,9 +38,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.duggustore.app.data.local.AppPrefs
 import com.duggustore.app.data.model.Address
+import com.duggustore.app.data.model.Campaign
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.model.SponsoredSlot
 import androidx.compose.ui.res.stringResource
 import com.duggustore.app.R
 import com.duggustore.app.platform.LocationState
@@ -92,7 +95,11 @@ fun HomeScreen(
     // as the coupon cards — 0 / blank simply omits that banner.
     walletBalance: Int = 0,
     referralCode: String = "",
-    onWalletBannerClick: () -> Unit = {}
+    onWalletBannerClick: () -> Unit = {},
+    // Already date-windowed (campaigns) / approved-and-live (sponsored
+    // slots) server-side — nothing here needs to check dates again.
+    campaigns: List<Campaign> = emptyList(),
+    sponsoredSlots: List<SponsoredSlot> = emptyList()
 ) {
     // Both sheets are owned here so the header can stay a plain row of
     // controls and the sheets sit above the whole screen.
@@ -126,9 +133,49 @@ fun HomeScreen(
     // a reminder of wallet money the customer already has, an invite to
     // refer a friend. Each is a normal outcome to omit, not a fallback:
     // no new product, no balance, or no code yet just means one fewer card.
-    val promoBanners = remember(offers, allProducts, walletBalance, referralCode) {
+    val promoBanners = remember(offers, allProducts, walletBalance, referralCode, campaigns, sponsoredSlots) {
         buildList {
             addAll(buildDiscountBanners(offers, allProducts, onOfferClick))
+
+            // A seasonal push toward one category — already restricted to
+            // ones actually running right now by the server, so every
+            // campaign here is live by definition.
+            campaigns.forEach { campaign ->
+                add(
+                    PromoBanner(
+                        id = "campaign:${campaign.id}",
+                        tint = runCatching { Color(android.graphics.Color.parseColor(campaign.tintHex)) }.getOrDefault(Orange),
+                        eyebrowIcon = Icons.Default.Campaign,
+                        eyebrow = "Limited time",
+                        headline = campaign.label,
+                        subtitle = categories.firstOrNull { it.id == campaign.categoryId }?.name
+                            ?: "Handpicked for you",
+                        chipLabel = campaign.ctaLabel,
+                        onClick = { onCategorySelected(campaign.categoryId) }
+                    )
+                )
+            }
+
+            // A seller's paid placement, standing in for a storefront the
+            // app doesn't have yet — it opens one of their own products
+            // instead. Skipped entirely if that seller currently has
+            // nothing active to show, rather than opening a dead end.
+            sponsoredSlots.forEach { slot ->
+                val product = allProducts.firstOrNull { it.sellerId == slot.sellerId && it.isActive } ?: return@forEach
+                add(
+                    PromoBanner(
+                        id = "sponsored:${slot.id}",
+                        tint = TextSecondary,
+                        eyebrowIcon = Icons.Default.Campaign,
+                        eyebrow = "",
+                        headline = slot.headline,
+                        subtitle = slot.message,
+                        cornerTag = "SPONSORED",
+                        featuredProduct = product,
+                        onClick = { onProductClick(product) }
+                    )
+                )
+            }
 
             allProducts.filter { it.isActive }.maxByOrNull { it.createdAt }?.let { product ->
                 add(

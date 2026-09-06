@@ -530,7 +530,9 @@ fun AppNavGraph(
                 allProducts = homeState.products,
                 walletBalance = cartState.walletBalance,
                 referralCode = authState.user?.referralCode.orEmpty(),
-                onWalletBannerClick = { navController.navigate(Screen.CustomerWallet.route) }
+                onWalletBannerClick = { navController.navigate(Screen.CustomerWallet.route) },
+                campaigns = homeState.campaigns,
+                sponsoredSlots = homeState.sponsoredSlots
             )
 
             LaunchedEffect(authState.user) {
@@ -906,6 +908,13 @@ fun AppNavGraph(
                             voiceAlertsEnabled = !voiceAlertsEnabled
                             AppPrefs.setOrderAlertEnabled(context, voiceAlertsEnabled)
                         },
+                        sponsoredSlots = sellerState.sponsoredSlots,
+                        onRequestSponsoredSlot = { headline, message, days ->
+                            authState.user?.let { sellerViewModel.requestSponsoredSlot(it.id, headline, message, days) }
+                        },
+                        isRequestingSlot = sellerState.isRequestingSlot,
+                        slotRequestError = sellerState.slotRequestError,
+                        onClearSlotRequestError = { sellerViewModel.clearSlotRequestError() },
                         onSignOut = onOnboardingSignOut
                     )
                 }
@@ -1167,6 +1176,7 @@ fun AppNavGraph(
                 },
                 categories = adminState.categories,
                 coupons = adminState.coupons,
+                campaigns = adminState.campaigns,
                 isSavingCatalog = adminState.isSavingCatalog,
                 catalogError = adminState.catalogError,
                 onClearCatalogError = { adminViewModel.clearCatalogError() },
@@ -1177,6 +1187,14 @@ fun AppNavGraph(
                 onSaveCoupon = { adminViewModel.saveCoupon(it) },
                 onToggleCouponActive = { adminViewModel.toggleCouponActive(it) },
                 onDeleteCoupon = { adminViewModel.deleteCoupon(it) },
+                onSaveCampaign = { campaign, days -> adminViewModel.saveCampaign(campaign, days) },
+                onToggleCampaignActive = { adminViewModel.toggleCampaignActive(it) },
+                onDeleteCampaign = { adminViewModel.deleteCampaign(it) },
+                sponsoredSlots = adminState.sponsoredSlots,
+                onReviewSponsoredSlot = { slotId, approve, reason -> adminViewModel.reviewSponsoredSlot(slotId, approve, reason) },
+                reviewingSlotId = adminState.reviewingSlotId,
+                slotReviewError = adminState.slotReviewError,
+                onClearSlotReviewError = { adminViewModel.clearSlotReviewError() },
                 onSignOut = {
                     authViewModel.signOut()
                     navController.navigate(Screen.Login.route) { popUpTo(0) { inclusive = true } }

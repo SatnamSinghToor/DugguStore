@@ -2,12 +2,16 @@ package com.duggustore.app.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.duggustore.app.data.model.Campaign
 import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.data.model.SponsoredSlot
+import com.duggustore.app.data.repository.CampaignRepository
 import com.duggustore.app.data.repository.CategoryRepository
 import com.duggustore.app.data.repository.OfferRepository
 import com.duggustore.app.data.repository.ProductRepository
+import com.duggustore.app.data.repository.SponsoredSlotRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +24,10 @@ data class HomeState(
     val categories: List<Category> = emptyList(),
     /** The store's active coupons, shown on the home carousel. */
     val offers: List<Coupon> = emptyList(),
+    /** Currently-running seasonal pushes — already date-windowed server-side. */
+    val campaigns: List<Campaign> = emptyList(),
+    /** Currently-live, admin-approved seller placements — already filtered server-side. */
+    val sponsoredSlots: List<SponsoredSlot> = emptyList(),
     /**
      * The full active catalogue — kept only for Categories' scroll-spy view
      * (which genuinely needs every product across every category at once,
@@ -45,6 +53,8 @@ class HomeViewModel : ViewModel() {
     private val categoryRepo = CategoryRepository()
     private val productRepo = ProductRepository()
     private val offerRepo = OfferRepository()
+    private val campaignRepo = CampaignRepository()
+    private val sponsoredSlotRepo = SponsoredSlotRepository()
 
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state
@@ -81,6 +91,8 @@ class HomeViewModel : ViewModel() {
             val categoriesDeferred = async { categoryRepo.getAllCategories() }
             val productsDeferred = async { productRepo.getAllProducts() }
             val offersDeferred = async { offerRepo.getOffers() }
+            val campaignsDeferred = async { campaignRepo.getRunningCampaigns() }
+            val sponsoredSlotsDeferred = async { sponsoredSlotRepo.getLiveSlots() }
             val feedDeferred = async {
                 productRepo.getProductsPage(
                     page = 0,
@@ -92,9 +104,11 @@ class HomeViewModel : ViewModel() {
 
             val categories = categoriesDeferred.await().getOrNull()
             val products = productsDeferred.await().getOrNull()?.filter { it.isActive }
-            // A store with no coupons is a normal state, not an error worth
-            // showing; the carousel simply does not render.
+            // A store with no coupons/campaigns/sponsors is a normal state,
+            // not an error worth showing; the carousel simply renders fewer cards.
             val offers = offersDeferred.await().getOrNull()
+            val campaigns = campaignsDeferred.await().getOrNull()
+            val sponsoredSlots = sponsoredSlotsDeferred.await().getOrNull()
             val feed = feedDeferred.await().getOrNull()
 
             feedPage = 0
@@ -102,6 +116,8 @@ class HomeViewModel : ViewModel() {
                 categories = categories ?: _state.value.categories,
                 products = products ?: _state.value.products,
                 offers = offers ?: _state.value.offers,
+                campaigns = campaigns ?: _state.value.campaigns,
+                sponsoredSlots = sponsoredSlots ?: _state.value.sponsoredSlots,
                 feedProducts = feed ?: _state.value.feedProducts,
                 hasMoreFeed = feed?.let { it.size == FEED_PAGE_SIZE } ?: _state.value.hasMoreFeed,
                 isLoading = false

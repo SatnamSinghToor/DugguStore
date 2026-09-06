@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.duggustore.app.data.model.OrderStatus
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.data.model.Order
+import com.duggustore.app.data.model.SponsoredSlot
 import com.duggustore.app.data.repository.ProductRepository
 import com.duggustore.app.data.repository.OrderRepository
+import com.duggustore.app.data.repository.SponsoredSlotRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,12 +23,16 @@ data class SellerState(
     val error: String? = null,
     val productSaved: Boolean = false,
     /** Orders that arrived since the last refresh, waiting to be read out. Cleared by [consumeOrderAlerts] once spoken. */
-    val newOrderAlerts: List<Order> = emptyList()
+    val newOrderAlerts: List<Order> = emptyList(),
+    val sponsoredSlots: List<SponsoredSlot> = emptyList(),
+    val isRequestingSlot: Boolean = false,
+    val slotRequestError: String? = null
 )
 
 class SellerViewModel : ViewModel() {
     private val productRepo = ProductRepository()
     private val orderRepo = OrderRepository()
+    private val sponsoredSlotRepo = SponsoredSlotRepository()
 
     private val _state = MutableStateFlow(SellerState())
     val state: StateFlow<SellerState> = _state
@@ -46,9 +52,11 @@ class SellerViewModel : ViewModel() {
             try {
                 val productsDeferred = async { productRepo.getProductsBySeller(sellerId) }
                 val ordersDeferred = async { orderRepo.getSellerOrders(sellerId) }
+                val slotsDeferred = async { sponsoredSlotRepo.getMySlots(sellerId) }
 
                 val prods = productsDeferred.await().getOrThrow()
                 val ords = ordersDeferred.await().getOrThrow()
+                val slots = slotsDeferred.await().getOrElse { emptyList() }
 
                 val alreadySeen = knownOrderIds
                 // Only orders still waiting on the seller are worth calling
@@ -66,7 +74,8 @@ class SellerViewModel : ViewModel() {
                     orders = ords,
                     totalOrders = ords.size,
                     totalRevenue = ords.filter { it.status == "delivered" }.sumOf { it.totalAmount },
-                    newOrderAlerts = _state.value.newOrderAlerts + arrived
+                    newOrderAlerts = _state.value.newOrderAlerts + arrived,
+                    sponsoredSlots = slots
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to load seller data")
@@ -130,5 +139,24 @@ class SellerViewModel : ViewModel() {
 
     fun resetProductSaved() {
         _state.value = _state.value.copy(productSaved = false)
+    }
+
+    /** Pricing and payment happen outside the app for now — this just files the request; an admin approving it is what puts it live. */
+    fun requestSponsoredSlot(sellerId: String, headline: String, message: String, durationDays: Int) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isRequestingSlot = true, slotRequestError = null)
+            val result = sponsoredSlotRepo.requestSlot(sellerId, headline, message, durationDays)
+            result.onSuccess {
+                sponsoredSlotRepo.getMySlots(sellerId).onSuccess { slots ->
+                    _state.value = _state.value.copy(sponsoredSlots = slots)
+                }
+            }
+            result.onFailure { _state.value = _state.value.copy(slotRequestError = it.message) }
+            _state.value = _state.value.copy(isRequestingSlot = false)
+        }
+    }
+
+    fun clearSlotRequestError() {
+        _state.value = _state.value.copy(slotRequestError = null)
     }
 }

@@ -26,6 +26,7 @@ import com.duggustore.app.data.model.DeliveryPartner
 import com.duggustore.app.data.model.DeliveryPartnerDocument
 import com.duggustore.app.data.model.Seller
 import com.duggustore.app.data.model.SellerDocument
+import com.duggustore.app.data.model.SponsoredSlot
 import com.duggustore.app.data.model.VerificationStatus
 import com.duggustore.app.data.model.docTypeLabel
 import com.duggustore.app.ui.components.DashboardEmpty
@@ -58,11 +59,17 @@ fun AdminApprovalsScreen(
     onReviewPartner: (partnerId: String, approve: Boolean, reason: String) -> Unit,
     reviewingPartnerId: String?,
     partnerReviewError: String?,
-    onClearPartnerReviewError: () -> Unit
+    onClearPartnerReviewError: () -> Unit,
+    sponsoredSlots: List<SponsoredSlot> = emptyList(),
+    onReviewSponsoredSlot: (String, Boolean, String) -> Unit = { _, _, _ -> },
+    reviewingSlotId: String? = null,
+    slotReviewError: String? = null,
+    onClearSlotReviewError: () -> Unit = {}
 ) {
     var tab by rememberSaveable { mutableStateOf(0) }
     val pendingSellers = remember(sellers) { sellers.filter { it.verificationStatus() == VerificationStatus.UNDER_REVIEW } }
     val pendingPartners = remember(partners) { partners.filter { it.verificationStatus() == VerificationStatus.UNDER_REVIEW } }
+    val pendingSlots = remember(sponsoredSlots) { sponsoredSlots.filter { it.status == "PENDING" } }
 
     Column(modifier = Modifier.fillMaxSize().background(Background)) {
         Row(
@@ -71,9 +78,14 @@ fun AdminApprovalsScreen(
         ) {
             ApprovalTabChip("Sellers (${pendingSellers.size})", tab == 0) { tab = 0 }
             ApprovalTabChip("Delivery (${pendingPartners.size})", tab == 1) { tab = 1 }
+            ApprovalTabChip("Sponsored (${pendingSlots.size})", tab == 2) { tab = 2 }
         }
 
-        val reviewError = if (tab == 0) sellerReviewError else partnerReviewError
+        val reviewError = when (tab) {
+            0 -> sellerReviewError
+            1 -> partnerReviewError
+            else -> slotReviewError
+        }
         if (reviewError != null) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -92,7 +104,13 @@ fun AdminApprovalsScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .padding(start = 8.dp)
-                            .clickable { if (tab == 0) onClearSellerReviewError() else onClearPartnerReviewError() }
+                            .clickable {
+                                when (tab) {
+                                    0 -> onClearSellerReviewError()
+                                    1 -> onClearPartnerReviewError()
+                                    else -> onClearSlotReviewError()
+                                }
+                            }
                     )
                 }
             }
@@ -125,7 +143,7 @@ fun AdminApprovalsScreen(
                     }
                 }
             }
-        } else {
+        } else if (tab == 1) {
             if (pendingPartners.isEmpty()) {
                 DashboardEmpty(
                     icon = Icons.Default.VerifiedUser,
@@ -147,6 +165,28 @@ fun AdminApprovalsScreen(
                             onExpand = { onLoadPartnerDocuments(partner.id) },
                             onApprove = { onReviewPartner(partner.id, true, "") },
                             onReject = { reason -> onReviewPartner(partner.id, false, reason) }
+                        )
+                    }
+                }
+            }
+        } else {
+            if (pendingSlots.isEmpty()) {
+                DashboardEmpty(
+                    icon = Icons.Default.VerifiedUser,
+                    title = "No pending requests",
+                    subtitle = "Sponsored-slot requests from sellers will appear here"
+                )
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(pendingSlots, key = { it.id }) { slot ->
+                        SponsoredSlotCard(
+                            slot = slot,
+                            isReviewing = reviewingSlotId == slot.id,
+                            onApprove = { onReviewSponsoredSlot(slot.id, true, "") },
+                            onReject = { reason -> onReviewSponsoredSlot(slot.id, false, reason) }
                         )
                     }
                 }
@@ -292,6 +332,51 @@ private fun DeliveryApplicationCard(
                     onReject = { showRejectDialog = true }
                 )
             }
+        }
+    }
+
+    if (showRejectDialog) {
+        RejectDialog(
+            onDismiss = { showRejectDialog = false },
+            onConfirm = { reason -> showRejectDialog = false; onReject(reason) }
+        )
+    }
+}
+
+/**
+ * No documents or expand/collapse here — a sponsored slot request is just an
+ * ad's copy and a duration, so everything worth reviewing already fits on
+ * the card. Pricing and payment are handled outside the app; approving here
+ * is only the content/legitimacy check before it goes live.
+ */
+@Composable
+private fun SponsoredSlotCard(
+    slot: SponsoredSlot,
+    isReviewing: Boolean,
+    onApprove: () -> Unit,
+    onReject: (String) -> Unit
+) {
+    var showRejectDialog by remember { mutableStateOf(false) }
+
+    DashboardPanel {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(slot.headline, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            if (slot.message.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(slot.message, fontSize = 13.sp, color = TextSecondary)
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Requested to run for ${slot.durationDays} days once approved",
+                fontSize = 11.sp,
+                color = TextLight
+            )
+            Spacer(Modifier.height(14.dp))
+            ApprovalActions(
+                isBusy = isReviewing,
+                onApprove = onApprove,
+                onReject = { showRejectDialog = true }
+            )
         }
     }
 
