@@ -29,7 +29,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -241,11 +246,14 @@ fun HomeScreen(
             // Pinned. The wordmark, the location strip and the search field were
             // the first item of the list, so they scrolled away with the
             // products — searching meant scrolling back to the top first.
-            Surface(
+            // A soft gradient wash (the same TealSurface used in the auth
+            // screens' header) rather than flat white, so the top of the
+            // page reads as considered rather than bare.
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .zIndex(1f),
-                color = SurfaceWhite
+                    .zIndex(1f)
+                    .background(Brush.verticalGradient(listOf(TealSurface, SurfaceWhite)))
             ) {
             Column(
                 modifier = Modifier
@@ -396,33 +404,12 @@ fun HomeScreen(
 
             if (categories.isNotEmpty() && !isSearching) {
                 item {
-                    Spacer(Modifier.height(22.dp))
-                    RowHeader("Categories", Modifier.padding(horizontal = 20.dp))
-                    Spacer(Modifier.height(12.dp))
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            AllCategoriesTile(
-                                selected = selectedCategoryId == null,
-                                onClick = { onCategorySelected(null) }
-                            )
-                        }
-                        items(categories, key = { it.id }) { category ->
-                            CategoryTile(
-                                category = category,
-                                color = CategoryColors[
-                                    (categories.indexOf(category)).mod(CategoryColors.size)
-                                ],
-                                onClick = {
-                                    onCategorySelected(
-                                        if (selectedCategoryId == category.id) null else category.id
-                                    )
-                                }
-                            )
-                        }
-                    }
+                    Spacer(Modifier.height(16.dp))
+                    CurvedCategoryTabs(
+                        categories = categories,
+                        selectedCategoryId = selectedCategoryId,
+                        onCategorySelected = onCategorySelected
+                    )
                 }
             }
 
@@ -586,21 +573,82 @@ private fun RecentSearchesRow(
     }
 }
 
+/**
+ * "All" plus every category as a scrollable row of text tabs, the selected
+ * one riding a raised curve rather than a flat highlight — each tab draws
+ * its own slice of one continuous baseline, so the row reads as a single
+ * connected shape (unselected tabs contribute a flat segment, the selected
+ * one bulges) without needing to measure any other tab's position.
+ */
 @Composable
-private fun AllCategoriesTile(selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.size(104.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = if (selected) TextPrimary else SurfaceWhite,
-        onClick = onClick
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = "All",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (selected) Color.White else TextPrimary
+private fun CurvedCategoryTabs(
+    categories: List<Category>,
+    selectedCategoryId: String?,
+    onCategorySelected: (String?) -> Unit
+) {
+    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp)) {
+        item {
+            CurvedTab(
+                label = "All",
+                selected = selectedCategoryId == null,
+                onClick = { onCategorySelected(null) }
             )
         }
+        items(categories, key = { it.id }) { category ->
+            CurvedTab(
+                label = category.name,
+                selected = selectedCategoryId == category.id,
+                onClick = {
+                    onCategorySelected(if (selectedCategoryId == category.id) null else category.id)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .dugguClickable(onClick)
+            .drawBehind {
+                val baselineY = size.height * 0.82f
+                val bumpTopY = size.height * 0.2f
+                val curveRun = (size.width * 0.3f).coerceAtMost(18.dp.toPx())
+                val path = Path().apply {
+                    if (selected) {
+                        moveTo(0f, baselineY)
+                        cubicTo(
+                            curveRun * 0.5f, baselineY,
+                            curveRun * 0.5f, bumpTopY,
+                            curveRun, bumpTopY
+                        )
+                        lineTo(size.width - curveRun, bumpTopY)
+                        cubicTo(
+                            size.width - curveRun * 0.5f, bumpTopY,
+                            size.width - curveRun * 0.5f, baselineY,
+                            size.width, baselineY
+                        )
+                    } else {
+                        moveTo(0f, baselineY)
+                        lineTo(size.width, baselineY)
+                    }
+                }
+                drawPath(
+                    path = path,
+                    color = Teal,
+                    style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = label.uppercase(),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.4.sp,
+            color = if (selected) Teal else TextSecondary,
+            modifier = Modifier.align(if (selected) Alignment.TopCenter else Alignment.BottomCenter)
+        )
     }
 }
