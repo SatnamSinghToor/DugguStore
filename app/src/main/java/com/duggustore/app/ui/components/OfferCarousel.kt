@@ -1,6 +1,7 @@
 package com.duggustore.app.ui.components
 
 import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -23,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -172,17 +174,32 @@ fun buildDiscountBanners(
 }
 
 /**
- * Four palette colours for one card's disc cluster, always excluding the
- * card's own tint — a disc drawn in the same colour as the tint it sits on
- * just disappears into the background instead of reading as its own accent.
- * Picked deterministically off the tint itself (not randomly) so the same
- * banner always draws the same cluster rather than reshuffling on every
- * recomposition.
+ * Four discs for one card's cluster, all in the same colour family as the
+ * card's own tint — lighter/darker/more-or-less-saturated shades of it,
+ * plus two slight hue shifts either side — rather than unrelated palette
+ * colours that read as a random, clashing collage sitting on top of the
+ * card's own colour.
  */
 private fun discColorsFor(tint: Color): List<Color> {
-    val candidates = CategoryColors.filter { it != tint }
-    val start = abs(tint.hashCode()) % candidates.size
-    return List(4) { candidates[(start + it) % candidates.size] }
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(tint.toArgb(), hsv)
+    val (hue, sat, value) = hsv
+
+    fun shade(hueShift: Float, satMul: Float, valueMul: Float): Color {
+        val shifted = floatArrayOf(
+            (hue + hueShift + 360f) % 360f,
+            (sat * satMul).coerceIn(0.2f, 1f),
+            (value * valueMul).coerceIn(0.35f, 1f)
+        )
+        return Color(AndroidColor.HSVToColor(shifted))
+    }
+
+    return listOf(
+        shade(hueShift = 0f, satMul = 0.65f, valueMul = 1.2f),
+        shade(hueShift = -16f, satMul = 1.15f, valueMul = 0.82f),
+        shade(hueShift = 14f, satMul = 0.9f, valueMul = 1.05f),
+        shade(hueShift = 0f, satMul = 1.35f, valueMul = 0.65f)
+    )
 }
 
 /** One flat, plain disc in the decorative cluster — no rim, no highlight. */
