@@ -437,6 +437,21 @@ fun StoreProductCard(
                         modifier = Modifier.align(Alignment.TopEnd)
                     )
                 }
+
+                // Sits over the photo rather than in the text block below —
+                // the only free corner (favourite is top-start, the discount
+                // ribbon top-end, "out of stock" dead centre) and, unlike the
+                // text column, one more thing here doesn't grow the card.
+                product.isVeg?.let { isVeg ->
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomStart).padding(6.dp),
+                        shape = RoundedCornerShape(4.dp),
+                        color = SurfaceWhite,
+                        shadowElevation = 1.dp
+                    ) {
+                        VegNonVegMark(isVeg = isVeg, modifier = Modifier.padding(3.dp))
+                    }
+                }
             }
 
             // A Material3 Text without its own lineHeight keeps bodyLarge's
@@ -445,9 +460,6 @@ fun StoreProductCard(
             // added up across the card into real, visible dead space. Every
             // one now sets a lineHeight that actually matches its fontSize.
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp)) {
-                product.isVeg?.let { isVeg ->
-                    VegNonVegMark(isVeg = isVeg, modifier = Modifier.padding(bottom = 4.dp))
-                }
                 Text(
                     text = product.name,
                     fontSize = 15.sp,
