@@ -212,7 +212,6 @@ fun RegisterScreen(
                                 label = stringResource(R.string.auth_full_name),
                                 placeholder = stringResource(R.string.auth_full_name_hint),
                                 leadingIcon = Icons.Default.Person,
-                                leadingIconTint = Teal,
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
@@ -229,14 +228,13 @@ fun RegisterScreen(
                                 label = stringResource(R.string.auth_email),
                                 placeholder = stringResource(R.string.auth_email_hint),
                                 leadingIcon = Icons.Default.Email,
-                                leadingIconTint = Orange,
                                 keyboardType = KeyboardType.Email,
                                 helper = if (email.isNotBlank() && stepProblem == errBadEmail) errBadEmail else null,
                                 isError = email.isNotBlank() && stepProblem == errBadEmail,
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
-                            StepIllustration(Icons.Default.Email, Orange, stringResource(R.string.auth_step_email_illustration))
+                            StepIllustration(Icons.Default.Email, Teal, stringResource(R.string.auth_step_email_illustration))
                         }
                         STEP_PHONE -> {
                             StepHeading(
@@ -253,13 +251,12 @@ fun RegisterScreen(
                                 label = stringResource(R.string.auth_phone),
                                 placeholder = stringResource(R.string.auth_phone_hint),
                                 leadingIcon = Icons.Default.Phone,
-                                leadingIconTint = Coral,
                                 keyboardType = KeyboardType.Phone,
                                 helper = if (phone.length < 10) stringResource(R.string.auth_phone_progress, phone.length) else null,
                                 imeAction = ImeAction.Next,
                                 onImeAction = { goNext() }
                             )
-                            StepIllustration(Icons.Default.LocalShipping, Coral, stringResource(R.string.auth_step_phone_illustration))
+                            StepIllustration(Icons.Default.LocalShipping, Teal, stringResource(R.string.auth_step_phone_illustration))
                         }
                         STEP_ROLE -> {
                             StepHeading(
@@ -287,7 +284,6 @@ fun RegisterScreen(
                                 label = stringResource(R.string.auth_password),
                                 placeholder = stringResource(R.string.auth_password_min_hint),
                                 leadingIcon = Icons.Default.Lock,
-                                leadingIconTint = Teal,
                                 keyboardType = KeyboardType.Password,
                                 isPassword = true,
                                 imeAction = ImeAction.Next,
@@ -300,7 +296,6 @@ fun RegisterScreen(
                                 label = stringResource(R.string.auth_confirm_password),
                                 placeholder = stringResource(R.string.auth_confirm_password_hint),
                                 leadingIcon = Icons.Default.Lock,
-                                leadingIconTint = Orange,
                                 keyboardType = KeyboardType.Password,
                                 isPassword = true,
                                 imeAction = ImeAction.Done,
@@ -309,7 +304,7 @@ fun RegisterScreen(
                             Spacer(Modifier.height(6.dp))
                             AuthRequirementRow(stringResource(R.string.auth_requirement_password_length), passwordLongEnough)
                             AuthRequirementRow(stringResource(R.string.auth_requirement_password_match), passwordsMatch)
-                            StepIllustration(Icons.Default.Lock, Violet, stringResource(R.string.auth_step_password_illustration))
+                            StepIllustration(Icons.Default.Lock, Teal, stringResource(R.string.auth_step_password_illustration))
                         }
                         else -> {
                             StepHeading(
@@ -322,7 +317,6 @@ fun RegisterScreen(
                                 label = stringResource(R.string.auth_referral_code_label),
                                 placeholder = stringResource(R.string.auth_referral_code_hint),
                                 leadingIcon = Icons.Default.CardGiftcard,
-                                leadingIconTint = Violet,
                                 imeAction = ImeAction.Done,
                                 onImeAction = { goNext() }
                             )

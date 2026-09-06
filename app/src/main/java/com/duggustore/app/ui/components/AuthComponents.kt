@@ -68,21 +68,32 @@ fun AuthScaffold(
                 .height(280.dp)
                 .background(Brush.verticalGradient(listOf(TealSurface, Background)))
         )
+        // One colour family, three depths — reads as a single considered
+        // backdrop rather than the two unrelated brand accents this used to
+        // mix (an orange disc and a teal one competing for attention).
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 90.dp, y = (-90).dp)
+                .size(240.dp)
+                .clip(CircleShape)
+                .background(Teal.copy(alpha = 0.10f))
+        )
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = (-60).dp, y = (-50).dp)
-                .size(190.dp)
+                .offset(x = (-70).dp, y = (-40).dp)
+                .size(170.dp)
                 .clip(CircleShape)
-                .background(Orange.copy(alpha = 0.10f))
+                .background(TealLight.copy(alpha = 0.14f))
         )
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = 50.dp, y = (-30).dp)
-                .size(150.dp)
+                .offset(x = (-10).dp, y = 60.dp)
+                .size(70.dp)
                 .clip(CircleShape)
-                .background(Teal.copy(alpha = 0.12f))
+                .background(Teal.copy(alpha = 0.16f))
         )
 
         Column(
