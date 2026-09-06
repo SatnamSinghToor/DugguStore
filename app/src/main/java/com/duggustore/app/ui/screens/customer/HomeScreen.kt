@@ -3,6 +3,8 @@ package com.duggustore.app.ui.screens.customer
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -608,9 +610,14 @@ private fun CurvedCategoryTabs(
 
 @Composable
 private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .dugguClickable(onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
             .drawBehind {
                 val baselineY = size.height * 0.82f
                 val bumpTopY = size.height * 0.44f
@@ -640,7 +647,7 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
                     style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 18.dp)
     ) {
         Text(
             text = label.uppercase(),
