@@ -204,39 +204,40 @@ private fun OfferCard(banner: PromoBanner, modifier: Modifier = Modifier) {
             )
         }
 
-        // A cluster of soft, differently-coloured discs bleeding off the
-        // right edge — big enough to sit visibly over the photo rather than
-        // just frame its corner, and in more than one colour so the cluster
-        // itself reads as a little collage rather than one flat tint bleeding
-        // through. Drawn after the photo so they sit on top of it, same for
-        // every card regardless of whether a product is featured.
+        // A cluster of soft, differently-coloured discs, in more than one
+        // colour so it reads as a little collage rather than one flat tint.
+        // The largest anchors the top-right corner (bleeding off both
+        // edges); the other three sit lower and further left, squarely over
+        // the photo rather than only grazing its top. Drawn after the photo
+        // so they sit on top of it, same for every card regardless of
+        // whether a product is featured.
         Box(
             modifier = Modifier
-                .size(150.dp)
-                .offset(x = 178.dp, y = (-55).dp)
+                .size(160.dp)
+                .offset(x = 250.dp, y = (-70).dp)
                 .clip(CircleShape)
                 .background(banner.tint.copy(alpha = 0.20f))
         )
         Box(
             modifier = Modifier
-                .size(115.dp)
-                .offset(x = 208.dp, y = 55.dp)
+                .size(130.dp)
+                .offset(x = 215.dp, y = 70.dp)
                 .clip(CircleShape)
-                .background(Coral.copy(alpha = 0.22f))
+                .background(Coral.copy(alpha = 0.24f))
         )
         Box(
             modifier = Modifier
-                .size(90.dp)
-                .offset(x = 232.dp, y = 118.dp)
+                .size(100.dp)
+                .offset(x = 228.dp, y = 125.dp)
                 .clip(CircleShape)
-                .background(Orange.copy(alpha = 0.24f))
+                .background(Orange.copy(alpha = 0.26f))
         )
         Box(
             modifier = Modifier
-                .size(64.dp)
-                .offset(x = 196.dp, y = 142.dp)
+                .size(70.dp)
+                .offset(x = 185.dp, y = 150.dp)
                 .clip(CircleShape)
-                .background(Violet.copy(alpha = 0.22f))
+                .background(Violet.copy(alpha = 0.24f))
         )
 
         banner.cornerTag?.let { tag ->
