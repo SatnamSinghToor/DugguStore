@@ -204,23 +204,39 @@ private fun OfferCard(banner: PromoBanner, modifier: Modifier = Modifier) {
             )
         }
 
-        // Two soft discs bleeding off the right edge, so a flat tint still has
-        // some depth without needing artwork per offer. Drawn after the photo
-        // so they sit visibly over it — same position and size regardless of
-        // whether a product is featured.
+        // A cluster of soft, differently-coloured discs bleeding off the
+        // right edge — big enough to sit visibly over the photo rather than
+        // just frame its corner, and in more than one colour so the cluster
+        // itself reads as a little collage rather than one flat tint bleeding
+        // through. Drawn after the photo so they sit on top of it, same for
+        // every card regardless of whether a product is featured.
         Box(
             modifier = Modifier
-                .size(112.dp)
-                .offset(x = 188.dp, y = (-50).dp)
+                .size(150.dp)
+                .offset(x = 178.dp, y = (-55).dp)
                 .clip(CircleShape)
-                .background(banner.tint.copy(alpha = 0.16f))
+                .background(banner.tint.copy(alpha = 0.20f))
         )
         Box(
             modifier = Modifier
-                .size(82.dp)
-                .offset(x = 212.dp, y = 91.dp)
+                .size(115.dp)
+                .offset(x = 208.dp, y = 55.dp)
                 .clip(CircleShape)
-                .background(banner.tint.copy(alpha = 0.12f))
+                .background(Coral.copy(alpha = 0.22f))
+        )
+        Box(
+            modifier = Modifier
+                .size(90.dp)
+                .offset(x = 232.dp, y = 118.dp)
+                .clip(CircleShape)
+                .background(Orange.copy(alpha = 0.24f))
+        )
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .offset(x = 196.dp, y = 142.dp)
+                .clip(CircleShape)
+                .background(Violet.copy(alpha = 0.22f))
         )
 
         banner.cornerTag?.let { tag ->
