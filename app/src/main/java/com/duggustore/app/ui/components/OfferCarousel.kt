@@ -1,7 +1,10 @@
 package com.duggustore.app.ui.components
 
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,19 +22,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.duggustore.app.data.model.Coupon
 import com.duggustore.app.data.model.Product
+import com.duggustore.app.platform.BackgroundRemover
 import com.duggustore.app.ui.theme.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /** How long each offer holds before the carousel moves on. */
 private const val AUTO_ADVANCE_MS = 4000L
+
+/**
+ * How many percentage points a product's own discount may differ from a
+ * coupon's headline figure and still count as that coupon's product — just
+ * enough slack to absorb [discountPercent]'s truncation to an Int, not loose
+ * enough to let one steeply-discounted item satisfy every coupon on the rail.
+ */
+private const val MATCH_TOLERANCE = 2
 
 /**
  * The offers strip on home.
@@ -55,6 +73,12 @@ fun OfferCarousel(
     if (offers.isEmpty()) return
 
     val pagerState = rememberPagerState(pageCount = { offers.size })
+
+    // Each coupon is paired with at most one product, and each product with
+    // at most one coupon — closest percentage match wins — so a single
+    // steeply-discounted item can't end up "featured" on every card just
+    // because it also happens to clear every other card's lower threshold.
+    val featuredByOffer = remember(offers, products) { assignFeaturedProducts(offers, products) }
 
     // Only advances while the user is not touching it — a card that slides away
     // mid-tap is worse than one that waits — and never with a single card,
@@ -91,7 +115,7 @@ fun OfferCarousel(
             OfferCard(
                 coupon = offers[page],
                 color = CategoryColors[page.mod(CategoryColors.size)],
-                products = products,
+                featuredProduct = featuredByOffer[offers[page].id],
                 modifier = Modifier.scale(scale),
                 onClick = { onOfferClick(offers[page]) }
             )
@@ -124,24 +148,39 @@ fun OfferCarousel(
     }
 }
 
+/**
+ * Greedy one-to-one pairing between coupons and products: every
+ * (coupon, product) combination within [MATCH_TOLERANCE] points of each
+ * other, closest first, each side claimed only once it's matched. A coupon
+ * with nothing close enough, or a product with no discount at all, simply
+ * gets no match — that's a normal outcome, not a fallback to guess at.
+ */
+private fun assignFeaturedProducts(offers: List<Coupon>, products: List<Product>): Map<String, Product> {
+    val candidates = products.filter { it.hasDiscount() }
+    if (candidates.isEmpty()) return emptyMap()
+
+    val pairs = offers.flatMap { offer ->
+        candidates.map { product -> Triple(offer, product, abs(discountPercent(product) - offer.discountPercent)) }
+    }.filter { it.third <= MATCH_TOLERANCE }.sortedBy { it.third }
+
+    val claimedProducts = mutableSetOf<String>()
+    val result = mutableMapOf<String, Product>()
+    for ((offer, product, _) in pairs) {
+        if (result.containsKey(offer.id) || product.id in claimedProducts) continue
+        result[offer.id] = product
+        claimedProducts += product.id
+    }
+    return result
+}
+
 @Composable
 private fun OfferCard(
     coupon: Coupon,
     color: Color,
     modifier: Modifier = Modifier,
-    products: List<Product> = emptyList(),
+    featuredProduct: Product? = null,
     onClick: () -> Unit
 ) {
-    // A product whose own discount meets or beats this offer's headline
-    // percentage stands in for it, so the card shows an actual item rather
-    // than only the discs below — picked once per offer (and re-picked only
-    // if the offer or the catalogue itself changes) rather than re-rolled on
-    // every recomposition, which would make it flicker between candidates.
-    val featuredProduct = remember(coupon.id, products) {
-        if (coupon.discountPercent <= 0) null
-        else products.filter { discountPercent(it) >= coupon.discountPercent }.randomOrNull()
-    }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -178,10 +217,9 @@ private fun OfferCard(
         )
 
         featuredProduct?.images()?.firstOrNull()?.let { imageUrl ->
-            AsyncImage(
-                model = imageUrl,
+            CutoutProductImage(
+                imageUrl = imageUrl,
                 contentDescription = featuredProduct.name,
-                contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 8.dp, bottom = 4.dp)
@@ -255,5 +293,53 @@ private fun OfferCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * Keeps a cutout from being re-segmented every time its card scrolls back
+ * into view — segmentation is on-device but not free, and the result for a
+ * given photo never changes for the lifetime of the app process.
+ */
+private val cutoutCache = mutableMapOf<String, Bitmap?>()
+
+/**
+ * A product photo with its own background cut out on-device (the same ML
+ * Kit subject segmenter used at upload time), so it sits directly on the
+ * offer card's tinted background instead of carrying a visible white
+ * rectangle from the original photo. Shows nothing while the cutout is
+ * being computed, and nothing at all if segmentation fails — a mismatched
+ * white box behind the photo is worse than no photo.
+ */
+@Composable
+private fun CutoutProductImage(
+    imageUrl: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val cutout by produceState<Bitmap?>(initialValue = cutoutCache[imageUrl], key1 = imageUrl) {
+        if (cutoutCache.containsKey(imageUrl)) return@produceState
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                val request = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .allowHardware(false)
+                    .build()
+                val drawable = context.imageLoader.execute(request).drawable
+                (drawable as? BitmapDrawable)?.bitmap?.let { BackgroundRemover.removeBackground(it) }
+            }.getOrNull()
+        }
+        cutoutCache[imageUrl] = result
+        value = result
+    }
+
+    cutout?.let { bitmap ->
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Fit,
+            modifier = modifier
+        )
     }
 }
