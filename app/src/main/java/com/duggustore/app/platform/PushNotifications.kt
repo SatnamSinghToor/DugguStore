@@ -81,6 +81,7 @@ class DugguFcmService : FirebaseMessagingService() {
 
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("open_notifications", true)
             orderId?.let { putExtra("order_id", it) }
         }
         val pendingIntent = PendingIntent.getActivity(

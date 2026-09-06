@@ -123,6 +123,10 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
+    // Set by MainActivity when the app is opened by tapping a push
+    // notification; consumed once so a config change doesn't renavigate.
+    pendingNotificationRoute: String? = null,
+    onNotificationRouteConsumed: () -> Unit = {},
     authViewModel: AuthViewModel = viewModel(),
     homeViewModel: HomeViewModel = viewModel(),
     cartViewModel: CartViewModel = viewModel(),
@@ -236,6 +240,15 @@ fun AppNavGraph(
             // rotates, not on every app start — a token issued before this
             // login would otherwise never get associated with this user.
             PushNotifications.registerCurrentToken(user.id)
+        }
+    }
+
+    // Runs after the dashboard-navigation effect above, so this lands on top
+    // of it rather than being wiped out by that effect's popUpTo(0).
+    LaunchedEffect(pendingNotificationRoute, authState.isLoggedIn) {
+        if (pendingNotificationRoute != null && authState.isLoggedIn) {
+            navController.navigate(pendingNotificationRoute)
+            onNotificationRouteConsumed()
         }
     }
 

@@ -22,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import com.duggustore.app.data.remote.AuthDeepLinkParser
 import com.duggustore.app.platform.withAppLanguage
 import com.duggustore.app.ui.navigation.AppNavGraph
+import com.duggustore.app.ui.navigation.Screen
 import com.duggustore.app.ui.theme.DugguStoreTheme
 import com.duggustore.app.ui.viewmodel.AuthViewModel
 
@@ -38,6 +40,10 @@ class MainActivity : ComponentActivity() {
 
     // Held by the activity so the deep link and the UI act on the same instance.
     private val authViewModel: AuthViewModel by viewModels()
+
+    // Set from the launching/new intent when the app was opened by tapping a
+    // push notification (see DugguFcmService), read by the nav graph below.
+    private val pendingNotificationRoute = mutableStateOf<String?>(null)
 
     /**
      * Everything the activity resolves — including every string Compose reads
@@ -52,6 +58,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleAuthDeepLink(intent)
+        handlePushNotificationIntent(intent)
         setContent {
             DugguStoreTheme {
                 // Below Android 13 a notification just shows, no permission
@@ -108,7 +115,13 @@ class MainActivity : ComponentActivity() {
                         )
                 ) {
                     val navController = rememberNavController()
-                    AppNavGraph(navController = navController, authViewModel = authViewModel)
+                    val notificationRoute by pendingNotificationRoute
+                    AppNavGraph(
+                        navController = navController,
+                        authViewModel = authViewModel,
+                        pendingNotificationRoute = notificationRoute,
+                        onNotificationRouteConsumed = { pendingNotificationRoute.value = null }
+                    )
                 }
             }
         }
@@ -119,6 +132,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleAuthDeepLink(intent)
+        handlePushNotificationIntent(intent)
     }
 
     private fun handleAuthDeepLink(intent: Intent?) {
@@ -126,5 +140,13 @@ class MainActivity : ComponentActivity() {
         authViewModel.onAuthDeepLink(link)
         // Clear it so a configuration change does not replay the same link.
         intent?.data = null
+    }
+
+    /** DugguFcmService points every push's tap target at this activity with this extra set. */
+    private fun handlePushNotificationIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra("open_notifications", false) != true) return
+        pendingNotificationRoute.value = Screen.CustomerNotifications.route
+        // Clear it so a configuration change does not replay the same navigation.
+        intent.removeExtra("open_notifications")
     }
 }
