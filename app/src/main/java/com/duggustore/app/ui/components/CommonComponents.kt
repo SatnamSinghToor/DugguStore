@@ -523,12 +523,15 @@ fun VegNonVegMark(isVeg: Boolean, modifier: Modifier = Modifier, size: Dp = 14.d
             )
         } else {
             Canvas(modifier = Modifier.fillMaxSize(0.75f)) {
-                // `size` here is the DrawScope's own canvas size (already in
-                // px) — not the outer badge-size parameter, which is a Dp.
+                // Captured as plain locals rather than read inside the
+                // Path.apply block below — that block's receiver is Path
+                // itself, which shadows DrawScope's own `size` property.
+                val w = size.width
+                val h = size.height
                 val path = Path().apply {
-                    moveTo(size.width / 2f, 0f)
-                    lineTo(size.width, size.height)
-                    lineTo(0f, size.height)
+                    moveTo(w / 2f, 0f)
+                    lineTo(w, h)
+                    lineTo(0f, h)
                     close()
                 }
                 drawPath(path, color = markColor)
