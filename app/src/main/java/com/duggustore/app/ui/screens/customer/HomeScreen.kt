@@ -1,5 +1,6 @@
 package com.duggustore.app.ui.screens.customer
 
+import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,10 +17,13 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.FiberNew
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -83,7 +87,12 @@ fun HomeScreen(
     onLoadMoreFeed: () -> Unit = {},
     // The full catalogue, separate from feedProducts above — used only to
     // let the offer carousel feature a matching product on its own card.
-    allProducts: List<Product> = emptyList()
+    allProducts: List<Product> = emptyList(),
+    // Feed the wallet-reminder and referral-invite banners on the same rail
+    // as the coupon cards — 0 / blank simply omits that banner.
+    walletBalance: Int = 0,
+    referralCode: String = "",
+    onWalletBannerClick: () -> Unit = {}
 ) {
     // Both sheets are owned here so the header can stay a plain row of
     // controls and the sheets sit above the whole screen.
@@ -110,6 +119,74 @@ fun HomeScreen(
         delay(1000)
         AppPrefs.addRecentSearch(context, searchQuery)
         recentSearches = AppPrefs.recentSearches(context)
+    }
+
+    // The coupon cards plus whatever else earns a slot on the same rail —
+    // a spotlight for whatever was added to the catalogue most recently,
+    // a reminder of wallet money the customer already has, an invite to
+    // refer a friend. Each is a normal outcome to omit, not a fallback:
+    // no new product, no balance, or no code yet just means one fewer card.
+    val promoBanners = remember(offers, allProducts, walletBalance, referralCode) {
+        buildList {
+            addAll(buildDiscountBanners(offers, allProducts, onOfferClick))
+
+            allProducts.filter { it.isActive }.maxByOrNull { it.createdAt }?.let { product ->
+                add(
+                    PromoBanner(
+                        id = "new-arrival:${product.id}",
+                        tint = Violet,
+                        // The "NEW" corner tag already says why this card is
+                        // here — a separate eyebrow row would just repeat it.
+                        eyebrowIcon = Icons.Default.FiberNew,
+                        eyebrow = "",
+                        headline = "Just landed",
+                        subtitle = product.name,
+                        cornerTag = "NEW",
+                        featuredProduct = product,
+                        onClick = { onProductClick(product) }
+                    )
+                )
+            }
+
+            if (walletBalance > 0) {
+                add(
+                    PromoBanner(
+                        id = "wallet",
+                        tint = Teal,
+                        eyebrowIcon = Icons.Default.AccountBalanceWallet,
+                        eyebrow = "In your wallet",
+                        headline = "₹$walletBalance cashback",
+                        subtitle = "Waiting to be used on your next order",
+                        chipLabel = "USE NOW",
+                        onClick = onWalletBannerClick
+                    )
+                )
+            }
+
+            if (referralCode.isNotBlank()) {
+                add(
+                    PromoBanner(
+                        id = "referral",
+                        tint = Color(0xFF5AA9E6),
+                        eyebrowIcon = Icons.Default.Share,
+                        eyebrow = "Invite a friend",
+                        headline = "Give ₹50, get ₹50",
+                        subtitle = "Both of you get wallet credit on their first order",
+                        chipLabel = "SHARE MY CODE",
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "Use my Duggu Store referral code $referralCode and we both get ₹50 wallet credit!"
+                                )
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share referral code"))
+                        }
+                    )
+                )
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Background)) {
@@ -264,14 +341,10 @@ fun HomeScreen(
             // mixed in with the categories instead of being their own list.
             val isSearching = searchQuery.isNotBlank()
 
-            if (offers.isNotEmpty() && !isSearching) {
+            if (promoBanners.isNotEmpty() && !isSearching) {
                 item {
                     Spacer(Modifier.height(10.dp))
-                    OfferCarousel(
-                        offers = offers,
-                        onOfferClick = onOfferClick,
-                        products = allProducts
-                    )
+                    OfferCarousel(banners = promoBanners)
                 }
             }
 

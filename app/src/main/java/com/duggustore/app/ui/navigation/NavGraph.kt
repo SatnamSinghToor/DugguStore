@@ -527,7 +527,10 @@ fun AppNavGraph(
                 hasMoreFeed = homeState.hasMoreFeed,
                 isLoadingMoreFeed = homeState.isLoadingMoreFeed,
                 onLoadMoreFeed = { homeViewModel.loadMoreFeed() },
-                allProducts = homeState.products
+                allProducts = homeState.products,
+                walletBalance = cartState.walletBalance,
+                referralCode = authState.user?.referralCode.orEmpty(),
+                onWalletBannerClick = { navController.navigate(Screen.CustomerWallet.route) }
             )
 
             LaunchedEffect(authState.user) {

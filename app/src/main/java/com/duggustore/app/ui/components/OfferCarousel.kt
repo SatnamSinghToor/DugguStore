@@ -40,7 +40,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
-/** How long each offer holds before the carousel moves on. */
+/** How long each banner holds before the carousel moves on. */
 private const val AUTO_ADVANCE_MS = 4000L
 
 /**
@@ -52,43 +52,32 @@ private const val AUTO_ADVANCE_MS = 4000L
 private const val MATCH_TOLERANCE = 2
 
 /**
- * The offers strip on home.
- *
- * The single static "25% OFF" panel is gone. Cards sit side by side with the
- * neighbours peeking in from both edges, so it is obvious the strip moves, and
- * it advances on its own like an ad rail. Cards take their colours from the
- * same palette as the category tiles, so the two rails read as one family.
+ * The offers strip on home. Not every card on it is a discount coupon any
+ * more — [banners] can mix in anything built by [buildDiscountBanners] or
+ * assembled by the caller (a new-arrival spotlight, a wallet reminder, a
+ * referral invite…), and this only knows how to page through and render
+ * them. Cards take their tint from whoever built them, so a mixed rail
+ * still reads as one family rather than one coupon look plus odd ones out.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OfferCarousel(
-    offers: List<Coupon>,
-    onOfferClick: (Coupon) -> Unit,
-    modifier: Modifier = Modifier,
-    // The full catalogue, not just whatever page of it Home currently has
-    // loaded — a discount worth featuring shouldn't depend on how far the
-    // customer happens to have scrolled.
-    products: List<Product> = emptyList()
+    banners: List<PromoBanner>,
+    modifier: Modifier = Modifier
 ) {
-    if (offers.isEmpty()) return
+    if (banners.isEmpty()) return
 
-    val pagerState = rememberPagerState(pageCount = { offers.size })
-
-    // Each coupon is paired with at most one product, and each product with
-    // at most one coupon — closest percentage match wins — so a single
-    // steeply-discounted item can't end up "featured" on every card just
-    // because it also happens to clear every other card's lower threshold.
-    val featuredByOffer = remember(offers, products) { assignFeaturedProducts(offers, products) }
+    val pagerState = rememberPagerState(pageCount = { banners.size })
 
     // Only advances while the user is not touching it — a card that slides away
     // mid-tap is worse than one that waits — and never with a single card,
     // where it would animate to the page it is already on.
-    LaunchedEffect(pagerState, offers.size) {
-        if (offers.size < 2) return@LaunchedEffect
+    LaunchedEffect(pagerState, banners.size) {
+        if (banners.size < 2) return@LaunchedEffect
         while (true) {
             delay(AUTO_ADVANCE_MS)
             if (!pagerState.isScrollInProgress) {
-                pagerState.animateScrollToPage((pagerState.currentPage + 1) % offers.size)
+                pagerState.animateScrollToPage((pagerState.currentPage + 1) % banners.size)
             }
         }
     }
@@ -112,22 +101,16 @@ fun OfferCarousel(
                 label = "offerScale"
             )
 
-            OfferCard(
-                coupon = offers[page],
-                color = CategoryColors[page.mod(CategoryColors.size)],
-                featuredProduct = featuredByOffer[offers[page].id],
-                modifier = Modifier.scale(scale),
-                onClick = { onOfferClick(offers[page]) }
-            )
+            OfferCard(banner = banners[page], modifier = Modifier.scale(scale))
         }
 
-        if (offers.size > 1) {
+        if (banners.size > 1) {
             Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                repeat(offers.size) { index ->
+                repeat(banners.size) { index ->
                     val active = index == pagerState.currentPage
                     Box(
                         modifier = Modifier
@@ -137,10 +120,7 @@ fun OfferCarousel(
                             // changing colour, so the position reads at a glance.
                             .width(if (active) 18.dp else 6.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (active) CategoryColors[index.mod(CategoryColors.size)]
-                                else BorderGray
-                            )
+                            .background(if (active) banners[index].tint else BorderGray)
                     )
                 }
             }
@@ -149,39 +129,50 @@ fun OfferCarousel(
 }
 
 /**
- * Greedy one-to-one pairing between coupons and products: every
- * (coupon, product) combination within [MATCH_TOLERANCE] points of each
- * other, closest first, each side claimed only once it's matched. A coupon
- * with nothing close enough, or a product with no discount at all, simply
- * gets no match — that's a normal outcome, not a fallback to guess at.
+ * Turns the store's active coupons into discount [PromoBanner]s, each paired
+ * with at most one product and each product with at most one coupon —
+ * closest percentage match wins, greedily, closest first — so a single
+ * steeply-discounted item can't end up "featured" on every coupon just
+ * because it also clears every other one's lower threshold. A coupon with
+ * nothing close enough features no product at all, which is a normal
+ * outcome, not a fallback to guess at.
  */
-private fun assignFeaturedProducts(offers: List<Coupon>, products: List<Product>): Map<String, Product> {
+fun buildDiscountBanners(
+    coupons: List<Coupon>,
+    products: List<Product>,
+    onClick: (Coupon) -> Unit
+): List<PromoBanner> {
     val candidates = products.filter { it.hasDiscount() }
-    if (candidates.isEmpty()) return emptyMap()
-
-    val pairs = offers.flatMap { offer ->
-        candidates.map { product -> Triple(offer, product, abs(discountPercent(product) - offer.discountPercent)) }
+    val pairs = if (candidates.isEmpty()) emptyList() else coupons.flatMap { coupon ->
+        candidates.map { product -> Triple(coupon, product, abs(discountPercent(product) - coupon.discountPercent)) }
     }.filter { it.third <= MATCH_TOLERANCE }.sortedBy { it.third }
 
     val claimedProducts = mutableSetOf<String>()
-    val result = mutableMapOf<String, Product>()
-    for ((offer, product, _) in pairs) {
-        if (result.containsKey(offer.id) || product.id in claimedProducts) continue
-        result[offer.id] = product
+    val featuredByCoupon = mutableMapOf<String, Product>()
+    for ((coupon, product, _) in pairs) {
+        if (featuredByCoupon.containsKey(coupon.id) || product.id in claimedProducts) continue
+        featuredByCoupon[coupon.id] = product
         claimedProducts += product.id
     }
-    return result
+
+    return coupons.mapIndexed { index, coupon ->
+        PromoBanner(
+            id = "coupon:${coupon.id}",
+            tint = CategoryColors[index.mod(CategoryColors.size)],
+            eyebrowIcon = Icons.Default.LocalOffer,
+            eyebrow = coupon.expiryLabel.ifBlank { "Limited time" },
+            headline = coupon.title.ifBlank { "${coupon.discountPercent}% OFF" },
+            subtitle = coupon.description,
+            chipLabel = "CODE  ${coupon.code}",
+            featuredProduct = featuredByCoupon[coupon.id],
+            onClick = { onClick(coupon) }
+        )
+    }
 }
 
 @Composable
-private fun OfferCard(
-    coupon: Coupon,
-    color: Color,
-    modifier: Modifier = Modifier,
-    featuredProduct: Product? = null,
-    onClick: () -> Unit
-) {
-    val featuredImageUrl = featuredProduct?.images()?.firstOrNull()
+private fun OfferCard(banner: PromoBanner, modifier: Modifier = Modifier) {
+    val featuredImageUrl = banner.featuredProduct?.images()?.firstOrNull()
 
     Box(
         modifier = modifier
@@ -195,8 +186,8 @@ private fun OfferCard(
             // A light wash of the card's colour rather than the colour itself:
             // the reference banner is a pale tint with dark type on it, and a
             // fully saturated panel reads far heavier than the rest of the page.
-            .background(color.copy(alpha = 0.14f))
-            .clickable { onClick() }
+            .background(banner.tint.copy(alpha = 0.14f))
+            .clickable { banner.onClick() }
     ) {
         if (featuredImageUrl != null) {
             // The matched product's photo, background cut out on-device so
@@ -205,7 +196,7 @@ private fun OfferCard(
             // the whole card.
             CutoutProductImage(
                 imageUrl = featuredImageUrl,
-                contentDescription = featuredProduct?.name,
+                contentDescription = banner.featuredProduct?.name,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 8.dp, bottom = 4.dp)
@@ -222,15 +213,31 @@ private fun OfferCard(
                 .size(112.dp)
                 .offset(x = 188.dp, y = (-50).dp)
                 .clip(CircleShape)
-                .background(color.copy(alpha = 0.16f))
+                .background(banner.tint.copy(alpha = 0.16f))
         )
         Box(
             modifier = Modifier
                 .size(82.dp)
                 .offset(x = 212.dp, y = 91.dp)
                 .clip(CircleShape)
-                .background(color.copy(alpha = 0.12f))
+                .background(banner.tint.copy(alpha = 0.12f))
         )
+
+        banner.cornerTag?.let { tag ->
+            Surface(
+                modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+                shape = RoundedCornerShape(7.dp),
+                color = banner.tint
+            ) {
+                Text(
+                    text = tag,
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -240,28 +247,31 @@ private fun OfferCard(
                 .fillMaxWidth(if (featuredImageUrl != null) 0.62f else 1f)
                 .fillMaxHeight()
                 .padding(18.dp),
-            verticalArrangement = Arrangement.Center
+            // A corner tag already occupies the top-left, so the text sits
+            // at the bottom instead of centred, rather than crowding it.
+            verticalArrangement = if (banner.cornerTag != null) Arrangement.Bottom else Arrangement.Center
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.LocalOffer,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = coupon.expiryLabel.ifBlank { "Limited time" },
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = color
-                )
+            if (banner.eyebrow.isNotBlank()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        banner.eyebrowIcon,
+                        contentDescription = null,
+                        tint = banner.tint,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = banner.eyebrow,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = banner.tint
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
             }
 
-            Spacer(Modifier.height(8.dp))
-
             Text(
-                text = coupon.title.ifBlank { "${coupon.discountPercent}% OFF" },
+                text = banner.headline,
                 fontSize = 25.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = TextPrimary,
@@ -272,7 +282,7 @@ private fun OfferCard(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = coupon.description,
+                text = banner.subtitle,
                 fontSize = 12.sp,
                 color = TextSecondary,
                 maxLines = 2,
@@ -280,22 +290,23 @@ private fun OfferCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(Modifier.height(10.dp))
-
-            // The code is the point of the card, so it is set apart rather than
-            // buried in the description.
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(color)
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
-            ) {
-                Text(
-                    text = "CODE  ${coupon.code}",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+            banner.chipLabel?.let { label ->
+                Spacer(Modifier.height(10.dp))
+                // The point of the card, so it is set apart rather than
+                // buried in the description.
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(banner.tint)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
         }
     }
