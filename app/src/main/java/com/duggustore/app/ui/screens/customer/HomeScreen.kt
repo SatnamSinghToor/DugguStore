@@ -613,8 +613,8 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
             .dugguClickable(onClick)
             .drawBehind {
                 val baselineY = size.height * 0.82f
-                val bumpTopY = size.height * 0.32f
-                val curveRun = (size.width * 0.4f).coerceAtMost(28.dp.toPx())
+                val bumpTopY = size.height * 0.44f
+                val curveRun = (size.width * 0.4f).coerceAtMost(30.dp.toPx())
                 val path = Path().apply {
                     if (selected) {
                         moveTo(0f, baselineY)
@@ -644,9 +644,9 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             text = label.uppercase(),
-            fontSize = 12.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.4.sp,
+            letterSpacing = 0.3.sp,
             color = if (selected) Teal else TextSecondary,
             modifier = Modifier.align(if (selected) Alignment.TopCenter else Alignment.BottomCenter)
         )
