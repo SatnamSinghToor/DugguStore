@@ -531,10 +531,13 @@ fun AppNavGraph(
                 authState.user?.let { favoriteViewModel.loadFavorites(it.id) }
                 cartViewModel.loadCart()
             }
-
-            LaunchedEffect(Unit) {
-                homeViewModel.loadData()
-            }
+            // Not re-triggered here: homeViewModel's own init{} already loads
+            // once for the whole session (it's created at AppNavGraph's
+            // scope, not per-visit). A LaunchedEffect(Unit) here reruns every
+            // time this composable re-enters — i.e. every tab switch back to
+            // Home — which refetched the whole catalogue and popped the
+            // pull-to-refresh spinner with no actual pull behind it, on
+            // every single Home tap.
         }
 
         composable(Screen.CustomerCart.route) {
