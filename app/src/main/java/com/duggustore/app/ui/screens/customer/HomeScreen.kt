@@ -619,8 +619,13 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
                 onClick = onClick
             )
             .drawBehind {
-                val baselineY = size.height * 0.82f
-                val bumpTopY = size.height * 0.44f
+                // Both the curve and the label are inset from the row's edges
+                // by fixed amounts (8dp here, 18dp of padding below), so the
+                // raised segment always clears the top of the text instead of
+                // cutting through it — and stays clear at any font scale,
+                // which a height fraction wouldn't.
+                val bumpTopY = 8.dp.toPx()
+                val baselineY = size.height - 8.dp.toPx()
                 val curveRun = (size.width * 0.4f).coerceAtMost(30.dp.toPx())
                 val path = Path().apply {
                     if (selected) {
@@ -654,8 +659,7 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.3.sp,
-            color = if (selected) Teal else TextSecondary,
-            modifier = Modifier.align(if (selected) Alignment.TopCenter else Alignment.BottomCenter)
+            color = if (selected) Teal else TextSecondary
         )
     }
 }
