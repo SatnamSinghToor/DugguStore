@@ -20,7 +20,8 @@ data class DbNotification(
     val title: String = "",
     val message: String = "",
     @SerialName("is_read") val isRead: Boolean = false,
-    @SerialName("created_at") val createdAt: String = ""
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("order_id") val orderId: String? = null
 )
 
 /**
@@ -81,7 +82,7 @@ class NotificationsRepository {
 
     // ---- mapping to the shared StoreNotification model ----------------
 
-    fun DbNotification.toStoreNotification(orderId: String = ""): StoreNotification {
+    fun DbNotification.toStoreNotification(): StoreNotification {
         val kind = when {
             title.contains("confirmed", ignoreCase = true) -> StoreNotification.Kind.Confirmed
             title.contains("prepared", ignoreCase = true) ||
@@ -98,7 +99,7 @@ class NotificationsRepository {
             title = title,
             body = message,
             timestamp = createdAt,
-            orderId = orderId,
+            orderId = orderId.orEmpty(),
             kind = kind
         )
     }
