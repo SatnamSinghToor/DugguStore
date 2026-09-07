@@ -267,21 +267,36 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
                     .padding(top = 8.dp, bottom = 8.dp)
             ) {
-                // Wordmark, search, language and bell all share one row now.
-                // Four controls on one line is tight on a narrow phone, so
-                // the wordmark is set smaller than its usual 22sp and the
-                // search field takes whatever width the other three leave.
+                // The strip showed only the saved default address. It now
+                // leads with the detected one and falls back to the saved
+                // address when location is off or refused.
+                val locationState = detected.state
+                LocationBar(
+                    city = if (locationState is LocationState.Locating) {
+                        stringResource(R.string.location_finding)
+                    } else {
+                        stringResource(R.string.home_deliver_to)
+                    },
+                    address = when (locationState) {
+                        is LocationState.Found -> locationState.address
+                        is LocationState.Locating -> stringResource(R.string.location_wait)
+                        is LocationState.Unavailable ->
+                            stringResource(locationState.messageRes)
+                        LocationState.Idle -> deliveryAddress
+                    },
+                    onClick = { showLocationSheet = true },
+                    trailing = { StoreWordmarkBadge() }
+                )
+
+                Spacer(Modifier.height(10.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    StoreWordmark(size = 17)
-                    Spacer(Modifier.width(10.dp))
                     StoreSearchBar(
                         query = searchQuery,
-                        // Short hint: "Search Anything..." would ellipsize
-                        // mid-word in the width left over on this row.
-                        placeholder = stringResource(R.string.home_search_hint_short),
+                        placeholder = stringResource(R.string.home_search_hint),
                         onQueryChange = onSearchQueryChange,
                         // Null when the device has no speech recogniser, which
                         // leaves the mic out rather than showing a dead button.
@@ -325,33 +340,6 @@ fun HomeScreen(
                         }
                     }
                 }
-
-                Spacer(Modifier.height(10.dp))
-
-                // The strip showed only the saved default address. It now
-                // leads with the detected one and falls back to the saved
-                // address when location is off or refused.
-                val locationState = detected.state
-                LocationBar(
-                    city = when {
-                        locationState is LocationState.Locating ->
-                            stringResource(R.string.location_finding)
-                        locationState is LocationState.Found ->
-                            stringResource(R.string.location_current)
-                        userName.isBlank() -> stringResource(R.string.home_deliver_to)
-                        else -> stringResource(R.string.home_greeting, userName)
-                    },
-                    address = when (locationState) {
-                        is LocationState.Found -> locationState.address
-                        is LocationState.Locating -> stringResource(R.string.location_wait)
-                        is LocationState.Unavailable ->
-                            stringResource(locationState.messageRes)
-                        LocationState.Idle -> deliveryAddress
-                    },
-                    onClick = { showLocationSheet = true },
-                    onLocateClick = detected.refresh,
-                    locating = locationState is LocationState.Locating
-                )
 
                 if (searchQuery.isBlank() && recentSearches.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))

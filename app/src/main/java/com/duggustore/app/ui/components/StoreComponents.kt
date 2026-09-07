@@ -46,16 +46,18 @@ fun StoreWordmark(first: String = "Duggu", second: String = "Store", size: Int =
     }
 }
 
-/** Location strip: city over address, reload. */
+/**
+ * Location strip: pin, label and address on one line with a chevron, and an
+ * optional badge at the far end.
+ */
 @Composable
 fun LocationBar(
     city: String,
     address: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Re-detects the device location. Null leaves the crosshair out. */
-    onLocateClick: (() -> Unit)? = null,
-    locating: Boolean = false
+    /** Drawn at the row's end, opposite the address. */
+    trailing: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = modifier
@@ -65,42 +67,54 @@ fun LocationBar(
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(city, fontSize = 13.sp, color = TextSecondary)
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.LocationOn,
+                contentDescription = null,
+                tint = TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(city, fontSize = 14.sp, color = TextSecondary, maxLines = 1)
+            Spacer(Modifier.width(5.dp))
             Text(
                 text = address,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                // fill = false so the chevron sits right after a short
+                // address rather than being pushed to the far edge.
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Icon(
+                Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = TextPrimary,
+                modifier = Modifier.size(20.dp)
             )
         }
-        if (onLocateClick != null) {
-            // Fixed-size box for both states, so the reload icon and the
-            // loading spinner it swaps with sit at the same spot rather
-            // than the row reflowing between them.
-            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                if (locating) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Teal,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    IconButton(onClick = onLocateClick, modifier = Modifier.fillMaxSize()) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = stringResource(R.string.location_use_current),
-                            // Teal now that the strip's teal pin is gone —
-                            // this is the only mark of colour left on the
-                            // row, so it carries the brand here.
-                            tint = Teal,
-                            modifier = Modifier.size(21.dp)
-                        )
-                    }
-                }
-            }
+        if (trailing != null) {
+            Spacer(Modifier.width(10.dp))
+            trailing()
+        }
+    }
+}
+
+/** The wordmark as a badge — white pill, for use on a tinted header. */
+@Composable
+fun StoreWordmarkBadge(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(50),
+        color = SurfaceWhite
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+            StoreWordmark(size = 15)
         }
     }
 }
@@ -120,9 +134,9 @@ fun StoreSearchBar(
         color = SurfaceMuted
     ) {
         Row(
-            // Tight insets: the bar now shares its row with the wordmark, the
-            // language picker and the bell, so every dp spent on chrome comes
-            // straight out of the field the user actually types in.
+            // The bar shares its row with the language picker and the bell,
+            // so the insets stay modest — but the wordmark has moved up to
+            // the location strip, which leaves room to breathe again.
             modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -134,21 +148,21 @@ fun StoreSearchBar(
                 Icons.Default.Search,
                 contentDescription = null,
                 tint = Orange,
-                modifier = Modifier.size(19.dp)
+                modifier = Modifier.size(21.dp)
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(10.dp))
             Box(modifier = Modifier.weight(1f)) {
                 BasicSearchField(query, onQueryChange, placeholder)
             }
             if (onMicClick != null) {
-                Spacer(Modifier.width(6.dp))
-                Box(Modifier.width(1.dp).height(18.dp).background(BorderGray))
-                IconButton(onClick = onMicClick, modifier = Modifier.size(34.dp)) {
+                Spacer(Modifier.width(8.dp))
+                Box(Modifier.width(1.dp).height(20.dp).background(BorderGray))
+                IconButton(onClick = onMicClick, modifier = Modifier.size(38.dp)) {
                     Icon(
                         Icons.Default.Mic,
                         stringResource(R.string.home_voice_search),
                         tint = Teal,
-                        modifier = Modifier.size(19.dp)
+                        modifier = Modifier.size(21.dp)
                     )
                 }
             }

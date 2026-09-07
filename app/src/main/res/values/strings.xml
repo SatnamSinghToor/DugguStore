@@ -19,7 +19,6 @@
 
     <!-- Home -->
     <string name="home_search_hint">Search Anything...</string>
-    <string name="home_search_hint_short">Search</string>
     <string name="home_voice_search">Voice search</string>
     <string name="home_notifications">Notifications</string>
     <string name="home_deliver_to">Deliver to</string>
