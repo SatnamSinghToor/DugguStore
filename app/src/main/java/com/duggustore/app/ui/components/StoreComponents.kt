@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -35,7 +34,6 @@ import com.duggustore.app.data.model.Category
 import com.duggustore.app.data.model.Product
 import com.duggustore.app.R
 import com.duggustore.app.ui.theme.*
-import kotlinx.coroutines.delay
 
 /** Wordmark with the two-tone split from the design. */
 @Composable
@@ -282,10 +280,10 @@ fun iconForCategory(name: String): ImageVector = when {
 }
 
 /**
- * A product's photos, auto-advancing on their own — a shopper scanning a
- * grid never swipes an individual card by hand, so a second or third photo
- * would otherwise go unseen. Falls back to a single static image (or the
- * placeholder icon) when there is nothing to cycle through.
+ * A product's photos, advanced by swiping only. The dots say how many there
+ * are; a card that is not being touched holds its photo still. Falls back to
+ * a single static image (or the placeholder icon) when there is nothing to
+ * page through.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -316,14 +314,6 @@ fun ProductImageCarousel(
     }
 
     val pagerState = rememberPagerState(pageCount = { images.size })
-
-    LaunchedEffect(pagerState, images) {
-        while (true) {
-            delay(2600L)
-            val next = (pagerState.currentPage + 1) % images.size
-            pagerState.animateScrollToPage(next)
-        }
-    }
 
     Box(modifier = modifier) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
