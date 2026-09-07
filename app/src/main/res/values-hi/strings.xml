@@ -14,6 +14,7 @@
     <string name="nav_cart">कार्ट</string>
 
     <string name="home_search_hint">कुछ भी खोजें…</string>
+    <string name="home_search_hint_short">खोजें</string>
     <string name="home_voice_search">बोलकर खोजें</string>
     <string name="home_notifications">सूचनाएँ</string>
     <string name="home_deliver_to">यहाँ डिलीवरी</string>

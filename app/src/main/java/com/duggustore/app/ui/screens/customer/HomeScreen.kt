@@ -267,18 +267,29 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
                     .padding(top = 8.dp, bottom = 8.dp)
             ) {
+                // Wordmark, search, language and bell all share one row now.
+                // Four controls on one line is tight on a narrow phone, so
+                // the wordmark is set smaller than its usual 22sp and the
+                // search field takes whatever width the other three leave.
                 Row(
-                    // Matches the 8dp end inset on the location strip's
-                    // reload icon and the search bar's mic icon below, so
-                    // all three land on the same vertical line instead of
-                    // the bell sitting flush with the true edge.
-                    modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    StoreWordmark()
-                    Spacer(Modifier.weight(1f))
+                    StoreWordmark(size = 17)
+                    Spacer(Modifier.width(10.dp))
+                    StoreSearchBar(
+                        query = searchQuery,
+                        // Short hint: "Search Anything..." would ellipsize
+                        // mid-word in the width left over on this row.
+                        placeholder = stringResource(R.string.home_search_hint_short),
+                        onQueryChange = onSearchQueryChange,
+                        // Null when the device has no speech recogniser, which
+                        // leaves the mic out rather than showing a dead button.
+                        onMicClick = voice?.let { { it.open() } },
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     LanguagePicker()
-                    Spacer(Modifier.width(12.dp))
                     Box(contentAlignment = Alignment.TopEnd) {
                         Box(
                             modifier = Modifier
@@ -342,19 +353,8 @@ fun HomeScreen(
                     locating = locationState is LocationState.Locating
                 )
 
-                Spacer(Modifier.height(12.dp))
-
-                StoreSearchBar(
-                    query = searchQuery,
-                    placeholder = stringResource(R.string.home_search_hint),
-                    onQueryChange = onSearchQueryChange,
-                    // Null when the device has no speech recogniser, which
-                    // leaves the mic out rather than showing a dead button.
-                    onMicClick = voice?.let { { it.open() } }
-                )
-
                 if (searchQuery.isBlank() && recentSearches.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(4.dp))
                     RecentSearchesRow(
                         terms = recentSearches,
                         onTermClick = onSearchQueryChange,
@@ -397,21 +397,24 @@ fun HomeScreen(
             // mixed in with the categories instead of being their own list.
             val isSearching = searchQuery.isNotBlank()
 
-            if (promoBanners.isNotEmpty() && !isSearching) {
-                item {
-                    Spacer(Modifier.height(10.dp))
-                    OfferCarousel(banners = promoBanners)
-                }
-            }
-
+            // Categories first, directly under the search bar, then the
+            // offers — the tabs filter the whole page below them, so they
+            // belong next to the other control that does (search) rather
+            // than after a carousel they have no bearing on.
             if (categories.isNotEmpty() && !isSearching) {
                 item {
-                    Spacer(Modifier.height(16.dp))
                     CurvedCategoryTabs(
                         categories = categories,
                         selectedCategoryId = selectedCategoryId,
                         onCategorySelected = onCategorySelected
                     )
+                }
+            }
+
+            if (promoBanners.isNotEmpty() && !isSearching) {
+                item {
+                    Spacer(Modifier.height(14.dp))
+                    OfferCarousel(banners = promoBanners)
                 }
             }
 
@@ -619,16 +622,14 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
                 onClick = onClick
             )
             .drawBehind {
-                // Both the curve and the label are inset from the row's edges
-                // by fixed amounts — the curve 8dp vertically and 20dp
-                // horizontally, the label 18dp/28dp — so the raised segment
-                // clears the label on all four sides instead of cutting
-                // through it. Fixed insets rather than fractions of the tab,
-                // so the gap holds for a label of any length and at any font
-                // scale; the fraction is only a floor for a degenerate width.
+                // Curve and label are both inset from the row's edges by fixed
+                // amounts (8dp here, the padding below), so the raised segment
+                // clears the top of the text instead of cutting through it,
+                // and stays clear at any font scale — which a height fraction
+                // wouldn't.
                 val bumpTopY = 8.dp.toPx()
                 val baselineY = size.height - 8.dp.toPx()
-                val curveRun = 20.dp.toPx().coerceAtMost(size.width * 0.4f)
+                val curveRun = (size.width * 0.4f).coerceAtMost(30.dp.toPx())
                 val path = Path().apply {
                     if (selected) {
                         moveTo(0f, baselineY)
@@ -654,7 +655,7 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
                     style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
-            .padding(horizontal = 28.dp, vertical = 18.dp)
+            .padding(horizontal = 22.dp, vertical = 18.dp)
     ) {
         Text(
             text = label.uppercase(),

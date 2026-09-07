@@ -46,7 +46,7 @@ fun StoreWordmark(first: String = "Duggu", second: String = "Store", size: Int =
     }
 }
 
-/** Location strip: teal pin, city over address, reload. */
+/** Location strip: city over address, reload. */
 @Composable
 fun LocationBar(
     city: String,
@@ -62,21 +62,9 @@ fun LocationBar(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .dugguClickable { onClick() }
-            .padding(vertical = 6.dp)
-            // Matches the search bar's own end inset directly below, so the
-            // reload icon here and the mic icon there land on the same
-            // vertical line instead of one sitting flush to the edge and
-            // the other tucked in from it.
-            .padding(end = 8.dp),
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(44.dp).background(Teal, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.LocationOn, null, tint = Color.White, modifier = Modifier.size(22.dp))
-        }
-        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(city, fontSize = 13.sp, color = TextSecondary)
             Text(
@@ -96,7 +84,7 @@ fun LocationBar(
                 if (locating) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Orange,
+                        color = Teal,
                         strokeWidth = 2.dp
                     )
                 } else {
@@ -104,11 +92,10 @@ fun LocationBar(
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.location_use_current),
-                            // Same colour as the search bar's lens icon
-                            // below, not teal — the pin above already
-                            // carries teal, and this is the one icon in
-                            // the strip that should read as its own action.
-                            tint = Orange,
+                            // Teal now that the strip's teal pin is gone —
+                            // this is the only mark of colour left on the
+                            // row, so it carries the brand here.
+                            tint = Teal,
                             modifier = Modifier.size(21.dp)
                         )
                     }
@@ -133,11 +120,10 @@ fun StoreSearchBar(
         color = SurfaceMuted
     ) {
         Row(
-            // Left inset kept small on purpose: the location pin right above
-            // this bar sits flush with the screen margin, and the old boxed
-            // icon (with its own 8dp of padding before it) started noticeably
-            // further right than the pin — the two controls didn't line up.
-            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            // Tight insets: the bar now shares its row with the wordmark, the
+            // language picker and the bell, so every dp spent on chrome comes
+            // straight out of the field the user actually types in.
+            modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Plain tinted glyph rather than a filled tile: a solid orange
@@ -148,21 +134,21 @@ fun StoreSearchBar(
                 Icons.Default.Search,
                 contentDescription = null,
                 tint = Orange,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(19.dp)
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Box(modifier = Modifier.weight(1f)) {
                 BasicSearchField(query, onQueryChange, placeholder)
             }
             if (onMicClick != null) {
-                Spacer(Modifier.width(8.dp))
-                Box(Modifier.width(1.dp).height(22.dp).background(BorderGray))
-                IconButton(onClick = onMicClick, modifier = Modifier.size(40.dp)) {
+                Spacer(Modifier.width(6.dp))
+                Box(Modifier.width(1.dp).height(18.dp).background(BorderGray))
+                IconButton(onClick = onMicClick, modifier = Modifier.size(34.dp)) {
                     Icon(
                         Icons.Default.Mic,
                         stringResource(R.string.home_voice_search),
                         tint = Teal,
-                        modifier = Modifier.size(21.dp)
+                        modifier = Modifier.size(19.dp)
                     )
                 }
             }
