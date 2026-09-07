@@ -2,6 +2,7 @@ package com.duggustore.app.ui.screens.customer
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -113,6 +115,16 @@ fun HomeScreen(
     val detected = rememberDeviceLocation()
     val voice = rememberVoiceSearchController { onSearchQueryChange(it) }
     val pullRefreshState = rememberPullRefreshState(refreshing = isLoading, onRefresh = onRefresh)
+
+    // The location strip folds away as soon as the feed moves, leaving the
+    // search field and the category tabs pinned. derivedStateOf so this only
+    // recomposes on the two transitions, not on every scrolled pixel.
+    val listState = rememberLazyListState()
+    val addressExpanded by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 10
+        }
+    }
 
     // Home is the bottom of the back stack, so with no search active the
     // system back button already does the right thing (exits to the
@@ -261,34 +273,42 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    // 20dp, not the usual 16 — this is what lines the search
-                    // bar's edges up with the offer cards below it, whose
-                    // width comes from the pager's own 20dp contentPadding.
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 8.dp, bottom = 8.dp)
+                    .padding(top = 8.dp)
+            ) {
+            Column(
+                // 20dp, not the usual 16 — this is what lines the search
+                // bar's edges up with the offer cards below it, whose
+                // width comes from the pager's own 20dp contentPadding.
+                // The tab row below sits outside it, so its baseline can
+                // run the full width of the screen.
+                modifier = Modifier.padding(horizontal = 20.dp)
             ) {
                 // The strip showed only the saved default address. It now
                 // leads with the detected one and falls back to the saved
                 // address when location is off or refused.
                 val locationState = detected.state
-                LocationBar(
-                    city = if (locationState is LocationState.Locating) {
-                        stringResource(R.string.location_finding)
-                    } else {
-                        stringResource(R.string.home_deliver_to)
-                    },
-                    address = when (locationState) {
-                        is LocationState.Found -> locationState.address
-                        is LocationState.Locating -> stringResource(R.string.location_wait)
-                        is LocationState.Unavailable ->
-                            stringResource(locationState.messageRes)
-                        LocationState.Idle -> deliveryAddress
-                    },
-                    onClick = { showLocationSheet = true },
-                    trailing = { StoreWordmarkBadge() }
-                )
-
-                Spacer(Modifier.height(10.dp))
+                AnimatedVisibility(visible = addressExpanded) {
+                    Column {
+                        LocationBar(
+                            city = if (locationState is LocationState.Locating) {
+                                stringResource(R.string.location_finding)
+                            } else {
+                                stringResource(R.string.home_deliver_to)
+                            },
+                            address = when (locationState) {
+                                is LocationState.Found -> locationState.address
+                                is LocationState.Locating ->
+                                    stringResource(R.string.location_wait)
+                                is LocationState.Unavailable ->
+                                    stringResource(locationState.messageRes)
+                                LocationState.Idle -> deliveryAddress
+                            },
+                            onClick = { showLocationSheet = true },
+                            trailing = { StoreWordmarkBadge() }
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -353,6 +373,20 @@ fun HomeScreen(
                     )
                 }
             }
+
+            // Pinned with the search field rather than scrolling with the
+            // feed: the tabs filter what is in that feed, so losing them
+            // the moment you scroll into it is the wrong way round.
+            if (categories.isNotEmpty() && searchQuery.isBlank()) {
+                CurvedCategoryTabs(
+                    categories = categories,
+                    selectedCategoryId = selectedCategoryId,
+                    onCategorySelected = onCategorySelected
+                )
+            } else {
+                Spacer(Modifier.height(8.dp))
+            }
+            }
             }
 
             Box(
@@ -375,29 +409,16 @@ fun HomeScreen(
                 }
             } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
 
-            // Search takes over the whole page — the carousel and the
-            // categories row are browsing aids, and showing them above a
-            // set of search results made it look like the results were
-            // mixed in with the categories instead of being their own list.
+            // Search takes over the whole page — the carousel is a browsing
+            // aid, and showing it above a set of search results made it look
+            // like the results were mixed in with it instead of being their
+            // own list.
             val isSearching = searchQuery.isNotBlank()
-
-            // Categories first, directly under the search bar, then the
-            // offers — the tabs filter the whole page below them, so they
-            // belong next to the other control that does (search) rather
-            // than after a carousel they have no bearing on.
-            if (categories.isNotEmpty() && !isSearching) {
-                item {
-                    CurvedCategoryTabs(
-                        categories = categories,
-                        selectedCategoryId = selectedCategoryId,
-                        onCategorySelected = onCategorySelected
-                    )
-                }
-            }
 
             if (promoBanners.isNotEmpty() && !isSearching) {
                 item {
@@ -640,7 +661,9 @@ private fun CurvedTab(label: String, selected: Boolean, onClick: () -> Unit) {
                 drawPath(
                     path = path,
                     color = Teal,
-                    style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
+                    // HairlineWidth is one physical pixel at any density —
+                    // the thinnest line that still renders.
+                    style = Stroke(width = Stroke.HairlineWidth, cap = StrokeCap.Round)
                 )
             }
             .padding(horizontal = 22.dp, vertical = 18.dp)
